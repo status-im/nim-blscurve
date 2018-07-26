@@ -64,9 +64,9 @@ type
 
 proc OCT_fromHex(dst: ptr Octet, src: cstring) {.amcl.}
 
-proc create_csprng(csprng: ptr Csprng, seed: ptr Octet) {.amcl.}
+proc CREATE_CSPRNG(csprng: ptr Csprng, seed: ptr Octet) {.amcl.}
 
-proc ecp_bls381_key_pair_generate(csprng: ptr Csprng, privkey, out_pubkey: ptr Octet) {.amcl.}
+proc ECP_BLS381_KEY_PAIR_GENERATE(csprng: ptr Csprng, privkey, out_pubkey: ptr Octet) {.amcl.}
 
 
 when isMainModule:
