@@ -53,7 +53,7 @@ type
     max* {.importc: "max".}: cint # Max length allowed - enforce truncation
     val* {.importc: "val".}: ptr UncheckedArray[byte] # Byte array
 
-  EcdhError* = enum
+  EcdhError* {.pure.}= enum
     Invalid = -4
     Error = -3
     InvalidPublicKey = -2
@@ -62,22 +62,9 @@ type
   Csprng* {.importc: "csprng", header: cSourcesPath & "/amcl.h", bycopy.} = object
     ## Opaque cryptographically secure pseudo-random number generator
 
-proc OCT_fromHex(dst: ptr Octet, src: cstring) {.amcl.}
+proc OCT_fromHex*(dst: ptr Octet, src: ptr char) {.amcl.}
+proc OCT_toHex*(src: ptr Octet, dst: ptr char) {.amcl.}
 
-proc CREATE_CSPRNG(csprng: ptr Csprng, seed: ptr Octet) {.amcl.}
+proc CREATE_CSPRNG*(csprng: ptr Csprng, seed: ptr Octet) {.amcl.}
 
-proc ECP_BLS381_KEY_PAIR_GENERATE(csprng: ptr Csprng, privkey, out_pubkey: ptr Octet) {.amcl.}
-
-
-when isMainModule:
-  ## Check Octet
-
-  var backend: array[64, byte]
-  var x = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](backend.addr))
-  let y = "1234"
-
-  x.addr.OCT_fromHex(y)
-
-  echo "length: " & $x.len
-  for i in 0 ..< x.len:
-    echo "byte " & $i & ": " & $x.val[i]
+proc ECP_BLS381_KEY_PAIR_GENERATE*(csprng: ptr Csprng, privkey, out_pubkey: ptr Octet) {.amcl.}
