@@ -66,5 +66,6 @@ proc OCT_fromHex*(dst: ptr Octet, src: ptr char) {.amcl.}
 proc OCT_toHex*(src: ptr Octet, dst: ptr char) {.amcl.}
 
 proc CREATE_CSPRNG*(csprng: ptr Csprng, seed: ptr Octet) {.amcl.}
+proc KILL_CSPRNG*(csprng: ptr Csprng) {.amcl.}
 
 proc ECP_BLS381_KEY_PAIR_GENERATE*(csprng: ptr Csprng, privkey, out_pubkey: ptr Octet) {.amcl.}

@@ -28,3 +28,21 @@ suite "Octet datatype":
         x.val[0].toHex == "12"
         x.val[1].toHex == "34"
 
+suite "CSPRNG: Cryptographically Strong Pseudo Random Number Generation":
+  test "CSPRNG initialization and destruction":
+
+    var
+      rng: Csprng
+      backend: array[64, byte]
+      seed = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](backend.addr))
+    let seedHex = "123456789ABCDEF"
+
+    seed.addr.OCT_fromHex(seedHex[0].unsafeAddr)
+
+    CREATE_CSPRNG(rng.addr, seed.addr)
+    KILL_CSPRNG(rng.addr)
+
+
+
+
+
