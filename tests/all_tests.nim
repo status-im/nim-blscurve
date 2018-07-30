@@ -3,7 +3,7 @@
 # Licensed and distributed under the Apache v2 license (license terms in the root directory or at http://www.apache.org/licenses/LICENSE-2.0).
 # This file may not be copied, modified, or distributed except according to those terms.
 
-import  unittest, strutils,
+import  unittest, strutils, strformat, encodings,
         ../src/milagro_crypto
 
 suite "Octet datatype":
@@ -42,7 +42,76 @@ suite "CSPRNG: Cryptographically Strong Pseudo Random Number Generation":
     CREATE_CSPRNG(rng.addr, seed.addr)
     KILL_CSPRNG(rng.addr)
 
+suite "Signing and verifying messages":
+  test "BLS12-381":
+    # https://github.com/ethereum/research/blob/051e8a9e0c04d53da293297f84eb4ea79a3e8cce/beacon_chain_impl/test.py#L9
 
+    # (Decimal, Hex) tuple. Python supports bigint by default, Nim doesn't.
+    let privkeys: array[7, tuple[decimal, hex: string]] = [
+      ("1", "1"), ("5", "5"), ("124","7C"), ("735", "2DF"),
+      ("127409812145", "1DAA3772B1"), ("90768492698215092512159", "133891E19CF0FC4EE59F"),
+      ("0", "0")
+      ]
 
+    type Backend = array[64, byte] # 64 is chosen arbitrarily to be big enough
 
+    for x in privkeys:
+      echo &"Testing with privkey {x.decimal}"
 
+      # Setup boilerplate
+
+      let
+        msg_backend = x.decimal.convert("UTF-8", getCurrentEncoding())
+        msg = Octet(len: cint(msg_backend.len), max: 64, val: cast[ptr UncheckedArray[byte]](msg_backend.unsafeAddr))
+        seedHex = "123456789ABCDEF"
+
+        copy_msg_backend = msg_backend
+
+      var
+        privkey_backend: Backend
+        pubkey_backend: Backend
+        ephemeralKey_backend: Backend
+        sigPair_backend: tuple[c, d: Backend]
+
+        privkey = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](privkey_backend.addr))
+        pubkey = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](pubkey_backend.addr))
+        ephemeralKey = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](ephemeralKey_backend.addr))
+        sigPair: tuple[c, d: Octet]
+
+        seed_backend: array[64, byte]
+        seed = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](seed_backend.addr))
+        rng: Csprng
+
+      seed.addr.OCT_fromHex(seedHex[0].unsafeAddr)
+      CREATE_CSPRNG(rng.addr, seed.addr)
+
+      var keyWithAddr = x.hex[0]
+      privkey.addr.OCT_fromHex(keyWithAddr.addr)
+
+      sigPair.c = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](sigPair_backend.c.addr))
+      sigPair.d = Octet(len: 0, max: 64, val: cast[ptr UncheckedArray[byte]](sigPair_backend.d.addr))
+
+      # Tests
+      var zeros: Backend
+
+      check:
+        # Key pair generation
+        pubkey_backend == zeros
+        ECP_BLS381_KEY_PAIR_GENERATE(rng.addr, privkey.addr, pubkey.addr) == EcdhError.Ok
+        pubkey_backend != zeros
+
+        # Message signing
+        sigPair_backend.c == zeros
+        sigPair_backend.d == zeros
+        # ECP_BLS381_SP_DSA( # TODO: Segfaulting at the moment
+        #   HashType.SHA256, rng.addr, ephemeralKey.addr,
+        #   privkey.addr, msg.unsafeAddr, sigPair.c.addr, sigPair.d.addr
+        #   ) == EcdhError.Ok
+        sigPair_backend.c != zeros
+        sigPair_backend.d != zeros
+        msg_backend == copy_msg_backend # make sure the original message was not modified under our nose.
+
+        # Message verification
+        ECP_BLS381_VP_DSA(
+          HashType.SHA256, pubkey.addr, msg.unsafeAddr, sigPair.c.addr, sigPair.d.addr
+        ) == EcdhError.Ok

@@ -62,10 +62,37 @@ type
   Csprng* {.importc: "csprng", header: cSourcesPath & "/amcl.h", bycopy.} = object
     ## Opaque cryptographically secure pseudo-random number generator
 
+  HashType* {.pure.}= enum
+    SHA256 = 32
+    SHA384 = 48
+    SHA512 = 64
+
 proc OCT_fromHex*(dst: ptr Octet, src: ptr char) {.amcl.}
 proc OCT_toHex*(src: ptr Octet, dst: ptr char) {.amcl.}
 
 proc CREATE_CSPRNG*(csprng: ptr Csprng, seed: ptr Octet) {.amcl.}
 proc KILL_CSPRNG*(csprng: ptr Csprng) {.amcl.}
 
-proc ECP_BLS381_KEY_PAIR_GENERATE*(csprng: ptr Csprng, privkey, out_pubkey: ptr Octet) {.amcl.}
+proc ECP_BLS381_KEY_PAIR_GENERATE*(csprng: ptr Csprng, privkey, out_pubkey: ptr Octet): EcdhError {.amcl.}
+  ## Generate an ECC public/private key pair
+  ## - csprng: is a pointer to a cryptographically secure random number generator
+  ## - privkey: the private key, an output internally randomly generated if R!=NULL, otherwise must be provided as an input
+  ## - out_pubkey:  the output public key, which is s.G, where G is a fixed generator
+
+proc ECP_BLS381_SP_DSA*(sha: HashType, csprng: ptr Csprng, ephemeralKey, privkey, msg, out_sig_c, out_sig_d: ptr Octet): EcdhError {.amcl.}
+  ## IEEE-1363 ECDSA Signature
+  ## sha is the hash type
+  ## csprng is a pointer to a cryptographically secure random number generator
+  ## ephemeralKey. This value is used when csprng is nil
+  ## privkey the input private signing key
+  ## msg the input message to be signed
+  ## out_sig_c: c component of the output signature
+  ## out_sig_d: d component of the output signature
+
+proc ECP_BLS381_VP_DSA*(sha: HashType, pubkey, msg, sig_c, sig_d: ptr Octet): EcdhError {.amcl.}
+  ## IEEE-1363 ECDSA Signature Verification
+  ## sha is the hash type
+  ## pubkey: the input public key
+  ## msg: the input message
+  ## sig_c: c component of the input signature
+  ## sig_d: c component of the input signature
