@@ -79,6 +79,9 @@ proc ECP_BLS381_KEY_PAIR_GENERATE*(csprng: ptr Csprng, privkey, out_pubkey: ptr 
   ## - privkey: the private key, an output internally randomly generated if R!=NULL, otherwise must be provided as an input
   ## - out_pubkey:  the output public key, which is s.G, where G is a fixed generator
 
+proc ECP_BLS381_PUBLIC_KEY_VALIDATE*(pubkey: ptr Octet): EcdhError {.amcl.}
+  ## Validate an ECC public key
+
 proc ECP_BLS381_SP_DSA*(sha: HashType, csprng: ptr Csprng, ephemeralKey, privkey, msg, out_sig_c, out_sig_d: ptr Octet): EcdhError {.amcl.}
   ## IEEE-1363 ECDSA Signature
   ## sha is the hash type

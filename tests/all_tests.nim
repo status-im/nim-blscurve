@@ -53,13 +53,13 @@ suite "Signing and verifying messages":
       ("0", "0")
       ]
 
-    type Backend = array[64, byte] # 64 is chosen arbitrarily to be big enough
+    # Pubkey size is 2*MODBYTES_384_29+1 with MODBYTES_384_29 == 48
+    type Backend = array[97, byte]
 
     for x in privkeys:
-      echo &"Testing with privkey {x.decimal}"
+      echo &"          BLS12-381 testing with privkey {x.decimal}"
 
       # Setup boilerplate
-
       let
         msg_backend = x.decimal.convert("UTF-8", getCurrentEncoding())
         msg = Octet(len: cint(msg_backend.len), max: 64, val: cast[ptr UncheckedArray[byte]](msg_backend.unsafeAddr))
@@ -94,24 +94,31 @@ suite "Signing and verifying messages":
       # Tests
       var zeros: Backend
 
-      check:
-        # Key pair generation
+      echo "             Key-pair generation"
+      check: # Key pair generation
         pubkey_backend == zeros
         ECP_BLS381_KEY_PAIR_GENERATE(rng.addr, privkey.addr, pubkey.addr) == EcdhError.Ok
         pubkey_backend != zeros
 
-        # Message signing
+      echo "             Public key validity"
+      check: # Validate the key
+        ECP_BLS381_PUBLIC_KEY_VALIDATE(pubkey.addr) == EcdhError.Ok
+
+      echo "             Message signing"
+      check:  # Message signing
         sigPair_backend.c == zeros
         sigPair_backend.d == zeros
-        # ECP_BLS381_SP_DSA( # TODO: Segfaulting at the moment
-        #   HashType.SHA256, rng.addr, ephemeralKey.addr,
-        #   privkey.addr, msg.unsafeAddr, sigPair.c.addr, sigPair.d.addr
-        #   ) == EcdhError.Ok
+
+        ECP_BLS381_SP_DSA( # TODO: Segfaulting at the moment
+          HashType.SHA256, rng.addr, ephemeralKey.addr,
+          privkey.addr, msg.unsafeAddr, sigPair.c.addr, sigPair.d.addr
+          ) == EcdhError.Ok
         sigPair_backend.c != zeros
         sigPair_backend.d != zeros
         msg_backend == copy_msg_backend # make sure the original message was not modified under our nose.
 
-        # Message verification
+      echo "             Message verification"
+      check:  # Message verification
         ECP_BLS381_VP_DSA(
           HashType.SHA256, pubkey.addr, msg.unsafeAddr, sigPair.c.addr, sigPair.d.addr
         ) == EcdhError.Ok
