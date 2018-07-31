@@ -54,6 +54,7 @@ suite "Signing and verifying messages":
       ]
 
     # Pubkey size is 2*MODBYTES_384_29+1 with MODBYTES_384_29 == 48
+    # Hardcoded in ecp_BLS381.C:562 (ECP_BLS381_toOctet function)
     type Backend = array[97, byte]
 
     for x in privkeys:
@@ -109,7 +110,7 @@ suite "Signing and verifying messages":
         sigPair_backend.c == zeros
         sigPair_backend.d == zeros
 
-        ECP_BLS381_SP_DSA( # TODO: Segfaulting at the moment
+        ECP_BLS381_SP_DSA(
           HashType.SHA256, rng.addr, ephemeralKey.addr,
           privkey.addr, msg.unsafeAddr, sigPair.c.addr, sigPair.d.addr
           ) == EcdhError.Ok
