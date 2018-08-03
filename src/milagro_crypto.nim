@@ -6,7 +6,10 @@
 import strutils, macros
 from os import DirSep
 
-const cSourcesPath = currentSourcePath.rsplit(DirSep, 1)[0] & "/generated"
+
+const
+  relPath = "/milagro_crypto/generated/"
+  cSourcesPath = currentSourcePath.rsplit(DirSep, 1)[0] & relPath
 {.passC: "-I" & cSourcesPath .}
 {.pragma: amcl, importc, cdecl.}
 
@@ -33,7 +36,7 @@ macro compileFilesFromDir(path: static[string], fileNameBody: untyped): untyped 
       )
     )
 
-compileFilesFromDir("generated/"):
+compileFilesFromDir(relPath):
   "oct.c"
   "aes.c"
   "hash.c"

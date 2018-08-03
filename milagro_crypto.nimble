@@ -1,7 +1,7 @@
 packageName   = "milagro_crypto"
 version       = "0.0.1"
 author        = "Status Research & Development GmbH"
-description   = ""
+description   = "Wrapper for the Apache Milagro Crypto Library"
 license       = "Apache License 2.0"
 srcDir        = "src"
 
