@@ -1,7 +1,9 @@
 # Nim Milagro Crypto Library
+
 [![Build Status (Travis)](https://img.shields.io/travis/status-im/nim-milagro-crypto/master.svg?label=Linux%20/%20macOS "Linux/macOS build status (Travis)")](https://travis-ci.org/status-im/nim-milagro-crypto)
-[![Windows build status (Appveyor)](https://img.shields.io/appveyor/ci/jarradh/nim-milagro-crypto/master.svg?label=Windows "Windows build status (Appveyor)")](https://travis-ci.org/jarradh/nim-milagro-crypto)
+[![Windows build status (Appveyor)](https://img.shields.io/appveyor/ci/nimbus/nim-milagro-crypto/master.svg?label=Windows "Windows build status (Appveyor)")](https://ci.appveyor.com/project/nimbus/nim-milagro-crypto)
 [![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 ![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)
 
 Wrapper for specific curve from [AMCL](https://github.com/milagro-crypto/amcl) and [Milagro-Crypto-C](https://github.com/milagro-crypto/milagro-crypto-c).
@@ -33,6 +35,7 @@ In the future, it may be possible to use Nim metaprogramming so we don't require
 
 ## License
 
-Licensed and distributed under the Apache v2 license (license terms in the root directory or at http://www.apache.org/licenses/LICENSE-2.0).
-This file may not be copied, modified, or distributed except according to those terms.
+Licensed under both of the following:
 
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license: [LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT
