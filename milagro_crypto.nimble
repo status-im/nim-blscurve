@@ -6,7 +6,7 @@ license       = "Apache License 2.0"
 srcDir        = "src"
 
 ### Dependencies
-requires "nim >= 0.18.1", "https://github.com/cheatfate/nimcrypto#master"
+requires "nim >= 0.18.1", "nimcrypto"
 
 ### Helper functions
 proc test(name: string, defaultLang = "c") =
