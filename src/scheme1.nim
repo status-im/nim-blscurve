@@ -49,73 +49,73 @@ const
   RawVerificationKeySize* = MODBYTES_384_29 * 4
   RawSignatureSize* = MODBYTES_384_29 * 2 + 1
 
-proc zero*(a: var BIG_384_29) {.inline.} =
+proc zero(a: var BIG_384_29) {.inline.} =
   ## Make big integer ``a`` be zero.
   for i in 0..<len(a):
     a[i] = 0
 
-proc bitsCount*(a: BIG_384_29): int {.inline.} =
+proc bitsCount(a: BIG_384_29): int {.inline.} =
   ## Returns number of bits in big integer ``a``.
   result = BIG_384_29_nbits(a)
 
-proc copy*(dst: var BIG_384_29, src: BIG_384_29) {.inline.} =
+proc copy(dst: var BIG_384_29, src: BIG_384_29) {.inline.} =
   ## Copy value if big integer ``src`` to ``dst``.
   BIG_384_29_copy(dst, src)
 
-proc shiftr*(a: var BIG_384_29, bits: int) {.inline.} =
+proc shiftr(a: var BIG_384_29, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
   BIG_384_29_shr(a, cint(bits))
 
-proc inf*(a: var ECP_BLS381) {.inline.} =
+proc inf(a: var ECP_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.
   ECP_BLS381_inf(addr a)
 
-proc isinf*(a: ECP_BLS381): bool {.inline.} =
+proc isinf(a: ECP_BLS381): bool {.inline.} =
   ## Check if ``a`` is infinite.
   var tmp = a
   result = (ECP_BLS381_isinf(addr tmp) != 0)
 
-proc isinf*(a: ECP2_BLS381): bool {.inline.} =
+proc isinf(a: ECP2_BLS381): bool {.inline.} =
   ## Check if ``a`` is infinite.
   var tmp = a
   result = (ECP2_BLS381_isinf(addr tmp) != 0)
 
-proc inf*(a: var ECP2_BLS381) {.inline.} =
+proc inf(a: var ECP2_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.
   ECP2_BLS381_inf(addr a)
 
-proc affine*(a: var ECP_BLS381) {.inline.} =
+proc affine(a: var ECP_BLS381) {.inline.} =
   ## Convert ``a`` from (x, y, z) to (x, y).
   ECP_BLS381_affine(addr a)
 
-proc affine*(a: var ECP2_BLS381) {.inline.} =
+proc affine(a: var ECP2_BLS381) {.inline.} =
   ## Convert ``a`` from (x, y, z) to (x, y, 1).
   ECP2_BLS381_affine(addr a)
 
-proc add*(a: var ECP2_BLS381, b: ECP2_BLS381) {.inline.} =
+proc add(a: var ECP2_BLS381, b: ECP2_BLS381) {.inline.} =
   ## Add point ``b`` to point ``a``.
   # ECP2_BLS381_add() always return 0.
   discard ECP2_BLS381_add(addr a, unsafeAddr b)
 
-proc add*(a: var ECP_BLS381, b: ECP_BLS381) {.inline.} =
+proc add(a: var ECP_BLS381, b: ECP_BLS381) {.inline.} =
   ## Add point ``b`` to point ``a``.
   ECP_BLS381_add(addr a, unsafeAddr b)
 
-proc mul*(a: var ECP2_BLS381, b: BIG_384_29) {.inline.} =
+proc mul(a: var ECP2_BLS381, b: BIG_384_29) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
   ECP2_BLS381_mul(addr a, b)
 
-proc mul*(a: var ECP_BLS381, b: BIG_384_29) {.inline.} =
+proc mul(a: var ECP_BLS381, b: BIG_384_29) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
   ECP_BLS381_mul(addr a, b)
 
-proc generator2*(): ECP2_BLS381 {.inline.} =
+proc generator2(): ECP2_BLS381 {.inline.} =
   ECP2_BLS381_generator(addr result)
 
-proc `==`*(a: FP12_BLS381, b: FP12_BLS381): bool {.inline.} =
+proc `==`(a: FP12_BLS381, b: FP12_BLS381): bool {.inline.} =
   result = (FP12_BLS381_equals(unsafeAddr a, unsafeAddr b) == 1)
 
-proc `$`*(a: BIG_384_29): string =
+proc `$`(a: BIG_384_29): string =
   ## Returns string hexadecimal representation of big integer ``a``.
   result = ""
   var b: BIG_384_29
@@ -137,13 +137,13 @@ proc `$`*(a: BIG_384_29): string =
       result.add(chr(ord('a') - 10 + alpha))
     dec(i)
 
-proc `$`*(r: FP_BLS381): string =
+proc `$`(r: FP_BLS381): string =
   ## Return string representation of ``FP_BLS381``.
   var c: BIG_384_29
   FP_BLS381_redc(c, unsafeAddr r)
   result = $c
 
-proc `$`*(w: FP2_BLS381): string =
+proc `$`(w: FP2_BLS381): string =
   ## Return string representation of ``FP2_BLS381``.
   var wx = w
   var bx, by: BIG_384_29
@@ -156,7 +156,7 @@ proc `$`*(w: FP2_BLS381): string =
   result.add($by)
   result.add("]")
 
-proc `$`*(w: FP4_BLS381): string =
+proc `$`(w: FP4_BLS381): string =
   ## Return string representation of ``FP4_BLS381``.
   result = "["
   result.add($w.a)
@@ -164,7 +164,7 @@ proc `$`*(w: FP4_BLS381): string =
   result.add($w.b)
   result.add("]")
 
-proc `$`*(w: FP12_BLS381): string =
+proc `$`(w: FP12_BLS381): string =
   ## Return string representation of ``FP12_BLS381``.
   result = "["
   result.add($w.a)
@@ -174,7 +174,7 @@ proc `$`*(w: FP12_BLS381): string =
   result.add($w.c)
   result.add("]")
 
-proc `$`*(p: ECP_BLS381): string =
+proc `$`(p: ECP_BLS381): string =
   ## Return string representation of ``ECP_BLS381``.
   if p.isinf():
     result = "INFINITY"
@@ -190,7 +190,7 @@ proc `$`*(p: ECP_BLS381): string =
     result.add($y)
     result.add(")")
 
-proc `$`*(p: ECP2_BLS381): string =
+proc `$`(p: ECP2_BLS381): string =
   ## Return string representation of ``ECP2_BLS381``.
   if p.isinf():
     result = "INFINITY"
@@ -204,8 +204,8 @@ proc `$`*(p: ECP2_BLS381): string =
     result.add($y)
     result.add(")")
 
-proc toBytes*(a: BIG_384_29, res: var array[MODBYTES_384_29, byte]) =
-  ## Serialize big integer ``a`` to ``res``.  
+proc toBytes(a: BIG_384_29, res: var array[MODBYTES_384_29, byte]) =
+  ## Serialize big integer ``a`` to ``res``.
   var c: BIG_384_29
   BIG_384_29_norm(a)
   BIG_384_29_copy(c, a)
@@ -215,7 +215,7 @@ proc toBytes*(a: BIG_384_29, res: var array[MODBYTES_384_29, byte]) =
     BIG_384_29_fshr(c, 8)
     dec(i)
 
-proc fromBytes*(res: var BIG_384_29, a: openarray[byte]): bool =
+proc fromBytes(res: var BIG_384_29, a: openarray[byte]): bool =
   ## Unserialize big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``MODBYTES_384_29``.
   let length = if len(a) > MODBYTES_384_29: MODBYTES_384_29 else: len(a)
@@ -224,12 +224,12 @@ proc fromBytes*(res: var BIG_384_29, a: openarray[byte]): bool =
     res[0] = res[0] + Chunk(a[i])
   result = true
 
-proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384_29 * 4, byte]) =
+proc toBytes(a: ECP2_BLS381, res: var array[MODBYTES_384_29 * 4, byte]) =
   var aclone = a
   var oct = Octet(max: MODBYTES_384_29 * 4, val: addr res[0])
   ECP2_BLS381_toOctet(addr oct, addr aclone)
 
-proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
+proc fromBytes(res: var ECP2_BLS381, a: openarray[byte]): bool =
   if len(a) < MODBYTES_384_29 * 4:
     result = false
   else:
@@ -237,7 +237,7 @@ proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
                     val: unsafeAddr a[0])
     result = (ECP2_BLS381_fromOctet(addr res, addr oct) == 1)
 
-proc toBytes*(a: ECP_BLS381, res: var array[MODBYTES_384_29 * 2 + 1, byte],
+proc toBytes(a: ECP_BLS381, res: var array[MODBYTES_384_29 * 2 + 1, byte],
               compressed = false) =
   ## Serialize point ``a`` to ``res`` in compressed (if ``compressed ==
   ## true``) or uncompressed (default) form.
@@ -254,7 +254,7 @@ proc toBytes*(a: ECP_BLS381, res: var array[MODBYTES_384_29 * 2 + 1, byte],
     BIG_384_29_toBytes(cast[ptr char](addr res[1]), x)
     BIG_384_29_toBytes(cast[ptr char](addr res[MODBYTES_384_29 + 1]), y)
 
-proc fromBytes*(res: var ECP_BLS381, a: openarray[byte]): bool =
+proc fromBytes(res: var ECP_BLS381, a: openarray[byte]): bool =
   ## Unserialize big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``MODBYTES_384_29 * 2 + 1`` for
   ## uncompressed signature, or at least ``MODBYTES_384_29 + 1`` for
@@ -274,12 +274,12 @@ proc fromBytes*(res: var ECP_BLS381, a: openarray[byte]): bool =
   else:
     result = false
 
-proc toBytes*(a: FP12_BLS381, res: var array[MODBYTES_384_29 * 12, byte]) =
+proc toBytes(a: FP12_BLS381, res: var array[MODBYTES_384_29 * 12, byte]) =
   ## Serialize FP12 ``a`` to ``res``.
   var oct = Octet(max: MODBYTES_384_29 * 12, val: addr res[0])
   FP12_BLS381_toOctet(addr oct, unsafeAddr a)
 
-proc fromBytes*(res: var FP12_BLS381, a: openarray[byte]): bool =
+proc fromBytes(res: var FP12_BLS381, a: openarray[byte]): bool =
   ## Unserialize FP12 from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``MODBYTES_384_29 * 12``.
   if len(a) != MODBYTES_384_29 * 12:
@@ -289,7 +289,7 @@ proc fromBytes*(res: var FP12_BLS381, a: openarray[byte]): bool =
                     val: unsafeAddr a[0])
     result = (FP12_BLS381_fromOctet(addr res, addr oct) == 1)
 
-proc mapit*(hash: MDigest[384]): GroupG1 =
+proc mapit(hash: MDigest[384]): GroupG1 =
   ## Map hash value ``hash`` to GroupG1 (ECP)
   var buffer: array[MODBYTES_384_29, byte]
   let pos = MODBYTES_384_29 - len(hash.data)
@@ -298,12 +298,12 @@ proc mapit*(hash: MDigest[384]): GroupG1 =
                   val: addr buffer[0])
   ECP_BLS381_mapit(addr result, addr oct)
 
-proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
+proc atePairing(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.
   PAIR_BLS381_ate(addr result, unsafeAddr pointG2, unsafeAddr pointG1)
   PAIR_BLS381_fexp(addr result)
 
-proc random*(a: var BIG_384_29) =
+proc random(a: var BIG_384_29) =
   ## Generates random big number `bit by bit` using nimcrypto's sysrand
   ## generator.
   var
@@ -327,7 +327,7 @@ proc random*(a: var BIG_384_29) =
     inc(j)
     j = j and 0x1F
 
-proc randomNum*(a: var BIG_384_29, q: BIG_384_29) =
+proc randomNum(a: var BIG_384_29, q: BIG_384_29) =
   ## Generates random big number `bit by bit` over modulo ``q`` using
   ## nimcrypto's sysrand generator.
   var
@@ -477,7 +477,7 @@ proc verifyMessage*(sig: Signature, msg: openarray[byte],
 
 proc hashVerkeyForAggregation(HashType: typedesc, verkey: VerKey,
                               allkeys: openarray[VerKey]): BIG_384_29 =
-  
+
   var ctx: HashType
   var serkey: array[RawVerificationKeySize, byte]
 
@@ -583,4 +583,4 @@ proc verifyMessage*[T](sig: AggregatedSignature, msg: openarray[T],
   ## Returns ``true`` if verification succeeded.
   var hh = blake2_384.digest(msg)
   var avk = initAggregatedKey(verkeys)
-  result = sig.verifyMessage(hh, avk)  
+  result = sig.verifyMessage(hh, avk)
