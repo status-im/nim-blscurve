@@ -1,3 +1,9 @@
+# Milagro should be compiled for C99.
+# This statement checks to see if we're using a backend other then C, and if not, passes C99.
+# We would just check for C except Nim only defines the other backends.
+when not defined(cpp) or defined(objc) or defined(js):
+  {.passC: "-std=c99".}
+
 import strutils
 from os import DirSep
 
@@ -91,7 +97,7 @@ proc BIG_384_29_dmod*(x: BIG_384_29, y: DBIG_384_29, n: BIG_384_29) {.
      millagro_func.}
 proc BIG_384_29_copy*(a: BIG_384_29, b: BIG_384_29) {.millagro_func.}
 proc BIG_384_29_norm*(a: BIG_384_29) {.millagro_func.}
-proc BIG_384_29_parity*(a: BIG_384_29): cint {.millagro_func.}  
+proc BIG_384_29_parity*(a: BIG_384_29): cint {.millagro_func.}
 
 proc PAIR_BLS381_ate*(res: ptr FP12_BLS381, p: ptr ECP2_BLS381,
                       q: ptr ECP_BLS381) {.millagro_func.}
