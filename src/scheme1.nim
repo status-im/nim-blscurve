@@ -550,13 +550,20 @@ proc initAggregatedKey*(verkeys: openarray[VerKey]): AggregatedVerKey =
 
 proc initAggregatedSignature*(
     pubkeys_sigs: tuple[
-      pubkeys: openarray[VerKey],
-      sigs: seq[Signature]
+      pkeys: openarray[VerKey],
+      signatures: openarray[Signature]
     ]): AggregatedSignature =
   ## Create Aggregated Signature from 2 arrays of signatures and
   ## verification keys.
   ## Important: This requires a proof of possession
   ## No sorting is done to prevent rogue key attacks
+
+  # Aliases
+  template pubkeys(): openarray[VerKey] =
+    pubkeys_sigs.pkeys
+  template sigs(): openarray[Signature] =
+    pubkeys_sigs.signatures
+
   doAssert pubkeys.len == sigs.len
 
   result.point.inf()
