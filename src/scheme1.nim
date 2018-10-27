@@ -550,7 +550,7 @@ proc initAggregatedKey*(verkeys: openarray[VerKey]): AggregatedVerKey =
 
 proc initAggregatedSignature*(
     pubkeys_sigs: tuple[
-      pkeys: seq[VerKey],
+      pubkeys: seq[VerKey],
       signatures: seq[Signature]
     ]): AggregatedSignature =
   ## Create Aggregated Signature from 2 arrays of signatures and
@@ -560,16 +560,16 @@ proc initAggregatedSignature*(
   # TODO: use a tuple of openarrays instead
 
   # Aliases
-  template pubkeys(): seq[VerKey] =
-    pubkeys_sigs.pkeys
+  template pkeys(): seq[VerKey] =
+    pubkeys_sigs.pubkeys
   template sigs(): seq[Signature] =
     pubkeys_sigs.signatures
 
-  doAssert pubkeys.len == sigs.len
+  doAssert pkeys.len == sigs.len
 
   result.point.inf()
-  for i in 0 ..< pubkeys.len:
-    var hh = blake2_384.hashVerkeyForAggregation(pubkeys[i], pubkeys)
+  for i in 0 ..< pkeys.len:
+    var hh = blake2_384.hashVerkeyForAggregation(pkeys[i], pkeys)
     var sig = sigs[i]
     sig.point.mul(hh)
     result.point.add(sig.point)
