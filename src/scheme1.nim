@@ -528,20 +528,41 @@ proc initAggregatedKey*(verkeys: openarray[VerKey]): AggregatedVerKey =
     result.point.add(key.point)
     result.point.affine()
 
-proc initAggregatedSignature*(sk: openarray[SigPair]): AggregatedSignature =
-  ## Create Aggregated Signature from array of signature and verification keys
-  ## pairs.
-  var sortsk = sorted(sk, cmp)
-  var keys = newSeq[VerKey]()
-  var sigs = newSeq[Signature]()
+# Due to BLS proof of possession in the beacon chain we don't need
+# to sort the keys to avoid rogue key attacks
+# proc initAggregatedSignature*(sk: openarray[SigPair]): AggregatedSignature =
+#   ## Create Aggregated Signature from array of signature and verification keys
+#   ## pairs.
+#   var sortsk = sorted(sk, cmp)
+#   var keys = newSeq[VerKey]()
+#   var sigs = newSeq[Signature]()
 
-  for item in sortsk:
-    keys.add(item.key)
+#   for item in sortsk:
+#     keys.add(item.key)
+
+#   result.point.inf()
+#   for item in sortsk:
+#     var hh = blake2_384.hashVerkeyForAggregation(item.key, keys)
+#     var sig = item.sig
+#     sig.point.mul(hh)
+#     result.point.add(sig.point)
+#     result.point.affine()
+
+proc initAggregatedSignature*(
+    pubkeys_sigs: tuple[
+      pubkeys: openarray[VerKey],
+      sigs: seq[Signature]
+    ]): AggregatedSignature =
+  ## Create Aggregated Signature from 2 arrays of signatures and
+  ## verification keys.
+  ## Important: This requires a proof of possession
+  ## No sorting is done to prevent rogue key attacks
+  doAssert pubkeys.len == sigs.len
 
   result.point.inf()
-  for item in sortsk:
-    var hh = blake2_384.hashVerkeyForAggregation(item.key, keys)
-    var sig = item.sig
+  for i in 0 ..< pubkeys.len:
+    var hh = blake2_384.hashVerkeyForAggregation(pubkeys[i], pubkeys)
+    var sig = sigs[i]
     sig.point.mul(hh)
     result.point.add(sig.point)
     result.point.affine()
