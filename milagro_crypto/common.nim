@@ -273,7 +273,7 @@ proc random*(a: var BIG_384) =
       inc(k)
     else:
       rndByte = rndByte shr 1
-    let bit = int(rndByte and 1'u8)
+    let bit = Chunk(rndByte and 1'u8)
     BIG_384_shl(a, 1)
     a[0] = a[0] + bit
     inc(j)
@@ -299,7 +299,7 @@ proc randomNum*(a: var BIG_384, q: BIG_384) =
       inc(k)
     else:
       rndByte = rndByte shr 1
-    let bit = int(rndByte and 1'u8)
+    let bit = Chunk(rndByte and 1'u8)
     BIG_384_dshl(d, 1)
     d[0] = d[0] + bit
     inc(j)
