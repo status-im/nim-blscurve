@@ -9,9 +9,9 @@
 
 import unittest
 import nimcrypto/[sysrand, hash, blake2, utils]
-import ../milagro_crypto/[internals, common, scheme1]
+import ../milagro_crypto/[internals, common, scheme2]
 
-suite "[SCHEME1] BLS381 test suite (private procs)":
+suite "[SCHEME2] BLS381 test suite (private procs)":
   test "Simple infinity signature test":
     var kp = newKeyPair()
     let vk = kp.verkey
@@ -27,6 +27,9 @@ suite "[SCHEME1] BLS381 test suite (private procs)":
     var keypair1 = newKeyPair()
     var keypair2 = newKeyPair()
     var hh = blake2_384.digest("Small msg")
-    var asig: AggregatedSignature
+    var asig: Signature
+    var akey: VerKey
     asig.point.inf()
-    check asig.verifyMessage(hh, [keypair1.verkey, keypair2.verkey]) == false
+    akey = keypair1.verkey
+    akey.combine(keypair2.verkey)
+    check asig.verifyMessage(hh, akey) == false

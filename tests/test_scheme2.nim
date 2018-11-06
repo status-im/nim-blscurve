@@ -9,7 +9,7 @@
 
 import unittest
 import nimcrypto/[sysrand, hash, blake2, utils]
-import ../milagro_crypto/scheme1
+import ../milagro_crypto/scheme2
 
 const messages = [
   "Small msg", "121220888888822111212",
@@ -18,7 +18,7 @@ const messages = [
   " is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
 ]
 
-suite "[SCHEME1] BLS381 test suite (public interface)":
+suite "[SCHEME2] BLS381 test suite (public interface)":
   test "Simple successful sign/verification tests":
     const messages = [
       "Small msg", "121220888888822111212",
@@ -53,24 +53,26 @@ suite "[SCHEME1] BLS381 test suite (public interface)":
     for message in messages:
       var hh = blake2_384.digest(message)
       var vks = newSeq[VerKey]()
-      var svks = newSeq[SigPair]()
+      var svks = newSeq[Signature]()
       for i in 0..<5:
         let kp = kps[i]
         var signature = kp.sigkey.signMessage(hh)
         check signature.verifyMessage(hh, kp.verkey) == true
-        svks.add(SigPair(sig: signature, key: kp.verkey))
+        svks.add(signature)
         vks.add(kp.verkey)
-      var asig = initAggregatedSignature(svks)
-      var akey = initAggregatedKey(vks)
+      var asig = combine(svks)
+      var akey1 = combine(vks)
+      var akey2 = combine(vks[0..3])
       check:
-        asig.verifyMessage(hh, vks) == true
-        asig.verifyMessage(hh, akey) == true
-        asig.verifyMessage(hh, vks[0..3]) == false
+        asig.verifyMessage(hh, akey1) == true
+        asig.verifyMessage(hh, akey2) == false
+
       # replace position of keys
       var temp = vks[2]
       vks[2] = vks[4]
       vks[4] = temp
-      check asig.verifyMessage(hh, vks) == true
+      var akey3 = combine(vks)
+      check asig.verifyMessage(hh, akey3) == true
 
   test "Signature Key serialize/deserialize test":
     for i in 0..<100:
@@ -126,3 +128,11 @@ suite "[SCHEME1] BLS381 test suite (public interface)":
         expectsig == ckhex2
         expectsig == $ns1
         expectsig == $ns2
+
+  test "Proof Of Posession test":
+    var keypair1 = newKeyPair()
+    var keypair2 = newKeyPair()
+    var proof = keypair1.generatePoP()
+    check:
+      proof.verifyPop(keypair1.verkey) == true
+      proof.verifyPop(keypair2.verkey) == false
