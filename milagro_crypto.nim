@@ -3,5 +3,5 @@
 # Licensed and distributed under the Apache v2 license (license terms in the root directory or at http://www.apache.org/licenses/LICENSE-2.0).
 # This file may not be copied, modified, or distributed except according to those terms.
 
-import milagro_crypto/[common, scheme1]
-export common, scheme1
+import milagro_crypto/[common, scheme2]
+export common, scheme2
