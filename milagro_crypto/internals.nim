@@ -116,7 +116,7 @@ when sizeof(int) == 4:
        importc: "BIG_384_29_toBytes", cdecl.}
   proc BIG_384_output*(a: BIG_384) {.
        importc: "BIG_384_29_output", cdecl.}
-  proc BIG_384_comp*(a: BIG_384, b: BIG_384): cint {.
+  proc BIG_384_29_comp*(a: BIG_384, b: BIG_384): cint {.
        importc: "BIG_384_29_comp", cdecl.}
   proc BIG_384_nbits*(a: BIG_384): cint {.
        importc: "BIG_384_29_nbits", cdecl.}
@@ -166,6 +166,10 @@ elif sizeof(int) == 8:
   proc BIG_384_parity*(a: BIG_384): cint {.
        importc: "BIG_384_58_parity", cdecl.}
 
+proc FP_BLS381_norm*(x: ptr FP_BLS381) {.milagro_func.}
+proc FP2_BLS381_norm*(x: ptr FP2_BLS381) {.milagro_func.}
+proc FP_BLS381_neg*(r: ptr FP_BLS381, a: ptr FP_BLS381) {.milagro_func.}
+proc FP2_BLS381_neg*(r: ptr FP2_BLS381, a: ptr FP2_BLS381) {.milagro_func.}
 proc PAIR_BLS381_ate*(res: ptr FP12_BLS381, p: ptr ECP2_BLS381,
                       q: ptr ECP_BLS381) {.milagro_func.}
 proc PAIR_BLS381_double_ate*(res: ptr FP12_BLS381, p: ptr ECP2_BLS381,
@@ -198,6 +202,7 @@ proc ECP2_BLS381_mul*(p: ptr ECP2_BLS381, e: BIG_384) {.milagro_func.}
 proc ECP2_BLS381_toOctet*(w: ptr Octet, q: ptr ECP2_BLS381) {.milagro_func.}
 proc ECP2_BLS381_fromOctet*(q: ptr ECP2_BLS381, w: ptr Octet): cint {.
      milagro_func.}
+proc ECP2_BLS381_mapit*(p: ptr ECP2_BLS381, w: ptr Octet) {.milagro_func.}
 proc ECP2_BLS381_add*(p: ptr ECP2_BLS381, q: ptr ECP2_BLS381): cint {.
      milagro_func.}
 proc ECP2_BLS381_generator*(g: ptr ECP2_BLS381) {.milagro_func.}
@@ -205,6 +210,8 @@ proc ECP2_BLS381_get*(x: ptr FP2_BLS381, y: ptr FP2_BLS381,
                       p: ptr ECP2_BLS381): cint {.milagro_func.}
 proc ECP2_BLS381_affine*(p: ptr ECP2_BLS381) {.milagro_func.}
 proc ECP2_BLS381_equals*(p: ptr ECP2_BLS381, q: ptr ECP2_BLS381): cint {.
+     milagro_func.}
+proc ECP2_BLS381_setx*(p: ptr ECP2_BLS381, x: ptr FP2_BLS381): cint {.
      milagro_func.}
 
 proc FP_BLS381_redc*(x: BIG_384, y: ptr FP_BLS381) {.milagro_func.}

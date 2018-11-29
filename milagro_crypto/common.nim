@@ -1,6 +1,7 @@
 import algorithm
 import nimcrypto/[sysrand, utils, hash, blake2]
 import internals
+export internals
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 
@@ -20,6 +21,42 @@ proc copy*(dst: var BIG_384, src: BIG_384) {.inline.} =
 proc shiftr*(a: var BIG_384, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
   BIG_384_shr(a, cint(bits))
+
+proc cmp*(a: BIG_384, b: BIG_384): cint {.inline.} =
+  ## Compares two big integers, inputs must be normalized externally
+  ##
+  ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
+  result = BIG_384_comp(a, b)
+
+proc cmp*(a: FP2_BLS381, b: FP2_BLS381): cint {.inline.} =
+  ## Compares two FP2 field members.
+  ##
+  ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
+  var x = a
+  var y = b
+  FP2_BLS381_norm(addr x)
+  FP2_BLS381_norm(addr y)
+  result = cmp(x.b.g, y.b.g)
+  if result == 0:
+    result = cmp(x.a.g, y.a.g)
+
+proc cmp*(a: FP_BLS381, b: FP_BLS381): cint {.inline.} =
+  ## Compares two FP field members
+  ##
+  ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
+  var x = a
+  var y = b
+  FP_BLS381_norm(addr x)
+  FP_BLS381_norm(addr y)
+  result = cmp(x.g, y.g)
+
+proc neg*(a: FP_BLS381): FP_BLS381 {.inline.} =
+  result = a
+  FP_BLS381_neg(addr result, unsafeAddr a)
+
+proc neg*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  result = a
+  FP2_BLS381_neg(addr result, unsafeAddr a)
 
 proc inf*(a: var ECP_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.
@@ -63,6 +100,15 @@ proc mul*(a: var ECP2_BLS381, b: BIG_384) {.inline.} =
 proc mul*(a: var ECP_BLS381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
   ECP_BLS381_mul(addr a, b)
+
+proc get*(a: ECP2_BLS381, x, y: var FP2_BLS381): int {.inline.} =
+  result = int(ECP2_BLS381_get(addr x, addr y, unsafeAddr a))
+
+proc setx*(p: var ECP2_BLS381, x: FP2_BLS381): int {.inline.} =
+  result = int(ECP2_BLS381_setx(addr p, unsafeAddr x))
+
+proc generator1*(): ECP_BLS381 {.inline.} =
+  ECP_BLS381_generator(addr result)
 
 proc generator2*(): ECP2_BLS381 {.inline.} =
   ECP2_BLS381_generator(addr result)
@@ -176,10 +222,20 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
     res[0] = res[0] + Chunk(a[i])
   result = true
 
-proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte]) =
-  var aclone = a
-  var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
-  ECP2_BLS381_toOctet(addr oct, addr aclone)
+# proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte]) =
+#   var aclone = a
+#   var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
+#   ECP2_BLS381_toOctet(addr oct, addr aclone)
+
+proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte],
+              compressed = false) =
+  if compressed:
+    discard
+  else:
+    var aclone = a
+    var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
+    ECP2_BLS381_toOctet(addr oct, addr aclone)
+
 
 proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
   if len(a) < MODBYTES_384 * 4:
@@ -241,14 +297,23 @@ proc fromBytes*(res: var FP12_BLS381, a: openarray[byte]): bool =
                     val: unsafeAddr a[0])
     result = (FP12_BLS381_fromOctet(addr res, addr oct) == 1)
 
-proc mapit*(hash: MDigest[384]): GroupG1 =
-  ## Map hash value ``hash`` to GroupG1 (ECP)
+proc mapit*(hash: MDigest[384]): ECP_BLS381 =
+  ## Map hash value ``hash`` to ECP
   var buffer: array[MODBYTES_384, byte]
   let pos = MODBYTES_384 - len(hash.data)
   copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
   var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
                   val: addr buffer[0])
   ECP_BLS381_mapit(addr result, addr oct)
+
+proc mapit2*(hash: MDigest[384]): ECP2_BLS381 =
+  ## Map hash value ``hash`` to ECP2
+  var buffer: array[MODBYTES_384, byte]
+  let pos = MODBYTES_384 - len(hash.data)
+  copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
+  var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
+                  val: addr buffer[0])
+  ECP2_BLS381_mapit(addr result, addr oct)
 
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.
