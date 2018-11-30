@@ -57,19 +57,70 @@ proc toRaw*(sigkey: SigKey, data: var openarray[byte]) =
   var buffer = getRaw(sigkey)
   copyMem(addr data[0], addr buffer[0], RawSignatureKeySize)
 
+# proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
+#   ## Converts Verification key ``verkey`` to serialized form.
+#   var output: array[MODBYTES_384 * 2 + 1, byte]
+#   toBytes(verkey.point, output, true)
+#   # Check if highest 3 bits are `0`.
+#   assert((output[1] and 0xE0'u8) == 0'u8)
+#   echo "output = ", output[0]
+#   # compressed format marker
+#   output[1] = output[1] or (1'u8 shl 7)
+#   if verkey.point.isinf():
+#     output[1] = output[1] or (1'u8 shl 6)
+#   else:
+#     if output[0] == 0x02:
+#       output[1] = output[1] or (1'u8 shl 5)
+#   copyMem(addr result[0], addr output[1], RawVerificationKeySize)
+
+# proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
+#   var x, y: BIG384
+#   if verkey.point.get(x, y) == -1:
+#     result[0] = result[0] or 0xC0
+#   else:
+#     toBytes(x, result)
+#     assert((result[0] and 0xE0'u8) == 0'u8)
+#     result[0] = result[0] or (1'u8 shl 7)
+#     var negy = verkey.point.y.neg()
+#     if cmp(verkey.point.y, negy) > 0:
+#       result[0] = result[0] or (1'u8 shl 5)
+
 proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
-  ## Converts Verification key ``verkey`` to serialized form.
-  var output: array[MODBYTES_384 * 2 + 1, byte]
-  toBytes(verkey.point, output, true)
-  # Check if highest 3 bits are `0`.
-  assert((output[1] and 0xE0'u8) == 0'u8)
-  # compressed format marker
-  output[1] = output[1] or 0x80 
-  if output[0] == 0x02:
-    output[1] = output[1] or 0x20'u8
-  elif output[0] == 0x03:
-    output[1] = output[1] or 0x40'u8
-  copyMem(addr result[0], addr output[1], RawVerificationKeySize)
+  ## Serialization in compressed form.
+  var x, y: BIG384
+  let res = verkey.point.get(x, y)
+  if res == -1:
+    result[0] = result[0] or 0xC0
+  else:
+    echo res
+    toBytes(x, result)
+    assert((result[0] and 0xE0'u8) == 0'u8)
+    result[0] = result[0] or (1'u8 shl 7)
+
+proc getRawFull*(verkey: VerKey): array[RawVerificationKeySize * 2, byte] =
+  ## This is serialization in non-compressed form.
+  var x, y: BIG384
+  var buffer: array[MODBYTES_384, byte]
+  let res = verkey.point.get(x, y)
+  if res == -1:
+    result[0] = result[0] or 0xC0
+  else:
+    var posy0 = verkey.point.y
+    var posy1 = posy0
+    var negy0 = neg(posy0)
+    var negy1 = negy0
+    norm(negy1)
+    norm(posy1)
+    echo "nn(y) and nn(neg(y)): ", cmp(posy0, negy0)
+    echo "nn(y) and n(neg(y)): ", cmp(posy0, negy1)
+    echo "n(y) and nn(neg(y)): ", cmp(posy1, negy0)
+    echo "n(y) and n(neg(y)): ", cmp(posy1, negy1)
+    toBytes(x, buffer)
+    copyMem(addr result[0], addr buffer[0], MODBYTES_384)
+    toBytes(y, buffer)
+    copyMem(addr result[MODBYTES_384], addr buffer[0], MODBYTES_384)
+    # assert((result[0] and 0xE0'u8) == 0'u8)
+    # result[0] = result[0] or (1'u8 shl 7)
 
 proc toRaw*(verkey: VerKey, data: var openarray[byte]) =
   ## Converts Verification key ``verkey`` to serialized form and store it to
@@ -78,24 +129,33 @@ proc toRaw*(verkey: VerKey, data: var openarray[byte]) =
   var buffer = getRaw(verkey)
   copyMem(addr data[0], addr buffer[0], RawVerificationKeySize)
 
-# proc getRaw*(sig: Signature): array[RawSignatureSize, byte] =
-#   ## Converts Signature ``sig`` to serialized form.
-#   var output: array[MODBYTES_384 * 2, byte]
+proc getRaw*(sig: Signature): array[RawSignatureSize, byte] =
+  ## Converts Signature ``sig`` to compressed serialized form.
+  var x, y: FP2_BLS381
+  var b0, b1: BIG_384
+  var buffer: array[MODBYTES_384, byte]
 
-#   toBytes(sig.point, output, true)
-#   # Check if highest 3 bits are `0`.
-#   assert((output[1] and 0xE0'u8) == 0'u8)
-#   if output[0] == 0x02:
-#     output[1] = output[1] or 0x40'u8
-#   elif output[0] == 0x03:
-#     output[1] = output[1] or 0x60'u8
-#   copyMem(addr result[0], addr output[1], RawSignatureSize)
+  if sig.point.get(x, y) == -1:
+    result[0] = result[0] or 0xC0
+  else:
+    FP_BLS381_redc(b0, addr x.b)
+    FP_BLS381_redc(b1, addr x.a)
+    toBytes(b0, buffer)
+    copyMem(addr result[0], addr buffer[0], MODBYTES_384)
+    toBytes(b1, buffer)
+    copyMem(addr result[MODBYTES_384], addr buffer[0], MODBYTES_384)
+    assert((result[0] and 0xE0'u8) == 0'u8)
+    result[0] = result[0] or (1'u8 shl 7)
+    var negy = y.neg()
+    if cmp(y, negy) > 0:
+      result[0] = result[0] or (1'u8 shl 5)
 
-# proc toRaw*(sig: Signature, data: var openarray[byte]) =
-#   ## Converts Signature ``sig`` to serialized form and store it to ``data``.
-#   assert(len(data) >= RawSignatureSize)
-#   var buffer = getRaw(sig)
-#   copyMem(addr data[0], addr buffer[0], RawSignatureSize)
+proc toRaw*(sig: Signature, data: var openarray[byte]) =
+  ## Converts Signature ``sig`` to compressed serialized form and
+  ## store it to ``data``.
+  assert(len(data) >= RawSignatureSize)
+  var buffer = getRaw(sig)
+  copyMem(addr data[0], addr buffer[0], RawSignatureSize)
 
 proc initSigKey*(data: openarray[byte]): SigKey =
   ## Initialize Signature key from serialized form ``data``.
@@ -239,10 +299,48 @@ proc newKeyPair*(): KeyPair =
 when isMainModule:
   import nimcrypto, hexdump
 
-  var a = generator1()
-  var vk: VerKey
-  vk.point = a
-  echo dumpHex(vk.getRaw())
+  ## XXX
+  ## This is just dump procedure from rust implementation test vectors
+  ## you can uncomment it and execute
+  
+  # block:
+  #   var file = open("g1_compressed_valid_test_vectors.dat")
+  #   var expect = newSeq[byte](48000)
+  #   assert(readBytes(file, expect, 0, 48000) == 48000)
+  #   close(file)
+  #   for i in 0..<10:
+  #     let offset = i * 48
+  #     let ch = expect[offset] and (1'u8 shl 5)
+  #     echo ch
+  #     echo dumpHex(expect.toOpenArray(offset, offset + 47))
+
+
+  block:
+    var a: ECP_BLS381
+    inf(a)
+    var vk: VerKey
+    vk.point = a
+    for i in 0..<10:
+      echo dumpHex(vk.getRawFull())
+      add(vk.point, generator1())
+
+  ## This is full test of G2 serialization
+  ## 
+  
+  # block:
+  #   var file = open("g2_compressed_valid_test_vectors.dat")
+  #   var expect = newSeq[byte](96000)
+  #   assert(readBytes(file, expect, 0, 96000) == 96000)
+  #   close(file)
+  #   var a: ECP2_BLS381
+  #   inf(a)
+  #   var sig: Signature
+  #   sig.point = a
+  #   for i in 0..<1000:
+  #     echo i
+  #     var check = sig.getRaw()
+  #     assert(equalMem(addr check[0], addr expect[i * 96], 96) == true)
+  #     add(sig.point, generator2())
 
 
   # var pair = newKeyPair()
@@ -258,7 +356,7 @@ when isMainModule:
   # var x0, y0: FP2_BLS381
   # var x1, y1: FP2_BLS381
   # echo "result = ", sig.point.get(x0, y0)
-  
+
   # var re: ECP2_BLS381
   # echo "result = ", setx(re, x0)
   # # echo "calculated y"
@@ -279,7 +377,7 @@ when isMainModule:
   # echo "restored ", verifyMessage(sig, h1, pair.verkey)
 
 
-  
+
 
 
   # # echo "original"

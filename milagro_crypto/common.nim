@@ -22,33 +22,37 @@ proc shiftr*(a: var BIG_384, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
   BIG_384_shr(a, cint(bits))
 
-proc cmp*(a: BIG_384, b: BIG_384): cint {.inline.} =
+proc norm*(a: BIG_384) {.inline.} =
+  ## Normalize big integer value.
+  ## All digits of the input are reduced ``mod 2^BASEBITS``.
+  discard BIG_384_norm(a)
+
+proc norm*(a: var FP_BLS381) {.inline.} =
+  ## Normalize FP field member.
+  FP_BLS381_norm(addr a)
+
+proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Compares two big integers, inputs must be normalized externally
   ##
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
-  result = BIG_384_comp(a, b)
+  result = int(BIG_384_comp(a, b))
 
-proc cmp*(a: FP2_BLS381, b: FP2_BLS381): cint {.inline.} =
-  ## Compares two FP2 field members.
-  ##
-  ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
-  var x = a
-  var y = b
-  FP2_BLS381_norm(addr x)
-  FP2_BLS381_norm(addr y)
-  result = cmp(x.b.g, y.b.g)
-  if result == 0:
-    result = cmp(x.a.g, y.a.g)
-
-proc cmp*(a: FP_BLS381, b: FP_BLS381): cint {.inline.} =
+proc cmp*(a: FP_BLS381, b: FP_BLS381): int {.inline.} =
   ## Compares two FP field members
   ##
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
-  var x = a
-  var y = b
-  FP_BLS381_norm(addr x)
-  FP_BLS381_norm(addr y)
-  result = cmp(x.g, y.g)
+  var ab, bb: BIG_384
+  FP_BLS381_redc(ab, unsafeAddr a)
+  FP_BLS381_redc(bb, unsafeAddr b)
+  result = cmp(ab, bb)
+
+proc cmp*(a: FP2_BLS381, b: FP2_BLS381): int {.inline.} =
+  ## Compares two FP2 field members.
+  ##
+  ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
+  result = cmp(a.b, b.b)
+  if result == 0:
+    result = cmp(a.a, b.a)
 
 proc neg*(a: FP_BLS381): FP_BLS381 {.inline.} =
   result = a
@@ -104,8 +108,14 @@ proc mul*(a: var ECP_BLS381, b: BIG_384) {.inline.} =
 proc get*(a: ECP2_BLS381, x, y: var FP2_BLS381): int {.inline.} =
   result = int(ECP2_BLS381_get(addr x, addr y, unsafeAddr a))
 
+proc get*(a: ECP_BLS381, x, y: var BIG_384): int {.inline.} =
+  result = int(ECP_BLS381_get(x, y, unsafeAddr a))
+
 proc setx*(p: var ECP2_BLS381, x: FP2_BLS381): int {.inline.} =
   result = int(ECP2_BLS381_setx(addr p, unsafeAddr x))
+
+proc setx*(p: var ECP_BLS381, x: BIG_384, sign: int): int {.inline.} =
+  result = int(ECP_BLS381_setx(addr p, x, cint(sign)))
 
 proc generator1*(): ECP_BLS381 {.inline.} =
   ECP_BLS381_generator(addr result)
@@ -227,15 +237,14 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
 #   var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
 #   ECP2_BLS381_toOctet(addr oct, addr aclone)
 
-proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte],
-              compressed = false) =
-  if compressed:
-    discard
-  else:
-    var aclone = a
-    var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
-    ECP2_BLS381_toOctet(addr oct, addr aclone)
-
+# proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte],
+#               compressed = false) =
+#   if compressed:
+#     discard
+#   else:
+#     var aclone = a
+#     var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
+#     ECP2_BLS381_toOctet(addr oct, addr aclone)
 
 proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
   if len(a) < MODBYTES_384 * 4:
