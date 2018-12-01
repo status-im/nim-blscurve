@@ -89,6 +89,13 @@ proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
   ## Serialization in compressed form.
   var x, y: BIG384
   let res = verkey.point.get(x, y)
+
+  # Determine which mirrored y coordinate this point has
+  var negationBuf: FP_BLS381
+  FP_BLS381_nres(addr negationBuf, y)
+  var negy = negationBuf.neg
+  negy.norm
+
   if res == -1:
     result[0] = result[0] or 0xC0
   else:
@@ -96,6 +103,8 @@ proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
     toBytes(x, result)
     assert((result[0] and 0xE0'u8) == 0'u8)
     result[0] = result[0] or (1'u8 shl 7)
+    if cmp(negationBuf, negy) == 1:
+      result[0] = result[0] or (1'u8 shl 5)
 
 proc getRawFull*(verkey: VerKey): array[RawVerificationKeySize * 2, byte] =
   ## This is serialization in non-compressed form.
@@ -316,12 +325,20 @@ when isMainModule:
 
 
   block:
+    var file = open("g1_compressed_valid_test_vectors.dat")
+    var expect = newSeq[byte](48000)
+    assert(readBytes(file, expect, 0, 48000) == 48000)
+    close(file)
     var a: ECP_BLS381
     inf(a)
     var vk: VerKey
     vk.point = a
-    for i in 0..<10:
+    for i in 0..<1000:
       echo dumpHex(vk.getRawFull())
+      let offset = i * 48
+      let isCorrect = vk.getRaw() == expect.toOpenArray(offset, offset + 47)
+      debugEcho isCorrect
+      doAssert isCorrect
       add(vk.point, generator1())
 
   ## This is full test of G2 serialization

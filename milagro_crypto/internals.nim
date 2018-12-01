@@ -216,6 +216,7 @@ proc ECP2_BLS381_setx*(p: ptr ECP2_BLS381, x: ptr FP2_BLS381): cint {.
 proc ECP_BLS381_setx*(p: ptr ECP_BLS381, x: BIG_384, s: cint): cint {.
      milagro_func.}
 proc FP_BLS381_redc*(x: BIG_384, y: ptr FP_BLS381) {.milagro_func.}
+proc FP_BLS381_nres*(y: ptr FP_BLS381, x: BIG_384) {.milagro_func.}
 
 proc FP2_BLS381_reduce*(w: ptr FP2_BLS381) {.milagro_func.}
 
