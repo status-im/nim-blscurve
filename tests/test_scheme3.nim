@@ -7,7 +7,7 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-import unittest
+import unittest, ospaths
 import nimcrypto/[sysrand, hash, blake2, utils]
 import ../milagro_crypto/scheme3
 
@@ -76,7 +76,7 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
       check asig.verifyMessage(hh, akey3) == true
 
   test "Verification Key compressed serialization test vectors":
-    var file = open("g1_compressed_valid_test_vectors.dat")
+    var file = open("tests" / "g1_compressed_valid_test_vectors.dat")
     var expect = newSeq[byte](48000)
     assert(readBytes(file, expect, 0, 48000) == 48000)
     close(file)
@@ -90,7 +90,7 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
       vk.point.add(generator1())
 
   test "Verification key non-compressed serialization test vectors":
-    var file = open("g1_uncompressed_valid_test_vectors.dat")
+    var file = open("tests" / "g1_uncompressed_valid_test_vectors.dat")
     var expect = newSeq[byte](96000)
     assert(readBytes(file, expect, 0, 96000) == 96000)
     close(file)
@@ -104,7 +104,7 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
       vk.point.add(generator1())
 
   test "Signature compressed serialization test vectors":
-    var file = open("g2_compressed_valid_test_vectors.dat")
+    var file = open("tests" / "g2_compressed_valid_test_vectors.dat")
     var expect = newSeq[byte](96000)
     assert(readBytes(file, expect, 0, 96000) == 96000)
     close(file)
@@ -118,7 +118,7 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
       sig.point.add(generator2())
 
   test "Signature non-compressed serialization test vectors":
-    var file = open("g2_uncompressed_valid_test_vectors.dat")
+    var file = open("tests" / "g2_uncompressed_valid_test_vectors.dat")
     var expect = newSeq[byte](192000)
     assert(readBytes(file, expect, 0, 192000) == 192000)
     close(file)
