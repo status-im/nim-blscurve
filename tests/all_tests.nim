@@ -11,4 +11,6 @@ import
   ./test_scheme1_private,
   ./test_scheme1,
   ./test_scheme2_private,
-  ./test_scheme2
+  ./test_scheme2,
+  ./test_scheme3_private,
+  ./test_scheme3

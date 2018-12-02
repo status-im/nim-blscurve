@@ -4,6 +4,7 @@ import internals
 export internals
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
+var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
 
 proc zero*(a: var BIG_384) {.inline.} =
   ## Make big integer ``a`` be zero.
@@ -30,6 +31,10 @@ proc norm*(a: BIG_384) {.inline.} =
 proc norm*(a: var FP_BLS381) {.inline.} =
   ## Normalize FP field member.
   FP_BLS381_norm(addr a)
+
+proc nres*(a: BIG_384): FP_BLS381 {.inline.} =
+  ## Convert big integer value to residue form mod Modulus.
+  FP_BLS381_nres(addr result, a)
 
 proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Compares two big integers, inputs must be normalized externally
@@ -61,6 +66,9 @@ proc neg*(a: FP_BLS381): FP_BLS381 {.inline.} =
 proc neg*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
   result = a
   FP2_BLS381_neg(addr result, unsafeAddr a)
+
+proc neg*(a: var ECP2_BLS381) {.inline.} =
+  ECP2_BLS381_neg(addr a)
 
 proc inf*(a: var ECP_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.
@@ -106,16 +114,63 @@ proc mul*(a: var ECP_BLS381, b: BIG_384) {.inline.} =
   ECP_BLS381_mul(addr a, b)
 
 proc get*(a: ECP2_BLS381, x, y: var FP2_BLS381): int {.inline.} =
+  ## Get coordinates ``x`` and ``y`` from point ``a``.
   result = int(ECP2_BLS381_get(addr x, addr y, unsafeAddr a))
 
 proc get*(a: ECP_BLS381, x, y: var BIG_384): int {.inline.} =
+  ## Get coordinates ``x`` and ``y`` from point ``a``.
   result = int(ECP_BLS381_get(x, y, unsafeAddr a))
 
-proc setx*(p: var ECP2_BLS381, x: FP2_BLS381): int {.inline.} =
-  result = int(ECP2_BLS381_setx(addr p, unsafeAddr x))
+proc setx*(p: var ECP2_BLS381, x: FP2_BLS381, greatest: bool): int =
+  ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
+  ## 
+  ## This is custom `setx` procedure which works in way compatible to
+  ## rust's library https://github.com/zkcrypto/pairing.
+  var y, negy: FP2_BLS381
+  ECP2_BLS381_rhs(addr y, unsafeAddr x)
+  if FP2_BLS381_sqrt(addr y, addr y) != 1:
+    ECP2_BLS381_inf(addr p)
+    result = 0
+  else:
+    FP2_BLS381_copy(addr negy, addr y)
+    FP2_BLS381_neg(addr negy, addr negy)
+    FP2_BLS381_copy(addr p.x, unsafeAddr x)
+    if not((cmp(y, negy) < 0) xor greatest):
+      FP2_BLS381_copy(addr p.y, addr negy)
+    else: 
+      FP2_BLS381_copy(addr p.y, addr y)
+    FP2_BLS381_one(addr p.z)
+    result = 1
 
-proc setx*(p: var ECP_BLS381, x: BIG_384, sign: int): int {.inline.} =
-  result = int(ECP_BLS381_setx(addr p, x, cint(sign)))
+proc setx*(p: var ECP_BLS381, x: BIG_384, greatest: bool): int =
+  ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
+  ## 
+  ## This is custom `setx` procedure which works in way compatible to
+  ## rust's library https://github.com/zkcrypto/pairing.
+  var rhs, negy: FP_BLS381
+  var t, m: BIG_384
+  BIG_384_rcopy(m, FIELD_Modulus)
+  FP_BLS381_nres(addr rhs, x)
+  ECP_BLS381_rhs(addr rhs, addr rhs)
+  FP_BLS381_redc(t, addr rhs)
+  if BIG_384_jacobi(t, m) != 1:
+    p.inf()
+    result = 0
+  else:
+    FP_BLS381_nres(addr p.x, x)
+    FP_BLS381_sqrt(addr p.y, addr rhs)
+    FP_BLS381_redc(t, addr p.y)
+    FP_BLS381_neg(addr negy, addr p.y)
+    FP_BLS381_norm(addr negy)
+    if not((cmp(p.y, negy) < 0) xor greatest):
+      p.y = negy
+    FP_BLS381_reduce(addr p.y)
+    FP_BLS381_one(addr p.z)
+    result = 1
+
+proc fromBigs*(p: var FP2_BLS381, x, y: BIG_384) {.inline.} =
+  ## Set value of ``p`` from two big integers ``x`` and ``y``.
+  FP2_BLS381_from_BIGs(addr p, x, y)
 
 proc generator1*(): ECP_BLS381 {.inline.} =
   ECP_BLS381_generator(addr result)
@@ -232,20 +287,6 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
     res[0] = res[0] + Chunk(a[i])
   result = true
 
-# proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte]) =
-#   var aclone = a
-#   var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
-#   ECP2_BLS381_toOctet(addr oct, addr aclone)
-
-# proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte],
-#               compressed = false) =
-#   if compressed:
-#     discard
-#   else:
-#     var aclone = a
-#     var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
-#     ECP2_BLS381_toOctet(addr oct, addr aclone)
-
 proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
   if len(a) < MODBYTES_384 * 4:
     result = false
@@ -253,6 +294,11 @@ proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
     var oct = Octet(len: MODBYTES_384 * 4, max: MODBYTES_384 * 4,
                     val: unsafeAddr a[0])
     result = (ECP2_BLS381_fromOctet(addr res, addr oct) == 1)
+
+proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte]) =
+  var aclone = a
+  var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
+  ECP2_BLS381_toOctet(addr oct, addr aclone)
 
 proc toBytes*(a: ECP_BLS381, res: var array[MODBYTES_384 * 2 + 1, byte],
               compressed = false) =

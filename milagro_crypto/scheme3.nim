@@ -17,6 +17,7 @@
 import algorithm
 import nimcrypto/[sysrand, utils, hash, blake2]
 import internals, common
+export common
 
 type
   SigKey* = object
@@ -57,95 +58,74 @@ proc toRaw*(sigkey: SigKey, data: var openarray[byte]) =
   var buffer = getRaw(sigkey)
   copyMem(addr data[0], addr buffer[0], RawSignatureKeySize)
 
-# proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
-#   ## Converts Verification key ``verkey`` to serialized form.
-#   var output: array[MODBYTES_384 * 2 + 1, byte]
-#   toBytes(verkey.point, output, true)
-#   # Check if highest 3 bits are `0`.
-#   assert((output[1] and 0xE0'u8) == 0'u8)
-#   echo "output = ", output[0]
-#   # compressed format marker
-#   output[1] = output[1] or (1'u8 shl 7)
-#   if verkey.point.isinf():
-#     output[1] = output[1] or (1'u8 shl 6)
-#   else:
-#     if output[0] == 0x02:
-#       output[1] = output[1] or (1'u8 shl 5)
-#   copyMem(addr result[0], addr output[1], RawVerificationKeySize)
-
-# proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
-#   var x, y: BIG384
-#   if verkey.point.get(x, y) == -1:
-#     result[0] = result[0] or 0xC0
-#   else:
-#     toBytes(x, result)
-#     assert((result[0] and 0xE0'u8) == 0'u8)
-#     result[0] = result[0] or (1'u8 shl 7)
-#     var negy = verkey.point.y.neg()
-#     if cmp(verkey.point.y, negy) > 0:
-#       result[0] = result[0] or (1'u8 shl 5)
-
 proc getRaw*(verkey: VerKey): array[RawVerificationKeySize, byte] =
-  ## Serialization in compressed form.
+  ## Converts Verification Key ``verkey`` to compressed binary form.
   var x, y: BIG384
   let res = verkey.point.get(x, y)
-
-  # Determine which mirrored y coordinate this point has
-  var negationBuf: FP_BLS381
-  FP_BLS381_nres(addr negationBuf, y)
-  var negy = negationBuf.neg
-  negy.norm
-
   if res == -1:
-    result[0] = result[0] or 0xC0
+    result[0] = result[0] or (1'u8 shl 6)
   else:
-    echo res
+    # Determine which mirrored y coordinate this point has
+    var ny = nres(y)
+    var negy = ny.neg
+    negy.norm()
     toBytes(x, result)
     assert((result[0] and 0xE0'u8) == 0'u8)
-    result[0] = result[0] or (1'u8 shl 7)
-    if cmp(negationBuf, negy) == 1:
+    if cmp(ny, negy) > 0:
       result[0] = result[0] or (1'u8 shl 5)
+  result[0] = result[0] or (1'u8 shl 7)
 
-proc getRawFull*(verkey: VerKey): array[RawVerificationKeySize * 2, byte] =
-  ## This is serialization in non-compressed form.
-  var x, y: BIG384
-  var buffer: array[MODBYTES_384, byte]
+proc getRawFull*(verkey: VerKey): array[MODBYTES_384 * 2, byte] =
+  ## Converts Verification Key ``verkey`` to non-compressed binary form.
+  var x, y: BIG_384
   let res = verkey.point.get(x, y)
   if res == -1:
-    result[0] = result[0] or 0xC0
+    result[0] = result[0] or (1'u8 shl 6)
   else:
-    var posy0 = verkey.point.y
-    var posy1 = posy0
-    var negy0 = neg(posy0)
-    var negy1 = negy0
-    norm(negy1)
-    norm(posy1)
-    echo "nn(y) and nn(neg(y)): ", cmp(posy0, negy0)
-    echo "nn(y) and n(neg(y)): ", cmp(posy0, negy1)
-    echo "n(y) and nn(neg(y)): ", cmp(posy1, negy0)
-    echo "n(y) and n(neg(y)): ", cmp(posy1, negy1)
+    var buffer: array[MODBYTES_384, byte]
     toBytes(x, buffer)
     copyMem(addr result[0], addr buffer[0], MODBYTES_384)
     toBytes(y, buffer)
     copyMem(addr result[MODBYTES_384], addr buffer[0], MODBYTES_384)
-    # assert((result[0] and 0xE0'u8) == 0'u8)
-    # result[0] = result[0] or (1'u8 shl 7)
 
 proc toRaw*(verkey: VerKey, data: var openarray[byte]) =
-  ## Converts Verification key ``verkey`` to serialized form and store it to
+  ## Converts Verification key ``verkey`` to binary form and store it to
   ## ``data``.
   assert(len(data) >= RawVerificationKeySize)
   var buffer = getRaw(verkey)
   copyMem(addr data[0], addr buffer[0], RawVerificationKeySize)
 
+proc fromRaw*(typename: typedesc[VerKey], data: openarray[byte],
+              verkey: var VerKey): bool =
+  ## Deserialize verification key from compressed binary form and store
+  ## result to ``verkey``. Returns ``true`` on success and ``false``
+  ## otherwise.
+  ## 
+  ## Length of ``data`` array must be at least ``RawVerificationKeySize``.
+  var buffer: array[MODBYTES_384, byte]
+  if len(data) >= RawVerificationKeySize:
+    if (data[0] and (1'u8 shl 7)) != 0:
+      if (data[0] and (1'u8 shl 6)) != 0:
+        # Infinity point
+        verkey.point.inf()
+        result = true
+      else:
+        var x: BIG384
+        let greatest = (data[0] and (1'u8 shl 5)) != 0'u8
+        copyMem(addr buffer[0], unsafeAddr data[0], MODBYTES_384)
+        buffer[0] = buffer[0] and 0x1F'u8
+        if x.fromBytes(buffer):
+          if verkey.point.setx(x, greatest) == 1:
+            result = true
+
 proc getRaw*(sig: Signature): array[RawSignatureSize, byte] =
-  ## Converts Signature ``sig`` to compressed serialized form.
+  ## Converts Signature ``sig`` to compressed binary form.
   var x, y: FP2_BLS381
-  var b0, b1: BIG_384
+  var b0, b1: BIG384
   var buffer: array[MODBYTES_384, byte]
 
   if sig.point.get(x, y) == -1:
-    result[0] = result[0] or 0xC0
+    result[0] = result[0] or (1'u8 shl 6)
   else:
     FP_BLS381_redc(b0, addr x.b)
     FP_BLS381_redc(b1, addr x.a)
@@ -154,53 +134,96 @@ proc getRaw*(sig: Signature): array[RawSignatureSize, byte] =
     toBytes(b1, buffer)
     copyMem(addr result[MODBYTES_384], addr buffer[0], MODBYTES_384)
     assert((result[0] and 0xE0'u8) == 0'u8)
-    result[0] = result[0] or (1'u8 shl 7)
     var negy = y.neg()
     if cmp(y, negy) > 0:
       result[0] = result[0] or (1'u8 shl 5)
+  result[0] = result[0] or (1'u8 shl 7)
+
+proc getRawFull*(sig: Signature): array[MODBYTES_384 * 4, byte] =
+  ## Converts Signature ``sig`` to non-compressed binary form.
+  var x, y: FP2_BLS381
+  var b0, b1: BIG_384
+  var a0, a1: BIG_384
+  var buffer: array[MODBYTES_384, byte]
+
+  if sig.point.get(x, y) == -1:
+    result[0] = result[0] or (1'u8 shl 6)
+  else:
+    FP_BLS381_redc(b0, addr x.b)
+    FP_BLS381_redc(b1, addr x.a)
+    FP_BLS381_redc(a0, addr y.b)
+    FP_BLS381_redc(a1, addr y.a)
+
+    toBytes(b0, buffer)
+    copyMem(addr result[0], addr buffer[0], MODBYTES_384)
+    toBytes(b1, buffer)
+    copyMem(addr result[MODBYTES_384], addr buffer[0], MODBYTES_384)
+    toBytes(a0, buffer)
+    copyMem(addr result[MODBYTES_384 * 2], addr buffer[0], MODBYTES_384)
+    toBytes(a1, buffer)
+    copyMem(addr result[MODBYTES_384 * 3], addr buffer[0], MODBYTES_384)
 
 proc toRaw*(sig: Signature, data: var openarray[byte]) =
-  ## Converts Signature ``sig`` to compressed serialized form and
+  ## Converts Signature ``sig`` to compressed binary form and
   ## store it to ``data``.
   assert(len(data) >= RawSignatureSize)
   var buffer = getRaw(sig)
   copyMem(addr data[0], addr buffer[0], RawSignatureSize)
 
-proc initSigKey*(data: openarray[byte]): SigKey =
+proc fromRaw*(typename: typedesc[Signature], data: openarray[byte],
+              sig: var Signature): bool =
+  ## Restore Signature from compressed binary form ``data`` and store
+  ## result to ``sig``. Returns ``true`` on success and ``false``
+  ## otherwise.
+  ## 
+  ## Length of ``data`` array must be at least ``RawSignatureSize``.
+  var buffer: array[MODBYTES_384, byte]
+  if len(data) >= RawSignatureSize:
+    # We only support compressed form
+    if (data[0] and (1'u8 shl 7)) != 0:
+      if (data[0] and (1'u8 shl 6)) != 0:
+        # Infinity point
+        sig.point.inf()
+        result = true
+      else:
+        var x1, x0: BIG384
+        let greatest = (data[0] and (1'u8 shl 5)) != 0'u8
+        copyMem(addr buffer[0], unsafeAddr data[0], MODBYTES_384)
+        buffer[0] = buffer[0] and 0x1F'u8
+        if x1.fromBytes(buffer):
+          copyMem(addr buffer[0], unsafeAddr data[MODBYTES_384], MODBYTES_384)
+          if x0.fromBytes(buffer):
+            var x: FP2_BLS381
+            x.fromBigs(x0, x1)
+            if sig.point.setx(x, greatest) == 1:
+              result = true
+
+proc initSigKey*(data: openarray[byte]): SigKey {.inline.} =
   ## Initialize Signature key from serialized form ``data``.
   if not result.x.fromBytes(data):
     raise newException(ValueError, "Error in signature key conversion")
 
-proc initSigKey*(data: string): SigKey =
+proc initSigKey*(data: string): SigKey {.inline.} =
   ## Initialize Signature key from serialized hexadecimal string ``data``.
   result = initSigKey(fromHex(data))
 
-proc initVerKey*(data: openarray[byte]): VerKey =
+proc initVerKey*(data: openarray[byte]): VerKey {.inline.} =
   ## Initialize Verification key from serialized form ``data``.
-  if not result.point.fromBytes(data):
+  if not VerKey.fromRaw(data, result):
     raise newException(ValueError, "Error in verification key conversion")
 
-proc initVerKey*(data: string): VerKey =
+proc initVerKey*(data: string): VerKey {.inline.} =
   ## Initialize Verification key from serialized hexadecimal string ``data``.
   result = initVerKey(fromHex(data))
 
-proc initSignature*(data: openarray[byte]): Signature =
+proc initSignature*(data: openarray[byte]): Signature {.inline.} =
   ## Initialize Signature from serialized form ``data``.
   ##
   ## Length of ``data`` array must be at least ``RawSignatureSize``.
-  var buffer: array[MODBYTES_384 + 1, byte]
-  if len(data) < RawSignatureSize:
-    raise newException(ValueError, "Invalid signature")
-  let marker = (data[0] and 0xE0'u8) shr 5
-  if marker notin {0x02'u8, 0x03'u8}:
-    raise newException(ValueError, "Invalid signature")
-  buffer[0] = marker
-  copyMem(addr buffer[1], unsafeAddr data[0], RawSignatureSize)
-  buffer[1] = buffer[1] and 0x1F'u8
-  if not result.point.fromBytes(buffer):
+  if not Signature.fromRaw(data, result):
     raise newException(ValueError, "Error in signature conversion")
 
-proc initSignature*(data: string): Signature =
+proc initSignature*(data: string): Signature {.inline.} =
   ## Initialize Signature from serialized hexadecimal string representation
   ## ``data``.
   result = initSignature(fromHex(data))
@@ -277,17 +300,13 @@ proc `$`*(sigkey: SigKey): string {.inline.} =
   ## Return string representation of Signature (Private) key.
   result = $sigkey.x
 
-# proc `$`*(verkey: VerKey): string {.inline.} =
-#   ## Return string representation of Verification (Public) key.
-#   var buf: array[MODBYTES_384 * 4, byte]
-#   toBytes(verkey.point, buf)
-#   result = toHex(buf, true)
+proc `$`*(verkey: VerKey): string {.inline.} =
+  ## Return string representation of Verification (Public) key.
+  result = toHex(verkey.getRaw(), true)
 
-# proc `$`*(sig: Signature): string {.inline.} =
-#   ## Return string representation of ``uncompressed`` signature.
-#   var buf: array[MODBYTES_384, byte]
-#   sig.toRaw(buf)
-#   result = toHex(buf, true)
+proc `$`*(sig: Signature): string {.inline.} =
+  ## Return string representation of ``uncompressed`` signature.
+  result = toHex(sig.getRaw(), true)
 
 proc newKeyPair*(): KeyPair =
   ## Create new random pair of Signature (Private) and Verification (Public)
@@ -295,127 +314,12 @@ proc newKeyPair*(): KeyPair =
   result.sigkey = newSigKey()
   result.verkey = fromSigKey(result.sigkey)
 
-# proc generatePoP*(pair: KeyPair): Signature =
-#   ## Generate Proof Of Possession for key pair ``pair``.
-#   var rawkey = pair.verkey.getRaw()
-#   result = pair.sigkey.signMessage(rawkey)
+proc generatePoP*(pair: KeyPair): Signature =
+  ## Generate Proof Of Possession for key pair ``pair``.
+  var rawkey = pair.verkey.getRaw()
+  result = pair.sigkey.signMessage(rawkey)
 
-# proc verifyPoP*(proof: Signature, vkey: VerKey): bool =
-#   ## Verifies Proof Of Possession.
-#   var rawkey = vkey.getRaw()
-#   result = proof.verifyMessage(rawkey, vkey)
-
-when isMainModule:
-  import nimcrypto, hexdump
-
-  ## XXX
-  ## This is just dump procedure from rust implementation test vectors
-  ## you can uncomment it and execute
-  
-  # block:
-  #   var file = open("g1_compressed_valid_test_vectors.dat")
-  #   var expect = newSeq[byte](48000)
-  #   assert(readBytes(file, expect, 0, 48000) == 48000)
-  #   close(file)
-  #   for i in 0..<10:
-  #     let offset = i * 48
-  #     let ch = expect[offset] and (1'u8 shl 5)
-  #     echo ch
-  #     echo dumpHex(expect.toOpenArray(offset, offset + 47))
-
-
-  block:
-    var file = open("g1_compressed_valid_test_vectors.dat")
-    var expect = newSeq[byte](48000)
-    assert(readBytes(file, expect, 0, 48000) == 48000)
-    close(file)
-    var a: ECP_BLS381
-    inf(a)
-    var vk: VerKey
-    vk.point = a
-    for i in 0..<1000:
-      echo dumpHex(vk.getRawFull())
-      let offset = i * 48
-      let isCorrect = vk.getRaw() == expect.toOpenArray(offset, offset + 47)
-      debugEcho isCorrect
-      doAssert isCorrect
-      add(vk.point, generator1())
-
-  ## This is full test of G2 serialization
-  ## 
-  
-  # block:
-  #   var file = open("g2_compressed_valid_test_vectors.dat")
-  #   var expect = newSeq[byte](96000)
-  #   assert(readBytes(file, expect, 0, 96000) == 96000)
-  #   close(file)
-  #   var a: ECP2_BLS381
-  #   inf(a)
-  #   var sig: Signature
-  #   sig.point = a
-  #   for i in 0..<1000:
-  #     echo i
-  #     var check = sig.getRaw()
-  #     assert(equalMem(addr check[0], addr expect[i * 96], 96) == true)
-  #     add(sig.point, generator2())
-
-
-  # var pair = newKeyPair()
-  # var h = blake2_384.digest("Hello world!")
-  # var h1 = blake2_384.digest("Hello world+")
-  # var sig = signMessage(pair.sigkey, h)
-
-  # echo "original ", verifyMessage(sig, h, pair.verkey)
-  # echo "original ", verifyMessage(sig, h1, pair.verkey)
-
-  # # echo "original y"
-  # # echo repr sig.point.y
-  # var x0, y0: FP2_BLS381
-  # var x1, y1: FP2_BLS381
-  # echo "result = ", sig.point.get(x0, y0)
-
-  # var re: ECP2_BLS381
-  # echo "result = ", setx(re, x0)
-  # # echo "calculated y"
-  # # echo repr re.y
-
-  # # echo "result = ", re.get(x1, y1)
-  # # var negy = neg(re.y)
-  # # echo "negative y"
-  # # echo repr negy
-
-  # # echo cmp(y0, re.y)
-  # # echo cmp(y0, negy)
-
-  # var rsig: Signature
-  # rsig.point = re
-
-  # echo "restored ", verifyMessage(sig, h, pair.verkey)
-  # echo "restored ", verifyMessage(sig, h1, pair.verkey)
-
-
-
-
-
-  # # echo "original"
-  # # echo repr x
-  # # echo "negative"
-  # # var negx = neg(x)
-  # # echo repr negx
-
-  # # echo "negative normalized"
-  # # FP2_BLS381_norm(addr negx)
-  # # echo repr negx
-
-  # # echo cmp(orx, orx)
-  # # echo cmp(orx, negx)
-  # echo cmp(negx, orx)
-
-  # var newx = neg(negx)
-  # echo "positive"
-  # echo repr newx
-  # FP2_BLS381_norm(addr newx)
-  # echo "positive normalized"
-  # echo repr newx
-
-  # echo cmp(orx, newx)
+proc verifyPoP*(proof: Signature, vkey: VerKey): bool =
+  ## Verifies Proof Of Possession.
+  var rawkey = vkey.getRaw()
+  result = proof.verifyMessage(rawkey, vkey)
