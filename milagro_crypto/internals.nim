@@ -116,7 +116,7 @@ when sizeof(int) == 4:
        importc: "BIG_384_29_toBytes", cdecl.}
   proc BIG_384_output*(a: BIG_384) {.
        importc: "BIG_384_29_output", cdecl.}
-  proc BIG_384_29_comp*(a: BIG_384, b: BIG_384): cint {.
+  proc BIG_384_comp*(a: BIG_384, b: BIG_384): cint {.
        importc: "BIG_384_29_comp", cdecl.}
   proc BIG_384_nbits*(a: BIG_384): cint {.
        importc: "BIG_384_29_nbits", cdecl.}
