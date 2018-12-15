@@ -267,11 +267,12 @@ proc signMessage*[T](sigkey: SigKey, domain: uint64,
   point.mul(sigkey.x)
   result.point = point
 
-proc signMessage*[T](sigkey: SigKey, msg: openarray[T]): Signature {.inline.} =
+proc signMessage*[T](sigkey: SigKey, domain: uint64,
+                     msg: openarray[T]): Signature {.inline.} =
   ## Sign message ``msg`` using KECCAK-256 using Signature (Private) key
   ## ``sigkey``.
   var hh = keccak256.digest(msg)
-  result = signMessage(sigkey, 0'u64, hh)
+  result = signMessage(sigkey, domain, hh)
 
 proc verifyMessage*[T](sig: Signature, hash: MDigest[T], domain: uint64,
                        verkey: VerKey): bool =
@@ -287,12 +288,12 @@ proc verifyMessage*[T](sig: Signature, hash: MDigest[T], domain: uint64,
     var rhs = atePairing(point, verkey.point)
     result = (lhs == rhs)
 
-proc verifyMessage*[T](sig: Signature, msg: openarray[T],
+proc verifyMessage*[T](sig: Signature, msg: openarray[T], domain: uint64,
                        verkey: VerKey): bool {.inline.} =
   ## Verify message ``msg`` using KECCAK-256 and using Verification (Public)
   ## key ``verkey``. Returns ``true`` if verification succeeded.
   var hh = keccak256.digest(msg)
-  result = verifyMessage(sig, hh, 0'u64, verkey)
+  result = verifyMessage(sig, hh, domain, verkey)
 
 proc combine*(sig1: var Signature, sig2: Signature) =
   ## Aggregates signature ``sig2`` into ``sig1``.
@@ -352,9 +353,9 @@ proc newKeyPair*(): KeyPair =
 proc generatePoP*(pair: KeyPair): Signature =
   ## Generate Proof Of Possession for key pair ``pair``.
   var rawkey = pair.verkey.getRaw()
-  result = pair.sigkey.signMessage(rawkey)
+  result = pair.sigkey.signMessage(0'u64, rawkey)
 
 proc verifyPoP*(proof: Signature, vkey: VerKey): bool =
   ## Verifies Proof Of Possession.
   var rawkey = vkey.getRaw()
-  result = proof.verifyMessage(rawkey, vkey)
+  result = proof.verifyMessage(rawkey, 0'u64, vkey)
