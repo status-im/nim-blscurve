@@ -11,11 +11,11 @@
 ## https://github.com/lovesh/signature-schemes/blob/master/src/bls/aggr_old.rs.
 ## Main differences
 ## 1) Used OS specific CSPRNG.
-## 2) BLAKE2b-384 used instead of SHA2-256
+## 2) Keccak256 is used.
 ## 3) Serialized signature size is 48 bytes length.
 
 import algorithm
-import nimcrypto/[sysrand, utils, hash, blake2]
+import nimcrypto/[sysrand, utils, hash, keccak]
 import internals, common
 export common
 
@@ -198,6 +198,38 @@ proc fromRaw*(typename: typedesc[Signature], data: openarray[byte],
             if sig.point.setx(x, greatest) == 1:
               result = true
 
+# proc hashToG2*(mdigest: MDigest[256], domain: uint64): GroupG2 =
+#   var ctx1, ctx2: keccak256
+#   var xa, xb: BIG_384
+#   var x, one, y: FP2_BLS381
+#   var buffer: array[8, byte]
+#   EPUTU64(addr buffer, 0, domain)
+#   ctx1.init()
+#   ctx1.update(buffer)
+#   ctx2 = ctx1
+#   ctx1.update([0x01'u8])
+#   ctx1.update(mdigest.data)
+#   var xaDigest = ctx1.finish()
+#   ctx2.update([0x02'u8])
+#   ctx2.update(mdigest.data)
+#   var xbDigest = ctx2.finish()
+#   ctx1.clear()
+#   ctx2.clear()
+#   discard xa.fromBytes(xaDigest.data)
+#   discard xb.fromBytes(xbDigest.data)
+#   x.fromBigs(xa, xb)
+#   one.setOne()
+  
+#   while true:
+#     ECP2_BLS381_rhs(addr y, addr x)
+#     if FP2_BLS381_sqrt(addr y, addr y) == 1:
+#       discard
+#       # ECP2_BLS381_mul(addr x, addr y)
+
+#     if ECP2_BLS381_setx(addr result, addr x) == 1:
+#       break
+#     add(x, x, one)
+
 proc initSigKey*(data: openarray[byte]): SigKey {.inline.} =
   ## Initialize Signature key from serialized form ``data``.
   if not result.x.fromBytes(data):
@@ -228,21 +260,24 @@ proc initSignature*(data: string): Signature {.inline.} =
   ## ``data``.
   result = initSignature(fromHex(data))
 
-proc signMessage*(sigkey: SigKey, hash: MDigest[384]): Signature =
-  ## Sign 384-bit ``hash`` using Signature (Private) key ``sigkey``.
+proc signMessage*[T](sigkey: SigKey, domain: uint64,
+                     hash: MDigest[T]): Signature =
+  ## Sign [T]-bit ``hash`` using Signature (Private) key ``sigkey``.
   var point = hash.mapit2()
   point.mul(sigkey.x)
   result.point = point
 
 proc signMessage*[T](sigkey: SigKey, msg: openarray[T]): Signature {.inline.} =
-  ## Sign message ``msg`` using BLAKE2B-384 using Signature (Private) key
+  ## Sign message ``msg`` using KECCAK-256 using Signature (Private) key
   ## ``sigkey``.
-  var hh = blake2_384.digest(msg)
-  result = signMessage(sigkey, hh)
+  var hh = keccak256.digest(msg)
+  result = signMessage(sigkey, 0'u64, hh)
 
-proc verifyMessage*(sig: Signature, hash: MDigest[384], verkey: VerKey): bool =
-  ## Verify 384-bit ``hash`` and signature ``sig`` using Verification (Public)
-  ## key ``verkey``. Returns ``true`` if verification succeeded.
+proc verifyMessage*[T](sig: Signature, hash: MDigest[T], domain: uint64,
+                       verkey: VerKey): bool =
+  ## Verify [T]-bit ``hash`` and signature ``sig`` using Verification (Public)
+  ## key ``verkey`` in domain ``domain``. Returns ``true`` if verification
+  ## succeeded.
   if sig.point.isinf():
     result = false
   else:
@@ -254,10 +289,10 @@ proc verifyMessage*(sig: Signature, hash: MDigest[384], verkey: VerKey): bool =
 
 proc verifyMessage*[T](sig: Signature, msg: openarray[T],
                        verkey: VerKey): bool {.inline.} =
-  ## Verify message ``msg`` using BLAKE2B-384 and using Verification (Public)
+  ## Verify message ``msg`` using KECCAK-256 and using Verification (Public)
   ## key ``verkey``. Returns ``true`` if verification succeeded.
-  var hh = blake2_384.digest(msg)
-  result = verifyMessage(sig, hh, verkey)
+  var hh = keccak256.digest(msg)
+  result = verifyMessage(sig, hh, 0'u64, verkey)
 
 proc combine*(sig1: var Signature, sig2: Signature) =
   ## Aggregates signature ``sig2`` into ``sig1``.

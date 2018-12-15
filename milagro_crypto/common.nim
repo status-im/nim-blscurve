@@ -19,6 +19,14 @@ proc copy*(dst: var BIG_384, src: BIG_384) {.inline.} =
   ## Copy value if big integer ``src`` to ``dst``.
   BIG_384_copy(dst, src)
 
+proc setOne*(dst: var FP2_BLS381) {.inline.} =
+  ## Set value of ``dst`` to FP2.one
+  FP2_BLS381_one(addr dst)
+
+proc add*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+  ## Set ``dst`` to ``x + y``.
+  FP2_BLS381_add(addr dst, unsafeAddr x, unsafeAddr y)
+
 proc shiftr*(a: var BIG_384, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
   BIG_384_shr(a, cint(bits))
@@ -352,18 +360,20 @@ proc fromBytes*(res: var FP12_BLS381, a: openarray[byte]): bool =
                     val: unsafeAddr a[0])
     result = (FP12_BLS381_fromOctet(addr res, addr oct) == 1)
 
-proc mapit*(hash: MDigest[384]): ECP_BLS381 =
+proc mapit*[T](hash: MDigest[T]): ECP_BLS381 =
   ## Map hash value ``hash`` to ECP
   var buffer: array[MODBYTES_384, byte]
+  doAssert(len(hash.data) <= MODBYTES_384)
   let pos = MODBYTES_384 - len(hash.data)
   copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
   var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
                   val: addr buffer[0])
   ECP_BLS381_mapit(addr result, addr oct)
 
-proc mapit2*(hash: MDigest[384]): ECP2_BLS381 =
+proc mapit2*[T](hash: MDigest[T]): ECP2_BLS381 =
   ## Map hash value ``hash`` to ECP2
   var buffer: array[MODBYTES_384, byte]
+  doAssert(len(hash.data) <= MODBYTES_384)
   let pos = MODBYTES_384 - len(hash.data)
   copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
   var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
