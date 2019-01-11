@@ -13,7 +13,6 @@
 ## 1) Used OS specific CSPRNG.
 ## 2) Keccak256 is used.
 ## 3) Serialized signature size is 48 bytes length.
-
 import algorithm
 import nimcrypto/[sysrand, utils, hash, keccak]
 import internals, common
@@ -100,7 +99,7 @@ proc fromRaw*(typename: typedesc[VerKey], data: openarray[byte],
   ## Deserialize verification key from compressed binary form and store
   ## result to ``verkey``. Returns ``true`` on success and ``false``
   ## otherwise.
-  ## 
+  ##
   ## Length of ``data`` array must be at least ``RawVerificationKeySize``.
   var buffer: array[MODBYTES_384, byte]
   if len(data) >= RawVerificationKeySize:
@@ -175,7 +174,7 @@ proc fromRaw*(typename: typedesc[Signature], data: openarray[byte],
   ## Restore Signature from compressed binary form ``data`` and store
   ## result to ``sig``. Returns ``true`` on success and ``false``
   ## otherwise.
-  ## 
+  ##
   ## Length of ``data`` array must be at least ``RawSignatureSize``.
   var buffer: array[MODBYTES_384, byte]
   if len(data) >= RawSignatureSize:
@@ -197,38 +196,6 @@ proc fromRaw*(typename: typedesc[Signature], data: openarray[byte],
             x.fromBigs(x0, x1)
             if sig.point.setx(x, greatest) == 1:
               result = true
-
-# proc hashToG2*(mdigest: MDigest[256], domain: uint64): GroupG2 =
-#   var ctx1, ctx2: keccak256
-#   var xa, xb: BIG_384
-#   var x, one, y: FP2_BLS381
-#   var buffer: array[8, byte]
-#   EPUTU64(addr buffer, 0, domain)
-#   ctx1.init()
-#   ctx1.update(buffer)
-#   ctx2 = ctx1
-#   ctx1.update([0x01'u8])
-#   ctx1.update(mdigest.data)
-#   var xaDigest = ctx1.finish()
-#   ctx2.update([0x02'u8])
-#   ctx2.update(mdigest.data)
-#   var xbDigest = ctx2.finish()
-#   ctx1.clear()
-#   ctx2.clear()
-#   discard xa.fromBytes(xaDigest.data)
-#   discard xb.fromBytes(xbDigest.data)
-#   x.fromBigs(xa, xb)
-#   one.setOne()
-  
-#   while true:
-#     ECP2_BLS381_rhs(addr y, addr x)
-#     if FP2_BLS381_sqrt(addr y, addr y) == 1:
-#       discard
-#       # ECP2_BLS381_mul(addr x, addr y)
-
-#     if ECP2_BLS381_setx(addr result, addr x) == 1:
-#       break
-#     add(x, x, one)
 
 proc initSigKey*(data: openarray[byte]): SigKey {.inline.} =
   ## Initialize Signature key from serialized form ``data``.
@@ -260,40 +227,37 @@ proc initSignature*(data: string): Signature {.inline.} =
   ## ``data``.
   result = initSignature(fromHex(data))
 
-proc signMessage*[T](sigkey: SigKey, domain: uint64,
-                     hash: MDigest[T]): Signature =
-  ## Sign [T]-bit ``hash`` using Signature (Private) key ``sigkey``.
-  var point = hash.mapit2()
+proc signMessage*(sigkey: SigKey, domain: uint64, mdctx: keccak256): Signature =
+  var point = hashToG2(mdctx, domain)
   point.mul(sigkey.x)
   result.point = point
 
 proc signMessage*[T](sigkey: SigKey, domain: uint64,
-                     msg: openarray[T]): Signature {.inline.} =
-  ## Sign message ``msg`` using KECCAK-256 using Signature (Private) key
-  ## ``sigkey``.
-  var hh = keccak256.digest(msg)
-  result = signMessage(sigkey, domain, hh)
+                     message: openarray[T]): Signature =
+  var mdctx: keccak256
+  mdctx.init()
+  mdctx.update(message)
+  result = signMessage(sigkey, domain, mdctx)
+  mdctx.clear()
 
-proc verifyMessage*[T](sig: Signature, hash: MDigest[T], domain: uint64,
-                       verkey: VerKey): bool =
-  ## Verify [T]-bit ``hash`` and signature ``sig`` using Verification (Public)
-  ## key ``verkey`` in domain ``domain``. Returns ``true`` if verification
-  ## succeeded.
+proc verifyMessage*(sig: Signature, mdctx: keccak256, domain: uint64,
+                    verkey: VerKey): bool =
   if sig.point.isinf():
     result = false
   else:
     var gen = generator1()
-    var point = hash.mapit2()
+    var point = hashToG2(mdctx, domain)
     var lhs = atePairing(sig.point, gen)
     var rhs = atePairing(point, verkey.point)
     result = (lhs == rhs)
 
-proc verifyMessage*[T](sig: Signature, msg: openarray[T], domain: uint64,
+proc verifyMessage*[T](sig: Signature, message: openarray[T], domain: uint64,
                        verkey: VerKey): bool {.inline.} =
-  ## Verify message ``msg`` using KECCAK-256 and using Verification (Public)
-  ## key ``verkey``. Returns ``true`` if verification succeeded.
-  var hh = keccak256.digest(msg)
-  result = verifyMessage(sig, hh, domain, verkey)
+  var mdctx: keccak256
+  mdctx.init()
+  mdctx.update(message)
+  result = verifyMessage(sig, mdctx, domain, verkey)
+  mdctx.clear()
 
 proc combine*(sig1: var Signature, sig2: Signature) =
   ## Aggregates signature ``sig2`` into ``sig1``.

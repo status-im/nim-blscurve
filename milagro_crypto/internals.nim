@@ -239,7 +239,7 @@ proc FP2_BLS381_copy*(w: ptr FP2_BLS381, x: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_reduce*(w: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_one*(w: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_sqrt*(w: ptr FP2_BLS381, u: ptr FP2_BLS381): cint {.
-     milagro_func.} 
+     milagro_func.}
 proc FP2_BLS381_add*(w: ptr FP2_BLS381, x: ptr FP2_BLS381, y: ptr FP2_BLS381) {.
      milagro_func.}
 

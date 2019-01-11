@@ -22,7 +22,7 @@ const
   domain = 0'u64
 
 suite "[SCHEME3] BLS381 test suite (public interface)":
-     
+
   test "Simple successful sign/verification tests":
     const messages = [
       "Small msg", "121220888888822111212",
@@ -31,9 +31,8 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
     ]
     var kp = newKeyPair()
     for msg in messages:
-      var hh = keccak256.digest(msg)
-      var sig = kp.sigkey.signMessage(domain, hh)
-      check sig.verifyMessage(hh, domain, kp.verkey) == true
+      var sig = kp.sigkey.signMessage(domain, msg)
+      check sig.verifyMessage(msg, domain, kp.verkey) == true
 
   test "Simple failed sign/verification tests":
     var kp = newKeyPair()
@@ -42,14 +41,18 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
     var msg1 = "Some msg"
     var msg2 = "Other msg"
     var msg3 = ""
-    let hash1 = keccak256.digest(msg1)
-    let hash2 = keccak256.digest(msg2)
-    let hash3 = keccak256.digest(msg3)
-    var sig = sk.signMessage(domain, hash1)
+    var hctx1, hctx2, hctx3: keccak256
+    hctx1.init()
+    hctx2.init()
+    hctx3.init()
+    hctx1.update(msg1)
+    hctx2.update(msg2)
+    hctx3.update(msg3)
+    var sig = sk.signMessage(domain, hctx1)
     check:
-      sig.verifyMessage(hash1, domain, kp.verkey) == true
-      sig.verifyMessage(hash2, domain, kp.verkey) == false
-      sig.verifyMessage(hash3, domain, kp.verkey) == false
+      sig.verifyMessage(hctx1, domain, kp.verkey) == true
+      sig.verifyMessage(hctx2, domain, kp.verkey) == false
+      sig.verifyMessage(hctx3, domain, kp.verkey) == false
 
   test "Aggregated signature/key tests":
     var kps = [newKeyPair(), newKeyPair(), newKeyPair(), newKeyPair(),
@@ -60,23 +63,23 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
       var svks = newSeq[Signature]()
       for i in 0..<5:
         let kp = kps[i]
-        var signature = kp.sigkey.signMessage(domain, hh)
-        check signature.verifyMessage(hh, domain, kp.verkey) == true
+        var signature = kp.sigkey.signMessage(domain, message)
+        check signature.verifyMessage(message, domain, kp.verkey) == true
         svks.add(signature)
         vks.add(kp.verkey)
       var asig = combine(svks)
       var akey1 = combine(vks)
       var akey2 = combine(vks[0..3])
       check:
-        asig.verifyMessage(hh, domain, akey1) == true
-        asig.verifyMessage(hh, domain, akey2) == false
+        asig.verifyMessage(message, domain, akey1) == true
+        asig.verifyMessage(message, domain, akey2) == false
 
       # replace position of keys
       var temp = vks[2]
       vks[2] = vks[4]
       vks[4] = temp
       var akey3 = combine(vks)
-      check asig.verifyMessage(hh, domain, akey3) == true
+      check asig.verifyMessage(message, domain, akey3) == true
 
   test "Verification Key compressed serialization test vectors":
     var file = open("tests" / "g1_compressed_valid_test_vectors.dat")
@@ -153,3 +156,14 @@ suite "[SCHEME3] BLS381 test suite (public interface)":
       var check = sig2.getRaw()
       check buffer == check
       sig1.point.add(generator2())
+
+  test "Sign/Serialize/Deserialize/Verify test":
+    var kp = newKeyPair()
+    var message = "Simple message"
+    for i in 0..<100:
+      var desig: Signature
+      var idomain = uint64(i)
+      var sig = kp.sigkey.signMessage(idomain, message)
+      var serialized = sig.getRaw()
+      check Signature.fromRaw(serialized, desig) == true
+      check desig.verifyMessage(message, idomain, kp.verkey) == true

@@ -1,10 +1,48 @@
-import algorithm
-import nimcrypto/[sysrand, utils, hash, blake2]
+import algorithm, endians
+import nimcrypto/[sysrand, utils, hash, keccak, blake2]
 import internals
 export internals
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
+
+when sizeof(int) == 8:
+  const
+    G2_CoFactorHigh*: BIG_384 = [
+      0x01537E293A6691AE'i64, 0x023C72D367A0BBC8'i64, 0x0205B2E5A7DDFA62'i64,
+      0x01151C216AEA9A28'i64, 0x012876A202CD91DE'i64, 0x010539FC4247541E'i64,
+      0x000000005D543A95'i64
+    ]
+    G2_CoFactorLow*: BIG_384 = [
+      0x031C38E31C7238E5'i64, 0x01BB1B9E1BC31C33'i64, 0x0000000000000161'i64,
+      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000000000'i64,
+      0x0000000000000000'i64
+    ]
+    G2_CoFactorShift*: BIG_384 = [
+      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000001000'i64,
+      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000000000'i64,
+      0x0000000000000000
+    ]
+elif sizeof(int) == 4:
+  const
+    G2_CoFactorHigh*: BIG_384 = [
+      0x1A6691AE'i32, 0x0A9BF149'i32, 0x07A0BBC8'i32, 0x11E3969B'i32,
+      0x07DDFA62'i32, 0x102D972D'i32, 0x0AEA9A28'i32, 0x08A8E10B'i32,
+      0x02CD91DE'i32, 0x0943B510'i32, 0x0247541E'i32, 0x0829CFE2'i32,
+      0x1D543A95'i32, 0x00000002'i32
+    ]
+    G2_CoFactorLow*: BIG_384 = [
+      0x1C7238E5'i32, 0x18E1C718'i32, 0x1BC31C33'i32, 0x0DD8DCF0'i32,
+      0x00000161'i32, 0x00000000'i32, 0x00000000'i32, 0x00000000'i32,
+      0x00000000'i32, 0x00000000'i32, 0x00000000'i32, 0x00000000'i32,
+      0x00000000'i32, 0x00000000'i32
+    ]
+    G2_CoFactorShift*: BIG_384 = [
+      0x00000000'i32, 0x00000000'i32, 0x00000000'i32, 0x00000000'i32,
+      0x00001000'i32, 0x00000000'i32, 0x00000000'i32, 0x00000000'i32,
+      0x00000000'i32, 0x00000000'i32, 0x00000000'i32, 0x00000000'i32,
+      0x00000000'i32, 0x00000000'i32
+    ]
 
 proc zero*(a: var BIG_384) {.inline.} =
   ## Make big integer ``a`` be zero.
@@ -131,7 +169,7 @@ proc get*(a: ECP_BLS381, x, y: var BIG_384): int {.inline.} =
 
 proc setx*(p: var ECP2_BLS381, x: FP2_BLS381, greatest: bool): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
-  ## 
+  ##
   ## This is custom `setx` procedure which works in way compatible to
   ## rust's library https://github.com/zkcrypto/pairing.
   var y, negy: FP2_BLS381
@@ -145,14 +183,14 @@ proc setx*(p: var ECP2_BLS381, x: FP2_BLS381, greatest: bool): int =
     FP2_BLS381_copy(addr p.x, unsafeAddr x)
     if not((cmp(y, negy) < 0) xor greatest):
       FP2_BLS381_copy(addr p.y, addr negy)
-    else: 
+    else:
       FP2_BLS381_copy(addr p.y, addr y)
     FP2_BLS381_one(addr p.z)
     result = 1
 
 proc setx*(p: var ECP_BLS381, x: BIG_384, greatest: bool): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
-  ## 
+  ##
   ## This is custom `setx` procedure which works in way compatible to
   ## rust's library https://github.com/zkcrypto/pairing.
   var rhs, negy: FP_BLS381
@@ -379,6 +417,60 @@ proc mapit2*[T](hash: MDigest[T]): ECP2_BLS381 =
   var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
                   val: addr buffer[0])
   ECP2_BLS381_mapit(addr result, addr oct)
+
+proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
+  ## Multiplies point by a cofactor of G2
+  var lowpart: ECP2_BLS381
+  result = point
+  lowpart = point
+  mul(result, G2_CoFactorHigh)
+  mul(result, G2_CoFactorShift)
+  mul(lowpart, G2_CoFactorLow)
+  add(result, lowpart)
+
+proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
+  ## Perform transformation of keccak-256 context (which must be already
+  ## updated with `message`) over domain ``domain`` to point in G2.
+  var
+    bebuf: array[8, byte]
+    buffer: array[MODBYTES_384, byte]
+    xre, xim: BIG_384
+    x, one: FP2_BLS381
+  # Copy context of `msgctx` which is keccak256(message)
+  var ctx1 = msgctx
+  var ctx2 = msgctx
+  # Convert `domain` to its big-endian representation
+  bigEndian64(addr bebuf[0], unsafeAddr domain)
+  # Update hash context with domain value
+  ctx1.update(bebuf)
+  ctx2.update(bebuf)
+  # Update hash context with coordinate marker
+  bebuf[0] = 0x01
+  ctx1.update(buffer.toOpenArray(0, 0))
+  bebuf[0] = 0x02
+  ctx2.update(bebuf.toOpenArray(0, 0))
+  # Obtain result hash
+  var xrehash = ctx1.finish()
+  var ximhash = ctx2.finish()
+  # Clear contexts
+  ctx1.clear()
+  ctx2.clear()
+  # Create BIG_384 integer `xre` from `xrehash`.
+  copyMem(addr buffer[0], addr xrehash.data[0], len(xrehash.data))
+  discard xre.fromBytes(buffer)
+  # Create BIG_384 integer `xim` from `ximhash`.
+  copyMem(addr buffer[0], addr ximhash.data[0], len(ximhash.data))
+  discard xim.fromBytes(buffer)
+  # Convert (xre, xim) to FP2.
+  x.fromBigs(xre, xim)
+  # Set FP2 One
+  one.setOne()
+  while true:
+    if ECP2_BLS381_setx(addr result, addr x) == 1:
+      break
+    # Increment `x` by FP2(1, 0)
+    FP2_BLS381_add(addr x, addr x, addr one)
+  result = mulCoFactor(result)
 
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.
