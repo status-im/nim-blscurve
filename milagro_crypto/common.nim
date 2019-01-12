@@ -1,29 +1,12 @@
 import algorithm, endians
 import nimcrypto/[sysrand, utils, hash, keccak, blake2]
-import internals
+import internals, hexdump
 export internals
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
 
-when sizeof(int) == 8:
-  const
-    G2_CoFactorHigh*: BIG_384 = [
-      0x01537E293A6691AE'i64, 0x023C72D367A0BBC8'i64, 0x0205B2E5A7DDFA62'i64,
-      0x01151C216AEA9A28'i64, 0x012876A202CD91DE'i64, 0x010539FC4247541E'i64,
-      0x000000005D543A95'i64
-    ]
-    G2_CoFactorLow*: BIG_384 = [
-      0x031C38E31C7238E5'i64, 0x01BB1B9E1BC31C33'i64, 0x0000000000000161'i64,
-      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000000000'i64,
-      0x0000000000000000'i64
-    ]
-    G2_CoFactorShift*: BIG_384 = [
-      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000001000'i64,
-      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000000000'i64,
-      0x0000000000000000
-    ]
-elif sizeof(int) == 4:
+when sizeof(int) == 4 or defined(use32):
   const
     G2_CoFactorHigh*: BIG_384 = [
       0x1A6691AE'i32, 0x0A9BF149'i32, 0x07A0BBC8'i32, 0x11E3969B'i32,
@@ -42,6 +25,23 @@ elif sizeof(int) == 4:
       0x00001000'i32, 0x00000000'i32, 0x00000000'i32, 0x00000000'i32,
       0x00000000'i32, 0x00000000'i32, 0x00000000'i32, 0x00000000'i32,
       0x00000000'i32, 0x00000000'i32
+    ]
+elif sizeof(int) == 8:
+  const
+    G2_CoFactorHigh*: BIG_384 = [
+      0x01537E293A6691AE'i64, 0x023C72D367A0BBC8'i64, 0x0205B2E5A7DDFA62'i64,
+      0x01151C216AEA9A28'i64, 0x012876A202CD91DE'i64, 0x010539FC4247541E'i64,
+      0x000000005D543A95'i64
+    ]
+    G2_CoFactorLow*: BIG_384 = [
+      0x031C38E31C7238E5'i64, 0x01BB1B9E1BC31C33'i64, 0x0000000000000161'i64,
+      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000000000'i64,
+      0x0000000000000000'i64
+    ]
+    G2_CoFactorShift*: BIG_384 = [
+      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000001000'i64,
+      0x0000000000000000'i64, 0x0000000000000000'i64, 0x0000000000000000'i64,
+      0x0000000000000000'i64
     ]
 
 proc zero*(a: var BIG_384) {.inline.} =
@@ -77,6 +77,10 @@ proc norm*(a: BIG_384) {.inline.} =
 proc norm*(a: var FP_BLS381) {.inline.} =
   ## Normalize FP field member.
   FP_BLS381_norm(addr a)
+
+proc norm*(a: var FP2_BLS381) {.inline.} =
+  ## Normalize FP2 field number.
+  FP2_BLS381_norm(addr a)
 
 proc nres*(a: BIG_384): FP_BLS381 {.inline.} =
   ## Convert big integer value to residue form mod Modulus.
@@ -423,8 +427,11 @@ proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   var lowpart: ECP2_BLS381
   result = point
   lowpart = point
+  echo "mid 0 result = ", $result
   mul(result, G2_CoFactorHigh)
+  echo "mid 1 result = ", $result
   mul(result, G2_CoFactorShift)
+  echo "mid 2 result = ", $result
   mul(lowpart, G2_CoFactorLow)
   add(result, lowpart)
 
@@ -455,6 +462,8 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   # Clear contexts
   ctx1.clear()
   ctx2.clear()
+  echo $xrehash
+  echo $ximhash
   # Create BIG_384 integer `xre` from `xrehash`.
   copyMem(addr buffer[0], addr xrehash.data[0], len(xrehash.data))
   discard xre.fromBytes(buffer)
@@ -463,6 +472,7 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   discard xim.fromBytes(buffer)
   # Convert (xre, xim) to FP2.
   x.fromBigs(xre, xim)
+  echo "x = ", $x
   # Set FP2 One
   one.setOne()
   while true:
@@ -470,7 +480,11 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
       break
     # Increment `x` by FP2(1, 0)
     FP2_BLS381_add(addr x, addr x, addr one)
+  echo "after x = ", $x
+  echo "before result = ", $result
   result = mulCoFactor(result)
+  echo "after result = ", $result
+
 
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.

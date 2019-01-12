@@ -9,7 +9,7 @@ when not defined(cpp) or defined(objc) or defined(js):
 import strutils
 from os import DirSep
 
-when sizeof(int) == 4:
+when (sizeof(int) == 4) or defined(use32):
   const milagroPath = currentSourcePath.rsplit(DirSep, 1)[0] & DirSep &
                         "csources" & DirSep & "32" & DirSep
 
@@ -111,7 +111,7 @@ type
 proc OCT_fromHex*(dst: ptr Octet, src: ptr char) {.milagro_func.}
 proc OCT_toHex*(src: ptr Octet, dst: ptr char) {.milagro_func.}
 
-when sizeof(int) == 4:
+when (sizeof(int) == 4) or defined(use32):
   proc BIG_384_toBytes*(b: ptr char, a: BIG_384) {.
        importc: "BIG_384_29_toBytes", cdecl.}
   proc BIG_384_output*(a: BIG_384) {.
