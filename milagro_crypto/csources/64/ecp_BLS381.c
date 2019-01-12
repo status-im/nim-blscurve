@@ -27,21 +27,16 @@ under the License.
 /* test for P=O point-at-infinity */
 int ECP_BLS381_isinf(ECP_BLS381 *P)
 {
-//    if (P->inf) return 1;
-//    FP_BLS381_reduce(&(P->x));
-//    FP_BLS381_reduce(&(P->z));
+
 #if CURVETYPE_BLS381==EDWARDS
-//    FP_BLS381_reduce(&(P->y));
     return (FP_BLS381_iszilch(&(P->x)) && FP_BLS381_equals(&(P->y),&(P->z)));
 #endif
 #if CURVETYPE_BLS381==WEIERSTRASS
-//    FP_BLS381_reduce(&(P->y));
     return (FP_BLS381_iszilch(&(P->x)) && FP_BLS381_iszilch(&(P->z)));
 #endif
 #if CURVETYPE_BLS381==MONTGOMERY
     return FP_BLS381_iszilch(&(P->z));
 #endif
-//    return P->inf;
 
 }
 
@@ -53,12 +48,6 @@ static void ECP_BLS381_cswap(ECP_BLS381 *P,ECP_BLS381 *Q,int d)
     FP_BLS381_cswap(&(P->y),&(Q->y),d);
 #endif
     FP_BLS381_cswap(&(P->z),&(Q->z),d);
-/*
-    d=~(d-1);
-    d=d&(P->inf^Q->inf);
-    P->inf^=d;
-    Q->inf^=d;
-*/
 }
 
 #if CURVETYPE_BLS381!=MONTGOMERY
@@ -70,10 +59,6 @@ static void ECP_BLS381_cmove(ECP_BLS381 *P,ECP_BLS381 *Q,int d)
     FP_BLS381_cmove(&(P->y),&(Q->y),d);
 #endif
     FP_BLS381_cmove(&(P->z),&(Q->z),d);
-/*
-    d=~(d-1);
-    P->inf^=(P->inf^Q->inf)&d;
-*/
 }
 
 /* return 1 if b==c, no branching */
@@ -115,9 +100,6 @@ static void ECP_BLS381_select(ECP_BLS381 *P,ECP_BLS381 W[],sign32 b)
 int ECP_BLS381_equals(ECP_BLS381 *P,ECP_BLS381 *Q)
 {
     FP_BLS381 a,b;
-//    if (ECP_BLS381_isinf(P) && ECP_BLS381_isinf(Q)) return 1;
-//    if (ECP_BLS381_isinf(P) || ECP_BLS381_isinf(Q)) return 0;
-
 
     FP_BLS381_mul(&a,&(P->x),&(Q->z));
     FP_BLS381_mul(&b,&(Q->x),&(P->z));
@@ -137,7 +119,6 @@ int ECP_BLS381_equals(ECP_BLS381 *P,ECP_BLS381 *Q)
 /* SU=16 */
 void ECP_BLS381_copy(ECP_BLS381 *P,ECP_BLS381 *Q)
 {
-//    P->inf=Q->inf;
     FP_BLS381_copy(&(P->x),&(Q->x));
 #if CURVETYPE_BLS381!=MONTGOMERY
     FP_BLS381_copy(&(P->y),&(Q->y));
@@ -150,7 +131,6 @@ void ECP_BLS381_copy(ECP_BLS381 *P,ECP_BLS381 *Q)
 /* SU=8 */
 void ECP_BLS381_neg(ECP_BLS381 *P)
 {
-//    if (ECP_BLS381_isinf(P)) return;
 #if CURVETYPE_BLS381==WEIERSTRASS
     FP_BLS381_neg(&(P->y),&(P->y));
     FP_BLS381_norm(&(P->y));
@@ -174,7 +154,6 @@ void ECP_BLS381_inf(ECP_BLS381 *P)
 #else
     FP_BLS381_one(&(P->z));
 #endif
-//    P->inf=1;
 }
 
 /* Calculate right Hand Side of curve equation y^2=RHS */
@@ -240,8 +219,6 @@ void ECP_BLS381_rhs(FP_BLS381 *v,FP_BLS381 *x)
 #endif
 }
 
-/* Set P=(x,y) */
-
 #if CURVETYPE_BLS381==MONTGOMERY
 
 /* Set P=(x,{y}) */
@@ -262,7 +239,7 @@ int ECP_BLS381_set(ECP_BLS381 *P,BIG_384_58 x)
         ECP_BLS381_inf(P);
         return 0;
     }
- //   P->inf=0;
+ 
     FP_BLS381_nres(&(P->x),x);
     FP_BLS381_one(&(P->z));
     return 1;
@@ -275,7 +252,6 @@ int ECP_BLS381_get(BIG_384_58 x,ECP_BLS381 *P)
 	ECP_BLS381_copy(&W,P);
 	ECP_BLS381_affine(&W);
     if (ECP_BLS381_isinf(&W)) return -1;
-    //ECP_BLS381_affine(P);
     FP_BLS381_redc(x,&(Wx));
     return 0;
 }
@@ -292,8 +268,6 @@ int ECP_BLS381_get(BIG_384_58 x,BIG_384_58 y,ECP_BLS381 *P)
 	ECP_BLS381_affine(&W);
 
     if (ECP_BLS381_isinf(&W)) return -1;
-
-    //ECP_BLS381_affine(P);
 
     FP_BLS381_redc(y,&(W.y));
     s=BIG_384_58_parity(y);
@@ -322,8 +296,6 @@ int ECP_BLS381_set(ECP_BLS381 *P,BIG_384_58 x,BIG_384_58 y)
         return 0;
     }
 
-   // P->inf=0;
-
     FP_BLS381_nres(&(P->x),x);
     FP_BLS381_nres(&(P->y),y);
     FP_BLS381_one(&(P->z));
@@ -349,16 +321,10 @@ int ECP_BLS381_setx(ECP_BLS381 *P,BIG_384_58 x,int s)
         return 0;
     }
 
-  //  P->inf=0;
-
     FP_BLS381_nres(&(P->x),x);
     FP_BLS381_sqrt(&(P->y),&rhs);
 
-//printf("SR= "); FP_BLS381_output(&(P->y)); printf("\n");
-
     FP_BLS381_redc(t,&(P->y));
-
-//printf("t= "); BIG_384_58_output(t); printf("\n");
 
     if (BIG_384_58_parity(t)!=s)
         FP_BLS381_neg(&(P->y),&(P->y));
@@ -378,7 +344,6 @@ void ECP_BLS381_cfp(ECP_BLS381 *P)
 	{
 		ECP_BLS381_dbl(P);
 		ECP_BLS381_dbl(P);
-		//ECP_BLS381_affine(P);
 		return;
 	}
 	if (cf==8)
@@ -386,7 +351,6 @@ void ECP_BLS381_cfp(ECP_BLS381 *P)
 		ECP_BLS381_dbl(P);
 		ECP_BLS381_dbl(P);
 		ECP_BLS381_dbl(P);
-		//ECP_BLS381_affine(P);
 		return;
 	}
 	BIG_384_58_rcopy(c,CURVE_Cof_BLS381);
@@ -513,12 +477,7 @@ void ECP_BLS381_output(ECP_BLS381 *P)
 void ECP_BLS381_rawoutput(ECP_BLS381 *P)
 {
     BIG_384_58 x,z;
-//   if (ECP_BLS381_isinf(P))
-//   {
-//       printf("Infinity\n");
-//       return;
-//   }
-//    ECP_BLS381_affine(P);
+
 #if CURVETYPE_BLS381!=MONTGOMERY
     BIG_384_58 y;
     FP_BLS381_redc(x,&(P->x));
@@ -606,19 +565,12 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
 #if CURVETYPE_BLS381==WEIERSTRASS
     FP_BLS381 t0,t1,t2,t3,x3,y3,z3,b;
 
- //   if (ECP_BLS381_isinf(P)) return;
-
     if (CURVE_A_BLS381==0)
     {
-        //FP_BLS381_copy(&t0,&(P->y));				//FP t0=new FP(y);
         FP_BLS381_sqr(&t0,&(P->y));					//t0.sqr();
-        //FP_BLS381_copy(&t1,&(P->y));				//FP t1=new FP(y);
         FP_BLS381_mul(&t1,&(P->y),&(P->z));			//t1.mul(z);
 
-        //FP_BLS381_copy(&t2,&(P->z));				//FP t2=new FP(z);
         FP_BLS381_sqr(&t2,&(P->z));					//t2.sqr();
-
-        //FP_BLS381_copy(&(P->z),&t0);				//z.copy(t0);
         FP_BLS381_add(&(P->z),&t0,&t0);		//z.add(t0);
         FP_BLS381_norm(&(P->z));					//z.norm();
         FP_BLS381_add(&(P->z),&(P->z),&(P->z));	//z.add(z);
@@ -626,24 +578,20 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
         FP_BLS381_norm(&(P->z));					//z.norm();
 
         FP_BLS381_imul(&t2,&t2,3*CURVE_B_I_BLS381);		//t2.imul(3*ROM.CURVE_B_I);
-        //FP_BLS381_copy(&x3,&t2);					//FP x3=new FP(t2);
         FP_BLS381_mul(&x3,&t2,&(P->z));			//x3.mul(z);
 
-        //FP_BLS381_copy(&y3,&t0);					//FP y3=new FP(t0);
         FP_BLS381_add(&y3,&t0,&t2);				//y3.add(t2);
         FP_BLS381_norm(&y3);						//y3.norm();
         FP_BLS381_mul(&(P->z),&(P->z),&t1);		//z.mul(t1);
 
-        //FP_BLS381_copy(&t1,&t2);					//t1.copy(t2);
         FP_BLS381_add(&t1,&t2,&t2);				//t1.add(t2);
         FP_BLS381_add(&t2,&t2,&t1);				//t2.add(t1);
         FP_BLS381_sub(&t0,&t0,&t2);				//t0.sub(t2);
         FP_BLS381_norm(&t0);						//t0.norm();
         FP_BLS381_mul(&y3,&y3,&t0);				//y3.mul(t0);
         FP_BLS381_add(&y3,&y3,&x3);				//y3.add(x3);
-        //FP_BLS381_copy(&t1,&(P->x));				//t1.copy(x);                *** optimization possible
         FP_BLS381_mul(&t1,&(P->x),&(P->y));			//t1.mul(y);
-        //FP_BLS381_copy(&(P->x),&t0);				//x.copy(t0);
+       
         FP_BLS381_norm(&t0);					//x.norm();
         FP_BLS381_mul(&(P->x),&t0,&t1);		//x.mul(t1);
         FP_BLS381_add(&(P->x),&(P->x),&(P->x));	//x.add(x);
@@ -653,11 +601,6 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
     }
     else // its -3
     {
-        //FP_BLS381_copy(&t0,&(P->x));				//FP t0=new FP(x);
-        //FP_BLS381_copy(&t1,&(P->y));				//FP t1=new FP(y);
-        //FP_BLS381_copy(&t2,&(P->z));				//FP t2=new FP(z);
-        //FP_BLS381_copy(&t3,&(P->x));				//FP t3=new FP(x);
-        //FP_BLS381_copy(&z3,&(P->z));				//FP z3=new FP(z);
 
         if (CURVE_B_I_BLS381==0)					//if (ROM.CURVE_B_I==0)
             FP_BLS381_rcopy(&b,CURVE_B_BLS381);		//b.copy(new FP(new BIG(ROM.CURVE_B)));
@@ -673,7 +616,6 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
         FP_BLS381_mul(&z3,&(P->z),&(P->x));			//z3.mul(x);   //6
         FP_BLS381_add(&z3,&z3,&z3);				//z3.add(z3);
         FP_BLS381_norm(&z3);						//z3.norm();//7
-        //FP_BLS381_copy(&y3,&t2);					//y3.copy(t2);
 
         if (CURVE_B_I_BLS381==0)						//if (ROM.CURVE_B_I==0)
             FP_BLS381_mul(&y3,&t2,&b);				//y3.mul(b); //8
@@ -681,19 +623,16 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
             FP_BLS381_imul(&y3,&t2,CURVE_B_I_BLS381);	//y3.imul(ROM.CURVE_B_I);
 
         FP_BLS381_sub(&y3,&y3,&z3);				//y3.sub(z3); //y3.norm(); //9  ***
-        //FP_BLS381_copy(&x3,&y3);					//x3.copy(y3);
         FP_BLS381_add(&x3,&y3,&y3);				//x3.add(y3);
         FP_BLS381_norm(&x3);						//x3.norm();//10
 
         FP_BLS381_add(&y3,&y3,&x3);				//y3.add(x3); //y3.norm();//11
-        //FP_BLS381_copy(&x3,&t1);					//x3.copy(t1);
         FP_BLS381_sub(&x3,&t1,&y3);				//x3.sub(y3);
         FP_BLS381_norm(&x3);						//x3.norm();//12
         FP_BLS381_add(&y3,&y3,&t1);				//y3.add(t1);
         FP_BLS381_norm(&y3);						//y3.norm();//13
         FP_BLS381_mul(&y3,&y3,&x3);				//y3.mul(x3); //14
         FP_BLS381_mul(&x3,&x3,&t3);				//x3.mul(t3); //15
-        //FP_BLS381_copy(&t3,&t2);					//t3.copy(t2);
         FP_BLS381_add(&t3,&t2,&t2);				//t3.add(t2);  //16
         FP_BLS381_add(&t2,&t2,&t3);				//t2.add(t3); //17
 
@@ -705,12 +644,10 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
         FP_BLS381_sub(&z3,&z3,&t2);				//z3.sub(t2); //z3.norm();//19
         FP_BLS381_sub(&z3,&z3,&t0);				//z3.sub(t0);
         FP_BLS381_norm(&z3);						//z3.norm();//20  ***
-        //FP_BLS381_copy(&t3,&z3);					//t3.copy(z3);
         FP_BLS381_add(&t3,&z3,&z3);				//t3.add(z3); //t3.norm();//21
 
         FP_BLS381_add(&z3,&z3,&t3);				//z3.add(t3);
         FP_BLS381_norm(&z3);						//z3.norm(); //22
-        //FP_BLS381_copy(&t3,&t0);					//t3.copy(t0);
         FP_BLS381_add(&t3,&t0,&t0);				//t3.add(t0); //t3.norm(); //23
         FP_BLS381_add(&t0,&t0,&t3);				//t0.add(t3); //t0.norm();//24
         FP_BLS381_sub(&t0,&t0,&t2);				//t0.sub(t2);
@@ -718,7 +655,6 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
 
         FP_BLS381_mul(&t0,&t0,&z3);				//t0.mul(z3);//26
         FP_BLS381_add(&y3,&y3,&t0);				//y3.add(t0); //y3.norm();//27
-        //FP_BLS381_copy(&t0,&(P->y));				//t0.copy(y);
         FP_BLS381_mul(&t0,&(P->y),&(P->z));			//t0.mul(z);//28
         FP_BLS381_add(&t0,&t0,&t0);				//t0.add(t0);
         FP_BLS381_norm(&t0);						//t0.norm(); //29
@@ -728,14 +664,11 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
         FP_BLS381_norm(&t0);						//t0.norm();//32
         FP_BLS381_add(&t1,&t1,&t1);				//t1.add(t1);
         FP_BLS381_norm(&t1);						//t1.norm();//33
-        //FP_BLS381_copy(&z3,&t0);					//z3.copy(t0);
         FP_BLS381_mul(&(P->z),&t0,&t1);				//z3.mul(t1);//34
 
-        //FP_BLS381_copy(&(P->x),&x3);				//x.copy(x3);
         FP_BLS381_norm(&(P->x));					//x.norm();
         FP_BLS381_copy(&(P->y),&y3);				//y.copy(y3);
         FP_BLS381_norm(&(P->y));					//y.norm();
-        //FP_BLS381_copy(&(P->z),&z3);				//z.copy(z3);
         FP_BLS381_norm(&(P->z));					//z.norm();
     }
 #endif
@@ -745,12 +678,7 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
 
     FP_BLS381 C,D,H,J;
 
-//    if (ECP_BLS381_isinf(P)) return;
-
-    //FP_BLS381_copy(&C,&(P->x));			//FP C=new FP(x);
     FP_BLS381_sqr(&C,&(P->x));							//C.sqr();
-    //FP_BLS381_copy(&D,&(P->y));			//FP D=new FP(y);
-    //FP_BLS381_copy(&H,&(P->z));			//FP H=new FP(z);
 
     FP_BLS381_mul(&(P->x),&(P->x),&(P->y));		//x.mul(y);
     FP_BLS381_add(&(P->x),&(P->x),&(P->x));		//x.add(x);
@@ -761,17 +689,12 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
     if (CURVE_A_BLS381==-1)				//if (ROM.CURVE_A==-1)
         FP_BLS381_neg(&C,&C);				//	C.neg();
 
-    //FP_BLS381_copy(&(P->y),&C);			//y.copy(C);
     FP_BLS381_add(&(P->y),&C,&D);		//y.add(D);
     FP_BLS381_norm(&(P->y));				//y.norm();
-    FP_BLS381_sqr(&H,&(P->z));					//H.sqr();
+    FP_BLS381_sqr(&H,&(P->z));				//H.sqr();
     FP_BLS381_add(&H,&H,&H);				//H.add(H);
 
-
-    //FP_BLS381_copy(&(P->z),&(P->y));		//z.copy(y);
-    //FP_BLS381_copy(&J,&(P->y));			//J.copy(y);
-
-    FP_BLS381_sub(&J,&(P->y),&H);				//J.sub(H);
+    FP_BLS381_sub(&J,&(P->y),&H);			//J.sub(H);
     FP_BLS381_norm(&J);					//J.norm();
 
     FP_BLS381_mul(&(P->x),&(P->x),&J);		//x.mul(J);
@@ -786,31 +709,20 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
 #if CURVETYPE_BLS381==MONTGOMERY
     FP_BLS381 A,B,AA,BB,C;
 
-//    if (ECP_BLS381_isinf(P)) return;
-
-    //FP_BLS381_copy(&A,&(P->x));			//FP A=new FP(x);
-    //FP_BLS381_copy(&B,&(P->x));			//FP B=new FP(x);
-
     FP_BLS381_add(&A,&(P->x),&(P->z));			//A.add(z);
     FP_BLS381_norm(&A);					//A.norm();
-    //FP_BLS381_copy(&AA,&A);				//AA.copy(A);
     FP_BLS381_sqr(&AA,&A);				//AA.sqr();
     FP_BLS381_sub(&B,&(P->x),&(P->z));			//B.sub(z);
     FP_BLS381_norm(&B);					//B.norm();
-    //FP_BLS381_copy(&BB,&B);				//BB.copy(B);
+
     FP_BLS381_sqr(&BB,&B);				//BB.sqr();
-    //FP_BLS381_copy(&C,&AA);				//C.copy(AA);
     FP_BLS381_sub(&C,&AA,&BB);				//C.sub(BB);
     FP_BLS381_norm(&C);					//C.norm();
-    //FP_BLS381_copy(&(P->x),&AA);			//x.copy(AA);
     FP_BLS381_mul(&(P->x),&AA,&BB);	//x.mul(BB);
-
-    //FP_BLS381_copy(&A,&C);					//A.copy(C);
     FP_BLS381_imul(&A,&C,(CURVE_A_BLS381+2)/4);	//A.imul((ROM.CURVE_A+2)/4);
 
     FP_BLS381_add(&BB,&BB,&A);				//BB.add(A);
     FP_BLS381_norm(&BB);					//BB.norm();
-    //FP_BLS381_copy(&(P->z),&BB);			//z.copy(BB);
     FP_BLS381_mul(&(P->z),&BB,&C);		//z.mul(C);
 
 #endif
@@ -823,11 +735,6 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q,ECP_BLS381 *W)
 {
     FP_BLS381 A,B,C,D,DA,CB;
 
-    //FP_BLS381_copy(&A,&(P->x));	//FP A=new FP(x);
-    //FP_BLS381_copy(&B,&(P->x));	//FP B=new FP(x);
-    //FP_BLS381_copy(&C,&(Q->x));	//FP C=new FP(Q.x);
-    //FP_BLS381_copy(&D,&(Q->x));	//FP D=new FP(Q.x);
-
     FP_BLS381_add(&A,&(P->x),&(P->z));	//A.add(z);
     FP_BLS381_sub(&B,&(P->x),&(P->z));	//B.sub(z);
 
@@ -837,27 +744,19 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q,ECP_BLS381 *W)
     FP_BLS381_norm(&A);			//A.norm();
 
     FP_BLS381_norm(&D);			//D.norm();
-    //FP_BLS381_copy(&DA,&D);			//DA.copy(D);
     FP_BLS381_mul(&DA,&D,&A);			//DA.mul(A);
-
-
 
     FP_BLS381_norm(&C);			//C.norm();
     FP_BLS381_norm(&B);			//B.norm();
-    //FP_BLS381_copy(&CB,&C);		//CB.copy(C);
     FP_BLS381_mul(&CB,&C,&B);		//CB.mul(B);
 
-    //FP_BLS381_copy(&A,&DA);		//A.copy(DA);
     FP_BLS381_add(&A,&DA,&CB);		//A.add(CB);
     FP_BLS381_norm(&A);			//A.norm();
     FP_BLS381_sqr(&(P->x),&A);			//A.sqr();
-    //FP_BLS381_copy(&B,&DA);		//B.copy(DA);
     FP_BLS381_sub(&B,&DA,&CB);		//B.sub(CB);
     FP_BLS381_norm(&B);			//B.norm();
     FP_BLS381_sqr(&B,&B);			//B.sqr();
 
-    //FP_BLS381_copy(&(P->x),&A);	//x.copy(A);
-    //FP_BLS381_copy(&(P->z),&(W->x));//z.copy(W.x);
     FP_BLS381_mul(&(P->z),&(W->x),&B);	//z.mul(B);
 
 }
@@ -872,75 +771,54 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
 
     int b3;
     FP_BLS381 t0,t1,t2,t3,t4,x3,y3,z3,b;
-/*
-    if (ECP_BLS381_isinf(Q)) return;
-    if (ECP_BLS381_isinf(P))
-    {
-        ECP_BLS381_copy(P,Q);
-        return;
-    }
-*/
+
     if (CURVE_A_BLS381==0)
     {
         b3=3*CURVE_B_I_BLS381;					//int b=3*ROM.CURVE_B_I;
-        //FP_BLS381_copy(&t0,&(P->x));			//FP t0=new FP(x);
         FP_BLS381_mul(&t0,&(P->x),&(Q->x));		//t0.mul(Q.x);
-        //FP_BLS381_copy(&t1,&(P->y));			//FP t1=new FP(y);
         FP_BLS381_mul(&t1,&(P->y),&(Q->y));		//t1.mul(Q.y);
-        //FP_BLS381_copy(&t2,&(P->z));			//FP t2=new FP(z);
         FP_BLS381_mul(&t2,&(P->z),&(Q->z));		//t2.mul(Q.z);
-        //FP_BLS381_copy(&t3,&(P->x));			//FP t3=new FP(x);
         FP_BLS381_add(&t3,&(P->x),&(P->y));		//t3.add(y);
         FP_BLS381_norm(&t3);					//t3.norm();
-        //FP_BLS381_copy(&t4,&(Q->x));			//FP t4=new FP(Q.x);
+ 
         FP_BLS381_add(&t4,&(Q->x),&(Q->y));		//t4.add(Q.y);
         FP_BLS381_norm(&t4);					//t4.norm();
         FP_BLS381_mul(&t3,&t3,&t4);			//t3.mul(t4);
-        //FP_BLS381_copy(&t4,&t0);				//t4.copy(t0);
         FP_BLS381_add(&t4,&t0,&t1);			//t4.add(t1);
 
         FP_BLS381_sub(&t3,&t3,&t4);			//t3.sub(t4);
         FP_BLS381_norm(&t3);					//t3.norm();
-        //FP_BLS381_copy(&t4,&(P->y));			//t4.copy(y);
         FP_BLS381_add(&t4,&(P->y),&(P->z));		//t4.add(z);
         FP_BLS381_norm(&t4);					//t4.norm();
-        //FP_BLS381_copy(&x3,&(Q->y));			//FP x3=new FP(Q.y);
         FP_BLS381_add(&x3,&(Q->y),&(Q->z));		//x3.add(Q.z);
         FP_BLS381_norm(&x3);					//x3.norm();
 
         FP_BLS381_mul(&t4,&t4,&x3);			//t4.mul(x3);
-        //FP_BLS381_copy(&x3,&t1);				//x3.copy(t1);
         FP_BLS381_add(&x3,&t1,&t2);			//x3.add(t2);
 
         FP_BLS381_sub(&t4,&t4,&x3);			//t4.sub(x3);
         FP_BLS381_norm(&t4);					//t4.norm();
-        //FP_BLS381_copy(&x3,&(P->x));			//x3.copy(x);
         FP_BLS381_add(&x3,&(P->x),&(P->z));		//x3.add(z);
         FP_BLS381_norm(&x3);					//x3.norm();
-        //FP_BLS381_copy(&y3,&(Q->x));			//FP y3=new FP(Q.x);
         FP_BLS381_add(&y3,&(Q->x),&(Q->z));		//y3.add(Q.z);
         FP_BLS381_norm(&y3);					//y3.norm();
         FP_BLS381_mul(&x3,&x3,&y3);			//x3.mul(y3);
-        //FP_BLS381_copy(&y3,&t0);				//y3.copy(t0);
+
         FP_BLS381_add(&y3,&t0,&t2);			//y3.add(t2);
         FP_BLS381_sub(&y3,&x3,&y3);			//y3.rsub(x3);
         FP_BLS381_norm(&y3);					//y3.norm();
-        //FP_BLS381_copy(&x3,&t0);				//x3.copy(t0);
         FP_BLS381_add(&x3,&t0,&t0);			//x3.add(t0);
         FP_BLS381_add(&t0,&t0,&x3);			//t0.add(x3);
         FP_BLS381_norm(&t0);					//t0.norm();
         FP_BLS381_imul(&t2,&t2,b3);				//t2.imul(b);
 
-        //FP_BLS381_copy(&z3,&t1);				//FP z3=new FP(t1);
         FP_BLS381_add(&z3,&t1,&t2);			//z3.add(t2);
         FP_BLS381_norm(&z3);					//z3.norm();
         FP_BLS381_sub(&t1,&t1,&t2);			//t1.sub(t2);
         FP_BLS381_norm(&t1);					//t1.norm();
         FP_BLS381_imul(&y3,&y3,b3);				//y3.imul(b);
 
-        //FP_BLS381_copy(&x3,&y3);				//x3.copy(y3);
         FP_BLS381_mul(&x3,&y3,&t4);			//x3.mul(t4);
-        //FP_BLS381_copy(&t2,&t3);				//t2.copy(t3);
         FP_BLS381_mul(&t2,&t3,&t1);			//t2.mul(t1);
         FP_BLS381_sub(&(P->x),&t2,&x3);			//x3.rsub(t2);
         FP_BLS381_mul(&y3,&y3,&t0);			//y3.mul(t0);
@@ -950,23 +828,12 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
         FP_BLS381_mul(&z3,&z3,&t4);			//z3.mul(t4);
         FP_BLS381_add(&(P->z),&z3,&t0);			//z3.add(t0);
 
-        //FP_BLS381_copy(&(P->x),&x3);			//x.copy(x3);
         FP_BLS381_norm(&(P->x));				//x.norm();
-        //FP_BLS381_copy(&(P->y),&y3);			//y.copy(y3);
         FP_BLS381_norm(&(P->y));				//y.norm();
-        //FP_BLS381_copy(&(P->z),&z3);			//z.copy(z3);
         FP_BLS381_norm(&(P->z));				//z.norm();
     }
     else
     {
-        //FP_BLS381_copy(&t0,&(P->x));			//FP t0=new FP(x);
-        //FP_BLS381_copy(&t1,&(P->y));			//FP t1=new FP(y);
-        //FP_BLS381_copy(&t2,&(P->z));			//FP t2=new FP(z);
-        //FP_BLS381_copy(&t3,&(P->x));			//FP t3=new FP(x);
-        //FP_BLS381_copy(&t4,&(Q->x));			//FP t4=new FP(Q.x);
-
-        //FP_BLS381_copy(&y3,&(Q->x));			//FP y3=new FP(Q.x);
-        //FP_BLS381_copy(&x3,&(Q->y));			//FP x3=new FP(Q.y);
 
         if (CURVE_B_I_BLS381==0)				//if (ROM.CURVE_B_I==0)
             FP_BLS381_rcopy(&b,CURVE_B_BLS381);	//b.copy(new FP(new BIG(ROM.CURVE_B)));
@@ -980,48 +847,40 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
         FP_BLS381_add(&t4,&(Q->x),&(Q->y));		//t4.add(Q.y);
         FP_BLS381_norm(&t4);					//t4.norm();//5
         FP_BLS381_mul(&t3,&t3,&t4);			//t3.mul(t4);//6
-        //FP_BLS381_copy(&t4,&t0);				//t4.copy(t0);
+    
         FP_BLS381_add(&t4,&t0,&t1);			//t4.add(t1); //t4.norm(); //7
         FP_BLS381_sub(&t3,&t3,&t4);			//t3.sub(t4);
         FP_BLS381_norm(&t3);					//t3.norm(); //8
-        //FP_BLS381_copy(&t4,&(P->y));			//t4.copy(y);
         FP_BLS381_add(&t4,&(P->y),&(P->z));		//t4.add(z);
         FP_BLS381_norm(&t4);					//t4.norm();//9
         FP_BLS381_add(&x3,&(Q->y),&(Q->z));		//x3.add(Q.z);
         FP_BLS381_norm(&x3);					//x3.norm();//10
         FP_BLS381_mul(&t4,&t4,&x3);			//t4.mul(x3); //11
-        //FP_BLS381_copy(&x3,&t1);				//x3.copy(t1);
         FP_BLS381_add(&x3,&t1,&t2);			//x3.add(t2); //x3.norm();//12
 
         FP_BLS381_sub(&t4,&t4,&x3);			//t4.sub(x3);
         FP_BLS381_norm(&t4);					//t4.norm();//13
-        //FP_BLS381_copy(&x3,&(P->x));			//x3.copy(x);
         FP_BLS381_add(&x3,&(P->x),&(P->z));		//x3.add(z);
         FP_BLS381_norm(&x3);					//x3.norm(); //14
         FP_BLS381_add(&y3,&(Q->x),&(Q->z));		//y3.add(Q.z);
         FP_BLS381_norm(&y3);					//y3.norm();//15
 
         FP_BLS381_mul(&x3,&x3,&y3);			//x3.mul(y3); //16
-        //FP_BLS381_copy(&y3,&t0);				//y3.copy(t0);
         FP_BLS381_add(&y3,&t0,&t2);			//y3.add(t2); //y3.norm();//17
 
         FP_BLS381_sub(&y3,&x3,&y3);			//y3.rsub(x3);
         FP_BLS381_norm(&y3);					//y3.norm(); //18
-        //FP_BLS381_copy(&z3,&t2);				//z3.copy(t2);
 
         if (CURVE_B_I_BLS381==0)				//if (ROM.CURVE_B_I==0)
             FP_BLS381_mul(&z3,&t2,&b);			//z3.mul(b); //18
         else
             FP_BLS381_imul(&z3,&t2,CURVE_B_I_BLS381);	//z3.imul(ROM.CURVE_B_I);
 
-        //FP_BLS381_copy(&x3,&y3);				//x3.copy(y3);
         FP_BLS381_sub(&x3,&y3,&z3);			//x3.sub(z3);
         FP_BLS381_norm(&x3);					//x3.norm(); //20
-        //FP_BLS381_copy(&z3,&x3);				//z3.copy(x3);
         FP_BLS381_add(&z3,&x3,&x3);			//z3.add(x3); //z3.norm(); //21
 
         FP_BLS381_add(&x3,&x3,&z3);			//x3.add(z3); //x3.norm(); //22
-        //FP_BLS381_copy(&z3,&t1);				//z3.copy(t1);
         FP_BLS381_sub(&z3,&t1,&x3);			//z3.sub(x3);
         FP_BLS381_norm(&z3);					//z3.norm(); //23
         FP_BLS381_add(&x3,&x3,&t1);			//x3.add(t1);
@@ -1032,7 +891,6 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
         else
             FP_BLS381_imul(&y3,&y3,CURVE_B_I_BLS381);	//y3.imul(ROM.CURVE_B_I);
 
-        //FP_BLS381_copy(&t1,&t2);				//t1.copy(t2);
         FP_BLS381_add(&t1,&t2,&t2);			//t1.add(t2); //t1.norm();//26
         FP_BLS381_add(&t2,&t2,&t1);			//t2.add(t1); //t2.norm();//27
 
@@ -1040,61 +898,39 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
 
         FP_BLS381_sub(&y3,&y3,&t0);			//y3.sub(t0);
         FP_BLS381_norm(&y3);					//y3.norm(); //29
-        //FP_BLS381_copy(&t1,&y3);				//t1.copy(y3);
         FP_BLS381_add(&t1,&y3,&y3);			//t1.add(y3); //t1.norm();//30
         FP_BLS381_add(&y3,&y3,&t1);			//y3.add(t1);
         FP_BLS381_norm(&y3);					//y3.norm(); //31
 
-        //FP_BLS381_copy(&t1,&t0);				//t1.copy(t0);
         FP_BLS381_add(&t1,&t0,&t0);			//t1.add(t0); //t1.norm(); //32
         FP_BLS381_add(&t0,&t0,&t1);			//t0.add(t1); //t0.norm();//33
         FP_BLS381_sub(&t0,&t0,&t2);			//t0.sub(t2);
         FP_BLS381_norm(&t0);					//t0.norm();//34
-        //FP_BLS381_copy(&t1,&t4);				//t1.copy(t4);
+
         FP_BLS381_mul(&t1,&t4,&y3);			//t1.mul(y3);//35
-        //FP_BLS381_copy(&t2,&t0);				//t2.copy(t0);
         FP_BLS381_mul(&t2,&t0,&y3);			//t2.mul(y3);//36
-        //FP_BLS381_copy(&y3,&x3);				//y3.copy(x3);
         FP_BLS381_mul(&y3,&x3,&z3);			//y3.mul(z3);//37
         FP_BLS381_add(&(P->y),&y3,&t2);			//y3.add(t2); //y3.norm();//38
         FP_BLS381_mul(&x3,&x3,&t3);			//x3.mul(t3);//39
         FP_BLS381_sub(&(P->x),&x3,&t1);			//x3.sub(t1);//40
         FP_BLS381_mul(&z3,&z3,&t4);			//z3.mul(t4);//41
-        //FP_BLS381_copy(&t1,&t3);				//t1.copy(t3);
+ 
         FP_BLS381_mul(&t1,&t3,&t0);			//t1.mul(t0);//42
         FP_BLS381_add(&(P->z),&z3,&t1);			//z3.add(t1);
-        //FP_BLS381_copy(&(P->x),&x3);			//x.copy(x3);
         FP_BLS381_norm(&(P->x));				//x.norm();
-        //FP_BLS381_copy(&(P->y),&y3);			//y.copy(y3);
+
         FP_BLS381_norm(&(P->y));				//y.norm();
-        //FP_BLS381_copy(&(P->z),&z3);			//z.copy(z3);
         FP_BLS381_norm(&(P->z));				//z.norm();
     }
 
 #else
     FP_BLS381 A,B,C,D,E,F,G,b;
 
-/*
-    if (ECP_BLS381_isinf(Q)) return;
-    if (ECP_BLS381_isinf(P))
-    {
-        ECP_BLS381_copy(P,Q);
-        return;
-    }
-*/
-
-    //FP_BLS381_copy(&A,&(P->z));		//FP A=new FP(z);
-    //FP_BLS381_copy(&C,&(P->x));		//FP C=new FP(x);
-    //FP_BLS381_copy(&D,&(P->y));		//FP D=new FP(y);
-
     FP_BLS381_mul(&A,&(P->z),&(Q->z));		//A.mul(Q.z);
-    //FP_BLS381_copy(&B,&A);				//B.copy(A);
-    FP_BLS381_sqr(&B,&A);				//B.sqr();
+    FP_BLS381_sqr(&B,&A);					//B.sqr();
     FP_BLS381_mul(&C,&(P->x),&(Q->x));		//C.mul(Q.x);
     FP_BLS381_mul(&D,&(P->y),&(Q->y));		//D.mul(Q.y);
-
-    //FP_BLS381_copy(&E,&C);				//E.copy(C);
-    FP_BLS381_mul(&E,&C,&D);			//E.mul(D);
+    FP_BLS381_mul(&E,&C,&D);				//E.mul(D);
 
     if (CURVE_B_I_BLS381==0)			//if (ROM.CURVE_B_I==0)
     {
@@ -1104,21 +940,16 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
     else
         FP_BLS381_imul(&E,&E,CURVE_B_I_BLS381);	//E.imul(ROM.CURVE_B_I);
 
-    //FP_BLS381_copy(&F,&B);				//F.copy(B);
     FP_BLS381_sub(&F,&B,&E);			//F.sub(E);
-    //FP_BLS381_copy(&G,&B);				//G.copy(B);
     FP_BLS381_add(&G,&B,&E);			//G.add(E);
 
     if (CURVE_A_BLS381==1)				//if (ROM.CURVE_A==1)
     {
-        //FP_BLS381_copy(&E,&D);			//E.copy(D);
         FP_BLS381_sub(&E,&D,&C);		//E.sub(C);
     }
     FP_BLS381_add(&C,&C,&D);			//C.add(D);
-
-    //FP_BLS381_copy(&B,&(P->x));		//B.copy(x);
     FP_BLS381_add(&B,&(P->x),&(P->y));		//B.add(y);
-    //FP_BLS381_copy(&D,&(Q->x));		//D.copy(Q.x);
+
     FP_BLS381_add(&D,&(Q->x),&(Q->y));		//D.add(Q.y);
     FP_BLS381_norm(&B);				//B.norm();
     FP_BLS381_norm(&D);				//D.norm();
@@ -1127,14 +958,12 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
     FP_BLS381_norm(&B);				//B.norm();
     FP_BLS381_norm(&F);				//F.norm();
     FP_BLS381_mul(&B,&B,&F);			//B.mul(F);
-    //FP_BLS381_copy(&(P->x),&A);		//x.copy(A);
     FP_BLS381_mul(&(P->x),&A,&B); //x.mul(B);
     FP_BLS381_norm(&G);				//G.norm();
 
     if (CURVE_A_BLS381==1)				//if (ROM.CURVE_A==1)
     {
         FP_BLS381_norm(&E);			//E.norm();
-        //FP_BLS381_copy(&C,&E);			//C.copy(E);
         FP_BLS381_mul(&C,&E,&G);		//C.mul(G);
     }
     if (CURVE_A_BLS381==-1)			//if (ROM.CURVE_A==-1)
@@ -1142,10 +971,7 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
         FP_BLS381_norm(&C);			//C.norm();
         FP_BLS381_mul(&C,&C,&G);		//C.mul(G);
     }
-    //FP_BLS381_copy(&(P->y),&A);		//y.copy(A);
     FP_BLS381_mul(&(P->y),&A,&C);	//y.mul(C);
-
-    //FP_BLS381_copy(&(P->z),&F);		//z.copy(F);
     FP_BLS381_mul(&(P->z),&F,&G);	//z.mul(G);
 
 #endif
@@ -1158,9 +984,7 @@ void  ECP_BLS381_sub(ECP_BLS381 *P,ECP_BLS381 *Q)
 	ECP_BLS381 NQ;
 	ECP_BLS381_copy(&NQ,Q);
 	ECP_BLS381_neg(&NQ);
-    //ECP_BLS381_neg(Q);
     ECP_BLS381_add(P,&NQ);
-    //ECP_BLS381_neg(Q);
 }
 
 #endif
@@ -1205,7 +1029,6 @@ void ECP_BLS381_mul(ECP_BLS381 *P,BIG_384_58 e)
         ECP_BLS381_inf(P);
         return;
     }
-    //ECP_BLS381_affine(P);
 
     ECP_BLS381_copy(&R0,P);
     ECP_BLS381_copy(&R1,P);
@@ -1311,9 +1134,6 @@ void ECP_BLS381_mul2(ECP_BLS381 *P,ECP_BLS381 *Q,BIG_384_58 e,BIG_384_58 f)
     ECP_BLS381 S,T,W[8],C;
     sign8 w[1+(NLEN_384_58*BASEBITS_384_58+1)/2];
     int i,a,b,s,ns,nb;
-
-    //ECP_BLS381_affine(P);
-    //ECP_BLS381_affine(Q);
 
     BIG_384_58_copy(te,e);
     BIG_384_58_copy(tf,f);

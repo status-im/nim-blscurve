@@ -112,9 +112,7 @@ void FP4_BLS381_neg(FP4_BLS381 *w,FP4_BLS381 *x)
     FP2_BLS381 m,t;
 	FP4_BLS381_norm(x);
     FP2_BLS381_add(&m,&(x->a),&(x->b));
-//	FP2_BLS381_norm(&m);
     FP2_BLS381_neg(&m,&m);
-//    FP2_BLS381_norm(&m);
     FP2_BLS381_add(&t,&m,&(x->b));
     FP2_BLS381_add(&(w->b),&m,&(x->a));
     FP2_BLS381_copy(&(w->a),&t);
@@ -152,10 +150,8 @@ void FP4_BLS381_add(FP4_BLS381 *w,FP4_BLS381 *x,FP4_BLS381 *y)
 void FP4_BLS381_sub(FP4_BLS381 *w,FP4_BLS381 *x,FP4_BLS381 *y)
 {
     FP4_BLS381 my;
-
     FP4_BLS381_neg(&my, y);
     FP4_BLS381_add(w, x, &my);
-
 }
 /* SU= 8 */
 /* reduce all components of w mod Modulus */
@@ -301,8 +297,6 @@ void FP4_BLS381_times_i(FP4_BLS381 *w)
 {
     FP_BLS381 z;
     FP2_BLS381 s,t;
-
-//    FP4_BLS381_norm(w);
     FP2_BLS381_copy(&t,&(w->b));
 
     FP2_BLS381_copy(&s,&t);
@@ -359,9 +353,7 @@ void FP4_BLS381_pow(FP4_BLS381 *r,FP4_BLS381* a,BIG_384_29 b)
 void FP4_BLS381_xtr_A(FP4_BLS381 *r,FP4_BLS381 *w,FP4_BLS381 *x,FP4_BLS381 *y,FP4_BLS381 *z)
 {
     FP4_BLS381 t1,t2;
-
     FP4_BLS381_copy(r,x);
-//FP4_BLS381_norm(y);
     FP4_BLS381_sub(&t1,w,y);
     FP4_BLS381_norm(&t1);
     FP4_BLS381_pmul(&t1,&t1,&(r->a));
@@ -410,7 +402,6 @@ void FP4_BLS381_xtr_pow(FP4_BLS381 *r,FP4_BLS381 *x,BIG_384_29 n)
     FP4_BLS381_copy(&b,&sf);
     FP4_BLS381_xtr_D(&c,&sf);
 
-    //BIG_384_29_norm(n);
     par=BIG_384_29_parity(n);
     BIG_384_29_copy(v,n);
 	BIG_384_29_norm(v);
@@ -636,9 +627,6 @@ int FP4_BLS381_sqrt(FP4_BLS381 *r,FP4_BLS381* x)
 
     if (!FP2_BLS381_sqrt(&s,&a)) return 0;
 
-    //FP2_BLS381_sqr(&t,&s);
-
-
     FP2_BLS381_copy(&t,&(x->a));
     FP2_BLS381_add(&a,&t,&s);
     FP2_BLS381_norm(&a);
@@ -660,7 +648,6 @@ int FP4_BLS381_sqrt(FP4_BLS381 *r,FP4_BLS381* x)
     FP4_BLS381_from_FP2s(r,&a,&t);
 
     return 1;
-
 }
 
 void FP4_BLS381_div_i(FP4_BLS381 *f)
@@ -686,115 +673,3 @@ void FP4_BLS381_div_2i(FP4_BLS381 *f)
 }
 
 #endif
-
-
-/*
-int main(){
-		FP2_BLS381 w0,w1,f;
-		FP4_BLS381 w,t;
-		FP4_BLS381 c1,c2,c3,c4,cr;
-		BIG_384_29 a,b;
-		BIG_384_29 e,e1,e2;
-		BIG_384_29 p,md;
-
-
-		BIG_384_29_rcopy(md,Modulus);
-		//Test w^(P^4) = w mod p^2
-		BIG_384_29_zero(a); BIG_384_29_inc(a,27);
-		BIG_384_29_zero(b); BIG_384_29_inc(b,45);
-		FP2_BLS381_from_BIGs(&w0,a,b);
-
-		BIG_384_29_zero(a); BIG_384_29_inc(a,33);
-		BIG_384_29_zero(b); BIG_384_29_inc(b,54);
-		FP2_BLS381_from_BIGs(&w1,a,b);
-
-		FP4_BLS381_from_FP2s(&w,&w0,&w1);
-		FP4_BLS381_reduce(&w);
-
-		printf("w= ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-
-
-		FP4_BLS381_copy(&t,&w);
-
-
-		BIG_384_29_copy(p,md);
-		FP4_BLS381_pow(&w,&w,p);
-
-		printf("w^p= ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-//exit(0);
-
-		BIG_384_29_rcopy(a,CURVE_Fra);
-		BIG_384_29_rcopy(b,CURVE_Frb);
-		FP2_BLS381_from_BIGs(&f,a,b);
-
-		FP4_BLS381_frob(&t,&f);
-		printf("w^p= ");
-		FP4_BLS381_output(&t);
-		printf("\n");
-
-		FP4_BLS381_pow(&w,&w,p);
-		FP4_BLS381_pow(&w,&w,p);
-		FP4_BLS381_pow(&w,&w,p);
-		printf("w^p4= ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-
-// Test 1/(1/x) = x mod p^4
-		FP4_BLS381_from_FP2s(&w,&w0,&w1);
-		printf("Test Inversion \nw= ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-
-		FP4_BLS381_inv(&w,&w);
-		printf("1/w mod p^4 = ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-
-		FP4_BLS381_inv(&w,&w);
-		printf("1/(1/w) mod p^4 = ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-
-		BIG_384_29_zero(e); BIG_384_29_inc(e,12);
-
-
-
-	//	FP4_BLS381_xtr_A(&w,&t,&w,&t,&t);
-		FP4_BLS381_xtr_pow(&w,&w,e);
-
-		printf("w^e= ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-
-
-		BIG_384_29_zero(a); BIG_384_29_inc(a,37);
-		BIG_384_29_zero(b); BIG_384_29_inc(b,17);
-		FP2_BLS381_from_BIGs(&w0,a,b);
-
-		BIG_384_29_zero(a); BIG_384_29_inc(a,49);
-		BIG_384_29_zero(b); BIG_384_29_inc(b,31);
-		FP2_BLS381_from_BIGs(&w1,a,b);
-
-		FP4_BLS381_from_FP2s(&c1,&w0,&w1);
-		FP4_BLS381_from_FP2s(&c2,&w0,&w1);
-		FP4_BLS381_from_FP2s(&c3,&w0,&w1);
-		FP4_BLS381_from_FP2s(&c4,&w0,&w1);
-
-		BIG_384_29_zero(e1); BIG_384_29_inc(e1,3331);
-		BIG_384_29_zero(e2); BIG_384_29_inc(e2,3372);
-
-		FP4_BLS381_xtr_pow2(&w,&c1,&w,&c2,&c3,e1,e2);
-
-		printf("c^e= ");
-		FP4_BLS381_output(&w);
-		printf("\n");
-
-
-		return 0;
-}
-*/
-

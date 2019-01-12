@@ -28,7 +28,6 @@ under the License.
 /* SU= 8 */
 int FP2_BLS381_iszilch(FP2_BLS381 *x)
 {
-   // FP2_BLS381_reduce(x);
     if (FP_BLS381_iszilch(&(x->a)) && FP_BLS381_iszilch(&(x->b))) return 1;
     return 0;
 }
@@ -46,7 +45,6 @@ int FP2_BLS381_isunity(FP2_BLS381 *x)
 {
     FP_BLS381 one;
     FP_BLS381_one(&one);
-    //FP2_BLS381_reduce(x);
     if (FP_BLS381_equals(&(x->a),&one) && FP_BLS381_iszilch(&(x->b))) return 1;
     return 0;
 }
@@ -132,7 +130,6 @@ void FP2_BLS381_neg(FP2_BLS381 *w,FP2_BLS381 *x)
 {
     /* Just one neg! */
     FP_BLS381 m,t;
-//    FP2_BLS381_norm(x);
     FP_BLS381_add(&m,&(x->a),&(x->b));
     FP_BLS381_neg(&m,&m);
     FP_BLS381_add(&t,&m,&(x->b));
@@ -146,7 +143,6 @@ void FP2_BLS381_neg(FP2_BLS381 *w,FP2_BLS381 *x)
 void FP2_BLS381_conj(FP2_BLS381 *w,FP2_BLS381 *x)
 {
     FP_BLS381_copy(&(w->a),&(x->a));
-//	BIG_384_29_norm(x->b);
     FP_BLS381_neg(&(w->b),&(x->b));
     FP_BLS381_norm(&(w->b));
 }
@@ -204,7 +200,6 @@ void FP2_BLS381_sqr(FP2_BLS381 *w,FP2_BLS381 *x)
 
     FP_BLS381_mul(&(w->a),&w1,&(w->a));     /* w->a#2 w->a=1 w1&w2=6 w1*w2=2 */
 }
-
 
 /* Set w=x*y */
 /* Inputs MUST be normed  */
@@ -298,7 +293,6 @@ void FP2_BLS381_inv(FP2_BLS381 *w,FP2_BLS381 *x)
     FP_BLS381_neg(&w1,&w1);
     FP_BLS381_norm(&w1);
     FP_BLS381_mul(&(w->b),&(x->b),&w1);
-//	FP2_BLS381_norm(w);
 }
 
 
@@ -318,8 +312,6 @@ void FP2_BLS381_mul_ip(FP2_BLS381 *w)
 {
     FP_BLS381 z;
     FP2_BLS381 t;
-
-//   FP2_BLS381_norm(w);
     FP2_BLS381_copy(&t,w);
 
     FP_BLS381_copy(&z,&(w->a));
@@ -436,9 +428,6 @@ int FP2_BLS381_sqrt(FP2_BLS381 *w,FP2_BLS381 *u)
 void FP2_BLS381_times_i(FP2_BLS381 *w)
 {
     FP_BLS381 z;
-
- //   FP2_norm(w);
-
     FP_BLS381_copy(&z,&(w->a));
     FP_BLS381_neg(&(w->a),&(w->b));
     FP_BLS381_copy(&(w->b),&z);
@@ -446,44 +435,3 @@ void FP2_BLS381_times_i(FP2_BLS381 *w)
 //    Output NOT normed, so use with care
 }
 
-/*
-int main()
-{
-	int i;
-	FP2_BLS381 w,z;
-	BIG_384_29 a,b,e;
-	BIG_384_29 pp1,pm1;
-	BIG_384_29_unity(a); BIG_384_29_unity(b);
-	FP2_BLS381_from_BIGs(&w,a,b);
-//	for (i=0;i<100;i++)
-//	{
-//		BIG_384_29_randomnum(a); BIG_384_29_randomnum(b);
-//		BIG_384_29_mod(a,Modulus_BLS381); BIG_384_29_mod(b,Modulus_BLS381);
-//		FP2_BLS381_from_FPs(&w,a,b);
-//		FP2_BLS381_output(&w);
-//		FP2_BLS381_inv(&z,&w);
-//				FP2_BLS381_output(&z);
-//		FP2_BLS381_inv(&z,&z);
-//				FP2_BLS381_output(&z);
-//				FP2_BLS381_output(&w);
-//		if (FP2_BLS381_comp(&w,&z)!=1) printf("error \n");
-//		else printf("OK \n");
-//	}
-//exit(0);
-	printf("w= "); FP2_BLS381_output(&w); printf("\n");
-	BIG_384_29_zero(e); BIG_384_29_inc(e,27);
-	FP2_BLS381_pow(&w,&w,e);
-	FP2_BLS381_output(&w);
-exit(0);
-	BIG_384_29_rcopy(pp1,Modulus_BLS381);
-	BIG_384_29_rcopy(pm1,Modulus_BLS381);
-	BIG_384_29_inc(pp1,1);
-	BIG_384_29_dec(pm1,1);
-	BIG_384_29_norm(pp1);
-	BIG_384_29_norm(pm1);
-	FP2_BLS381_pow(&w,&w,pp1);
-	FP2_BLS381_pow(&w,&w,pm1);
-	FP2_BLS381_output(&w);
-}
-
-*/

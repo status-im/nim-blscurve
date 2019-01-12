@@ -35,9 +35,6 @@ when (sizeof(int) == 4) or defined(use32):
   const
     MODBYTES_384* = 48 # config_big_384_29.h
     BASEBITS_384* = 29 # config_big_384_29.h
-    BIGBITS_384* = 8 * MODBYTES_384
-    NLEN_384* = (1 + ((8 * MODBYTES_384 - 1) div BASEBITS_384))
-    DNLEN_384* = 2 * NLEN_384
 
 elif sizeof(int) == 8:
   const milagroPath = currentSourcePath.rsplit(DirSep, 1)[0] & DirSep &
@@ -65,9 +62,11 @@ elif sizeof(int) == 8:
   const
     MODBYTES_384* = 48 # config_big_384_58.h
     BASEBITS_384* = 58 # config_big_384_58.h
-    BIGBITS_384* = 8 * MODBYTES_384
-    NLEN_384* = (1 + ((8 * MODBYTES_384 - 1) div BASEBITS_384))
-    DNLEN_384* = 2 * NLEN_384
+
+const
+  BIGBITS_384* = 8 * MODBYTES_384
+  NLEN_384* = (1 + ((8 * MODBYTES_384 - 1) div BASEBITS_384))
+  DNLEN_384* = 2 * NLEN_384
 
 type
   Octet* {.importc: "octet", header: milagroPath & "amcl.h"} = object

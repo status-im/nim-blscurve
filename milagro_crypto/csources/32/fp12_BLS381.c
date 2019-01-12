@@ -243,9 +243,7 @@ void FP12_BLS381_mul(FP12_BLS381 *w,FP12_BLS381 *y)
     FP4_BLS381_neg(&t1,&z2);
 
     FP4_BLS381_add(&z1,&z1,&t0);   // z1=z1-z0
-//    FP4_BLS381_norm(&z1);
-    FP4_BLS381_add(&(w->b),&z1,&t1);
-// z1=z1-z2
+    FP4_BLS381_add(&(w->b),&z1,&t1); // z1=z1-z2
     FP4_BLS381_add(&z3,&z3,&t1);        // z3=z3-z2
     FP4_BLS381_add(&z2,&z2,&t0);        // z2=z2-z0
 
@@ -302,7 +300,6 @@ void FP12_BLS381_smul(FP12_BLS381 *w,FP12_BLS381 *y,int type)
         FP4_BLS381_neg(&t1,&z2);
 
         FP4_BLS381_add(&(w->b),&(w->b),&t0);   // z1=z1-z0
-//    FP4_BLS381_norm(&(w->b));
         FP4_BLS381_add(&(w->b),&(w->b),&t1);   // z1=z1-z2
 
         FP4_BLS381_add(&z3,&z3,&t1);        // z3=z3-z2
@@ -371,7 +368,6 @@ void FP12_BLS381_smul(FP12_BLS381 *w,FP12_BLS381 *y,int type)
 void FP12_BLS381_inv(FP12_BLS381 *w,FP12_BLS381 *x)
 {
     FP4_BLS381 f0,f1,f2,f3;
-//    FP12_BLS381_norm(x);
 
     FP4_BLS381_sqr(&f0,&(x->a));
     FP4_BLS381_mul(&f1,&(x->b),&(x->c));
@@ -462,7 +458,6 @@ void FP12_BLS381_compow(FP4_BLS381 *c,FP12_BLS381 *x,BIG_384_29 e,BIG_384_29 r)
         return;
     }
 
-
     FP12_BLS381_frob(&g2,&f);
     FP12_BLS381_trace(&cp,&g2);
 
@@ -473,7 +468,6 @@ void FP12_BLS381_compow(FP4_BLS381 *c,FP12_BLS381 *x,BIG_384_29 e,BIG_384_29 r)
     FP12_BLS381_trace(&cpm2,&g2);
 
     FP4_BLS381_xtr_pow2(c,&cp,c,&cpm1,&cpm2,a,b);
-
 }
 
 
@@ -513,19 +507,6 @@ void FP12_BLS381_pow(FP12_BLS381 *r,FP12_BLS381 *a,BIG_384_29 b)
 
     FP12_BLS381_copy(r,&w);
     FP12_BLS381_reduce(r);
-
-    /*
-        while(1)
-        {
-            bt=BIG_384_29_parity(z);
-            BIG_384_29_shr(z,1);
-            if (bt)
-                FP12_BLS381_mul(r,&w);
-            if (BIG_384_29_comp(z,zilch)==0) break;
-            FP12_BLS381_usqr(&w,&w);
-        }
-
-        FP12_BLS381_reduce(r); */
 }
 
 /* p=q0^u0.q1^u1.q2^u2.q3^u3 */
@@ -616,95 +597,6 @@ void FP12_BLS381_pow4(FP12_BLS381 *p,FP12_BLS381 *q,BIG_384_29 u[4])
 	FP12_BLS381_reduce(p);
 }
 
-/* p=q0^u0.q1^u1.q2^u2.q3^u3 */
-/* Timing attack secure, but not cache attack secure */
-/*
-void FP12_BLS381_pow4(FP12_BLS381 *p,FP12_BLS381 *q,BIG_384_29 u[4])
-{
-    int i,j,a[4],nb,m;
-    FP12_BLS381 g[8],c,s[2];
-    BIG_384_29 t[4],mt;
-    sign8 w[NLEN_384_29*BASEBITS_384_29+1];
-
-    for (i=0; i<4; i++)
-        BIG_384_29_copy(t[i],u[i]);
-
-    FP12_BLS381_copy(&g[0],&q[0]);
-    FP12_BLS381_conj(&s[0],&q[1]);
-    FP12_BLS381_mul(&g[0],&s[0]);  // P/Q 
-    FP12_BLS381_copy(&g[1],&g[0]);
-    FP12_BLS381_copy(&g[2],&g[0]);
-    FP12_BLS381_copy(&g[3],&g[0]);
-    FP12_BLS381_copy(&g[4],&q[0]);
-    FP12_BLS381_mul(&g[4],&q[1]);  // P*Q 
-    FP12_BLS381_copy(&g[5],&g[4]);
-    FP12_BLS381_copy(&g[6],&g[4]);
-    FP12_BLS381_copy(&g[7],&g[4]);
-
-    FP12_BLS381_copy(&s[1],&q[2]);
-    FP12_BLS381_conj(&s[0],&q[3]);
-    FP12_BLS381_mul(&s[1],&s[0]);       // R/S 
-    FP12_BLS381_conj(&s[0],&s[1]);
-    FP12_BLS381_mul(&g[1],&s[0]);
-    FP12_BLS381_mul(&g[2],&s[1]);
-    FP12_BLS381_mul(&g[5],&s[0]);
-    FP12_BLS381_mul(&g[6],&s[1]);
-    FP12_BLS381_copy(&s[1],&q[2]);
-    FP12_BLS381_mul(&s[1],&q[3]);      // R*S 
-    FP12_BLS381_conj(&s[0],&s[1]);
-    FP12_BLS381_mul(&g[0],&s[0]);
-    FP12_BLS381_mul(&g[3],&s[1]);
-    FP12_BLS381_mul(&g[4],&s[0]);
-    FP12_BLS381_mul(&g[7],&s[1]);
-
-    // if power is even add 1 to power, and add q to correction 
-    FP12_BLS381_one(&c);
-
-    BIG_384_29_zero(mt);
-    for (i=0; i<4; i++)
-    {
-        if (BIG_384_29_parity(t[i])==0)
-        {
-            BIG_384_29_inc(t[i],1);
-            BIG_384_29_norm(t[i]);
-            FP12_BLS381_mul(&c,&q[i]);
-        }
-        BIG_384_29_add(mt,mt,t[i]);
-        BIG_384_29_norm(mt);
-    }
-
-    FP12_BLS381_conj(&c,&c);
-    nb=1+BIG_384_29_nbits(mt);
-
-    // convert exponent to signed 1-bit window 
-    for (j=0; j<nb; j++)
-    {
-        for (i=0; i<4; i++)
-        {
-            a[i]=BIG_384_29_lastbits(t[i],2)-2;
-            BIG_384_29_dec(t[i],a[i]);
-            BIG_384_29_norm(t[i]);
-            BIG_384_29_fshr(t[i],1);
-        }
-        w[j]=8*a[0]+4*a[1]+2*a[2]+a[3];
-    }
-    w[nb]=8*BIG_384_29_lastbits(t[0],2)+4*BIG_384_29_lastbits(t[1],2)+2*BIG_384_29_lastbits(t[2],2)+BIG_384_29_lastbits(t[3],2);
-    FP12_BLS381_copy(p,&g[(w[nb]-1)/2]);
-
-    for (i=nb-1; i>=0; i--)
-    {
-        m=w[i]>>7;
-        j=(w[i]^m)-m;  // j=abs(w[i]) 
-        j=(j-1)/2;
-        FP12_BLS381_copy(&s[0],&g[j]);
-        FP12_BLS381_conj(&s[1],&g[j]);
-        FP12_BLS381_usqr(p,p);
-        FP12_BLS381_mul(p,&s[m&1]);
-    }
-    FP12_BLS381_mul(p,&c); // apply correction 
-    FP12_BLS381_reduce(p);
-}
-*/
 /* Set w=w^p using Frobenius */
 /* SU= 160 */
 void FP12_BLS381_frob(FP12_BLS381 *w,FP2_BLS381 *f)
@@ -832,153 +724,3 @@ void FP12_BLS381_cmove(FP12_BLS381 *f,FP12_BLS381 *g,int d)
     FP4_BLS381_cmove(&(f->c),&(g->c),d);
 }
 
-
-/*
-int main(){
-		FP2_BLS381 f,w0,w1;
-		FP4_BLS381 t0,t1,t2;
-		FP12_BLS381 w,t,lv;
-		BIG_384_29 a,b;
-		BIG_384_29 p;
-
-		//Test w^(P^4) = w mod p^2
-//		BIG_384_29_randomnum(a);
-//		BIG_384_29_randomnum(b);
-//		BIG_384_29_mod(a,Modulus); BIG_384_29_mod(b,Modulus);
-	BIG_384_29_zero(a); BIG_384_29_zero(b); BIG_384_29_inc(a,1); BIG_384_29_inc(b,2); FP_BLS381_nres(a); FP_BLS381_nres(b);
-		FP2_BLS381_from_zps(&w0,a,b);
-
-//		BIG_384_29_randomnum(a); BIG_384_29_randomnum(b);
-//		BIG_384_29_mod(a,Modulus); BIG_384_29_mod(b,Modulus);
-	BIG_384_29_zero(a); BIG_384_29_zero(b); BIG_384_29_inc(a,3); BIG_384_29_inc(b,4); FP_BLS381_nres(a); FP_BLS381_nres(b);
-		FP2_BLS381_from_zps(&w1,a,b);
-
-		FP4_BLS381_from_FP2s(&t0,&w0,&w1);
-		FP4_BLS381_reduce(&t0);
-
-//		BIG_384_29_randomnum(a);
-//		BIG_384_29_randomnum(b);
-//		BIG_384_29_mod(a,Modulus); BIG_384_29_mod(b,Modulus);
-		BIG_384_29_zero(a); BIG_384_29_zero(b); BIG_384_29_inc(a,5); BIG_384_29_inc(b,6); FP_BLS381_nres(a); FP_BLS381_nres(b);
-		FP2_BLS381_from_zps(&w0,a,b);
-
-//		BIG_384_29_randomnum(a); BIG_384_29_randomnum(b);
-//		BIG_384_29_mod(a,Modulus); BIG_384_29_mod(b,Modulus);
-
-		BIG_384_29_zero(a); BIG_384_29_zero(b); BIG_384_29_inc(a,7); BIG_384_29_inc(b,8); FP_BLS381_nres(a); FP_BLS381_nres(b);
-		FP2_BLS381_from_zps(&w1,a,b);
-
-		FP4_BLS381_from_FP2s(&t1,&w0,&w1);
-		FP4_BLS381_reduce(&t1);
-
-//		BIG_384_29_randomnum(a);
-//		BIG_384_29_randomnum(b);
-//		BIG_384_29_mod(a,Modulus); BIG_384_29_mod(b,Modulus);
-		BIG_384_29_zero(a); BIG_384_29_zero(b); BIG_384_29_inc(a,9); BIG_384_29_inc(b,10); FP_BLS381_nres(a); FP_BLS381_nres(b);
-		FP2_BLS381_from_zps(&w0,a,b);
-
-//		BIG_384_29_randomnum(a); BIG_384_29_randomnum(b);
-//		BIG_384_29_mod(a,Modulus); BIG_384_29_mod(b,Modulus);
-		BIG_384_29_zero(a); BIG_384_29_zero(b); BIG_384_29_inc(a,11); BIG_384_29_inc(b,12); FP_BLS381_nres(a); FP_BLS381_nres(b);
-		FP2_BLS381_from_zps(&w1,a,b);
-
-		FP4_BLS381_from_FP2s(&t2,&w0,&w1);
-		FP4_BLS381_reduce(&t2);
-
-		FP12_BLS381_from_FP4s(&w,&t0,&t1,&t2);
-
-		FP12_BLS381_copy(&t,&w);
-
-		printf("w= ");
-		FP12_BLS381_output(&w);
-		printf("\n");
-
-		BIG_384_29_rcopy(p,Modulus);
-		//BIG_384_29_zero(p); BIG_384_29_inc(p,7);
-
-		FP12_BLS381_pow(&w,&w,p);
-
-		printf("w^p= ");
-		FP12_BLS381_output(&w);
-		printf("\n");
-
-		FP2_BLS381_gfc(&f,12);
-		FP12_BLS381_frob(&t,&f);
-		printf("w^p= ");
-		FP12_BLS381_output(&t);
-		printf("\n");
-
-//exit(0);
-
-		FP12_BLS381_pow(&w,&w,p);
-		//printf("w^p^2= ");
-		//FP12_BLS381_output(&w);
-		//printf("\n");
-		FP12_BLS381_pow(&w,&w,p);
-		//printf("w^p^3= ");
-		//FP12_BLS381_output(&w);
-		//printf("\n");
-		FP12_BLS381_pow(&w,&w,p);
-		FP12_BLS381_pow(&w,&w,p);
-		FP12_BLS381_pow(&w,&w,p);
-		printf("w^p^6= ");
-		FP12_BLS381_output(&w);
-		printf("\n");
-		FP12_BLS381_pow(&w,&w,p);
-		FP12_BLS381_pow(&w,&w,p);
-		printf("w^p^8= ");
-		FP12_BLS381_output(&w);
-		printf("\n");
-		FP12_BLS381_pow(&w,&w,p);
-		FP12_BLS381_pow(&w,&w,p);
-		FP12_BLS381_pow(&w,&w,p);
-		printf("w^p^11= ");
-		FP12_BLS381_output(&w);
-		printf("\n");
-
-	//	BIG_384_29_zero(p); BIG_384_29_inc(p,7); BIG_384_29_norm(p);
-		FP12_BLS381_pow(&w,&w,p);
-
-		printf("w^p12= ");
-		FP12_BLS381_output(&w);
-		printf("\n");
-//exit(0);
-
-		FP12_BLS381_inv(&t,&w);
-		printf("1/w mod p^4 = ");
-		FP12_BLS381_output(&t);
-		printf("\n");
-
-		FP12_BLS381_inv(&w,&t);
-		printf("1/(1/w) mod p^4 = ");
-		FP12_BLS381_output(&w);
-		printf("\n");
-
-
-
-	FP12_BLS381_inv(&lv,&w);
-//printf("w= "); FP12_BLS381_output(&w); printf("\n");
-	FP12_BLS381_conj(&w,&w);
-//printf("w= "); FP12_BLS381_output(&w); printf("\n");
-//exit(0);
-	FP12_BLS381_mul(&w,&w,&lv);
-//printf("w= "); FP12_BLS381_output(&w); printf("\n");
-	FP12_BLS381_copy(&lv,&w);
-	FP12_BLS381_frob(&w,&f);
-	FP12_BLS381_frob(&w,&f);
-	FP12_BLS381_mul(&w,&w,&lv);
-
-//printf("w= "); FP12_BLS381_output(&w); printf("\n");
-//exit(0);
-
-w.unitary=0;
-FP12_BLS381_conj(&lv,&w);
-	printf("rx= "); FP12_BLS381_output(&lv); printf("\n");
-FP12_BLS381_inv(&lv,&w);
-	printf("ry= "); FP12_BLS381_output(&lv); printf("\n");
-
-
-		return 0;
-}
-
-*/

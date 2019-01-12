@@ -473,6 +473,9 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   # Convert (xre, xim) to FP2.
   x.fromBigs(xre, xim)
   echo "x = ", $x
+  # Normalize `x`
+  norm(x)
+  echo "normalized x = ", $x
   # Set FP2 One
   one.setOne()
   while true:
