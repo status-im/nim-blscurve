@@ -229,7 +229,6 @@ proc initSignature*(data: string): Signature {.inline.} =
 
 proc signMessage*(sigkey: SigKey, domain: uint64, mdctx: keccak256): Signature =
   var point = hashToG2(mdctx, domain)
-  echo $point
   point.mul(sigkey.x)
   result.point = point
 
