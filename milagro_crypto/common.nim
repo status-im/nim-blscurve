@@ -1,6 +1,6 @@
 import algorithm, endians
-import nimcrypto/[sysrand, utils, hash, keccak, blake2]
-import internals, hexdump
+import nimcrypto/[sysrand, utils, hash, keccak]
+import internals
 export internals
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
@@ -64,6 +64,9 @@ proc setOne*(dst: var FP2_BLS381) {.inline.} =
 proc add*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
   ## Set ``dst`` to ``x + y``.
   FP2_BLS381_add(addr dst, unsafeAddr x, unsafeAddr y)
+
+proc add*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+  FP2_BLS381_add(addr result, unsafeAddr x, unsafeAddr y)
 
 proc shiftr*(a: var BIG_384, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
@@ -427,11 +430,8 @@ proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   var lowpart: ECP2_BLS381
   result = point
   lowpart = point
-  echo "mid 0 result = ", $result
   mul(result, G2_CoFactorHigh)
-  echo "mid 1 result = ", $result
   mul(result, G2_CoFactorShift)
-  echo "mid 2 result = ", $result
   mul(lowpart, G2_CoFactorLow)
   add(result, lowpart)
 
@@ -462,8 +462,6 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   # Clear contexts
   ctx1.clear()
   ctx2.clear()
-  echo $xrehash
-  echo $ximhash
   # Create BIG_384 integer `xre` from `xrehash`.
   copyMem(addr buffer[0], addr xrehash.data[0], len(xrehash.data))
   discard xre.fromBytes(buffer)
@@ -472,22 +470,16 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   discard xim.fromBytes(buffer)
   # Convert (xre, xim) to FP2.
   x.fromBigs(xre, xim)
-  echo "x = ", $x
-  # Normalize `x`
-  norm(x)
-  echo "normalized x = ", $x
   # Set FP2 One
   one.setOne()
+  var i = 0
   while true:
+    norm(x)
     if ECP2_BLS381_setx(addr result, addr x) == 1:
       break
     # Increment `x` by FP2(1, 0)
-    FP2_BLS381_add(addr x, addr x, addr one)
-  echo "after x = ", $x
-  echo "before result = ", $result
+    x = add(x, one)
   result = mulCoFactor(result)
-  echo "after result = ", $result
-
 
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.
