@@ -228,12 +228,16 @@ proc initSignature*(data: string): Signature {.inline.} =
   result = initSignature(fromHex(data))
 
 proc signMessage*(sigkey: SigKey, domain: uint64, mdctx: keccak256): Signature =
+  ## Sign keccak-256 context using Signature Key ``sigkey`` over domain
+  ## ``domain``.
   var point = hashToG2(mdctx, domain)
   point.mul(sigkey.x)
   result.point = point
 
 proc signMessage*[T](sigkey: SigKey, domain: uint64,
                      message: openarray[T]): Signature =
+  ## Sign message ``message`` using Signature Key ``sigkey`` over domain
+  ## ``domain``.
   var mdctx: keccak256
   mdctx.init()
   mdctx.update(message)
@@ -242,6 +246,11 @@ proc signMessage*[T](sigkey: SigKey, domain: uint64,
 
 proc verifyMessage*(sig: Signature, mdctx: keccak256, domain: uint64,
                     verkey: VerKey): bool =
+  ## Verify signature ``sig`` using Verification Key ``verkey`` and keccak-256
+  ## context ``mdctx`` over domain ``domain``.
+  ##
+  ## Returns ``true`` if message verification succeeded, ``false`` if
+  ## verification failed.
   if sig.point.isinf():
     result = false
   else:
@@ -253,6 +262,11 @@ proc verifyMessage*(sig: Signature, mdctx: keccak256, domain: uint64,
 
 proc verifyMessage*[T](sig: Signature, message: openarray[T], domain: uint64,
                        verkey: VerKey): bool {.inline.} =
+  ## Verify signature ``sig`` using Verification Key ``verkey`` and message
+  ## ``message`` over domain ``domain``.
+  ##
+  ## Return ``true`` if message verification succeeded, ``false`` if
+  ## verification failed.
   var mdctx: keccak256
   mdctx.init()
   mdctx.update(message)
