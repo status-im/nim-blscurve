@@ -9,7 +9,7 @@
 
 import unittest, ospaths
 import nimcrypto/[sysrand, hash, keccak, utils]
-import ../milagro_crypto/scheme3, ../milagro_crypto/hexdump
+import ../milagro_crypto/scheme3
 
 const messages = [
   "Small msg", "121220888888822111212",
