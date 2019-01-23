@@ -225,6 +225,10 @@ proc fromBigs*(p: var FP2_BLS381, x, y: BIG_384) {.inline.} =
   ## Set value of ``p`` from two big integers ``x`` and ``y``.
   FP2_BLS381_from_BIGs(addr p, x, y)
 
+proc fromFPs*(p: var FP2_BLS381, x, y: FP_BLS381) {.inline.} =
+  ## Set value of ``p`` from two big integers ``x`` and ``y``.
+  FP2_BLS381_from_FPs(addr p, x, y)
+
 proc generator1*(): ECP_BLS381 {.inline.} =
   ECP_BLS381_generator(addr result)
 
@@ -312,13 +316,12 @@ proc `$`*(p: ECP2_BLS381): string =
   if p.isinf():
     result = "INFINITY"
   else:
-    var px = p
-    var x, y: FP2_BLS381
-    discard ECP2_BLS381_get(addr x, addr y, addr px)
     result = "("
-    result.add($x)
+    result.add($p.x)
     result.add(", ")
-    result.add($y)
+    result.add($p.y)
+    result.add(", ")
+    result.add($p.z)
     result.add(")")
 
 proc toBytes*(a: BIG_384, res: var array[MODBYTES_384, byte]) =
@@ -340,18 +343,22 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
     res[0] = res[0] + Chunk(a[i])
   result = true
 
-proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
-  if len(a) < MODBYTES_384 * 4:
-    result = false
-  else:
-    var oct = Octet(len: MODBYTES_384 * 4, max: MODBYTES_384 * 4,
-                    val: unsafeAddr a[0])
-    result = (ECP2_BLS381_fromOctet(addr res, addr oct) == 1)
+proc fromHex*(res: var BIG_384, a: string): bool {.inline.} =
+  ## Unserialize big integer from hexadecimal string ``a`` to ``res``.
+  fromBytes(res, fromHex(a))
 
-proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte]) =
-  var aclone = a
-  var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
-  ECP2_BLS381_toOctet(addr oct, addr aclone)
+# proc fromBytes*(res: var ECP2_BLS381, a: openarray[byte]): bool =
+#   if len(a) < MODBYTES_384 * 4:
+#     result = false
+#   else:
+#     var oct = Octet(len: MODBYTES_384 * 4, max: MODBYTES_384 * 4,
+#                     val: unsafeAddr a[0])
+#     result = (ECP2_BLS381_fromOctet(addr res, addr oct) == 1)
+
+# proc toBytes*(a: ECP2_BLS381, res: var array[MODBYTES_384 * 4, byte]) =
+#   var aclone = a
+#   var oct = Octet(max: MODBYTES_384 * 4, val: addr res[0])
+#   ECP2_BLS381_toOctet(addr oct, addr aclone)
 
 proc toBytes*(a: ECP_BLS381, res: var array[MODBYTES_384 * 2 + 1, byte],
               compressed = false) =
@@ -405,32 +412,36 @@ proc fromBytes*(res: var FP12_BLS381, a: openarray[byte]): bool =
                     val: unsafeAddr a[0])
     result = (FP12_BLS381_fromOctet(addr res, addr oct) == 1)
 
-proc mapit*[T](hash: MDigest[T]): ECP_BLS381 =
-  ## Map hash value ``hash`` to ECP
-  var buffer: array[MODBYTES_384, byte]
-  doAssert(len(hash.data) <= MODBYTES_384)
-  let pos = MODBYTES_384 - len(hash.data)
-  copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
-  var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
-                  val: addr buffer[0])
-  ECP_BLS381_mapit(addr result, addr oct)
+# proc mapit*[T](hash: MDigest[T]): ECP_BLS381 =
+#   ## Map hash value ``hash`` to ECP
+#   var buffer: array[MODBYTES_384, byte]
+#   doAssert(len(hash.data) <= MODBYTES_384)
+#   let pos = MODBYTES_384 - len(hash.data)
+#   copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
+#   var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
+#                   val: addr buffer[0])
+#   ECP_BLS381_mapit(addr result, addr oct)
 
-proc mapit2*[T](hash: MDigest[T]): ECP2_BLS381 =
-  ## Map hash value ``hash`` to ECP2
-  var buffer: array[MODBYTES_384, byte]
-  doAssert(len(hash.data) <= MODBYTES_384)
-  let pos = MODBYTES_384 - len(hash.data)
-  copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
-  var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
-                  val: addr buffer[0])
-  ECP2_BLS381_mapit(addr result, addr oct)
+# proc mapit2*[T](hash: MDigest[T]): ECP2_BLS381 =
+#   ## Map hash value ``hash`` to ECP2
+#   var buffer: array[MODBYTES_384, byte]
+#   doAssert(len(hash.data) <= MODBYTES_384)
+#   let pos = MODBYTES_384 - len(hash.data)
+#   copyMem(addr buffer[pos], unsafeAddr hash.data[0], len(hash.data))
+#   var oct = Octet(len: MODBYTES_384, max: MODBYTES_384,
+#                   val: addr buffer[0])
+#   ECP2_BLS381_mapit(addr result, addr oct)
 
 proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   ## Multiplies point by a cofactor of G2
   var lowpart: ECP2_BLS381
   result = point
   lowpart = point
+  echo "Point = (", $point.x, ", ", $point.y, ", ", $point.z, ")\n"
+  echo "CoFactorHigh = ", $G2_CoFactorHigh
   mul(result, G2_CoFactorHigh)
+  echo "After G2_CoFactorHigh = (", $result.x, ", ", $result.y, ", ", $result.z, ")\n"
+  echo "After G2_CoFactorHigh - 2 = ", $result
   mul(result, G2_CoFactorShift)
   mul(lowpart, G2_CoFactorLow)
   add(result, lowpart)
@@ -453,21 +464,19 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   ctx2.update(bebuf)
   # Update hash context with coordinate marker
   bebuf[0] = 0x01
-  ctx1.update(buffer.toOpenArray(0, 0))
+  ctx1.update(bebuf.toOpenArray(0, 0))
   bebuf[0] = 0x02
   ctx2.update(bebuf.toOpenArray(0, 0))
   # Obtain result hash
   var xrehash = ctx1.finish()
   var ximhash = ctx2.finish()
+  echo xrehash
+  echo ximhash
   # Clear contexts
   ctx1.clear()
   ctx2.clear()
-  # Create BIG_384 integer `xre` from `xrehash`.
-  copyMem(addr buffer[0], addr xrehash.data[0], len(xrehash.data))
-  discard xre.fromBytes(buffer)
-  # Create BIG_384 integer `xim` from `ximhash`.
-  copyMem(addr buffer[0], addr ximhash.data[0], len(ximhash.data))
-  discard xim.fromBytes(buffer)
+  discard xre.fromBytes(xrehash.data)
+  discard xim.fromBytes(ximhash.data)
   # Convert (xre, xim) to FP2.
   x.fromBigs(xre, xim)
   # Set FP2 One
@@ -479,6 +488,13 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
       break
     # Increment `x` by FP2(1, 0)
     x = add(x, one)
+
+  # Get lexographically biggest Y
+  let negy = neg(result.y)
+  if cmp(result.y, negy) < 0:
+    result.y = negy
+
+  echo "before co-factor", $result
   result = mulCoFactor(result)
 
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =

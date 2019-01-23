@@ -234,6 +234,7 @@ proc FP_BLS381_neg*(r: ptr FP_BLS381, a: ptr FP_BLS381) {.milagro_func.}
 proc FP2_BLS381_norm*(x: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_neg*(r: ptr FP2_BLS381, a: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_from_BIGs*(w: ptr FP2_BLS381, x, y: BIG_384) {.milagro_func.}
+proc FP2_BLS381_from_FPs*(w: ptr FP2_BLS381, x, y: FP_BLS381) {.milagro_func.}
 proc FP2_BLS381_copy*(w: ptr FP2_BLS381, x: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_reduce*(w: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_one*(w: ptr FP2_BLS381) {.milagro_func.}
