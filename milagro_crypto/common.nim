@@ -6,6 +6,10 @@ export internals
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
 
+## https://github.com/zkcrypto/pairing/pull/30#issuecomment-321729673
+## "{0:b}".format(305502333931268344200999753193121504214466019254188142667664032982267604182971884026507427359259977847832272839041616661285803823378372096355777062779109)
+const G2_CoFactorBit = "101110101010100001110101001010101000001010011100111111100010000100100011101010100000111100100101000011101101010001000000010110011011001000111011110010001010100011100001000010110101011101010100110100010100010000001011011001011100101101001111101110111111010011000101000111100011100101101001101100111101000001011101111001000010101001101111110001010010011101001100110100100011010111000010110000101101110110001101110011110000110111100001100011100001100111100011100001110001110001100011100011100100011100011100101"
+
 when sizeof(int) == 4 or defined(use32):
   const
     G2_CoFactorHigh*: BIG_384 = [
@@ -432,7 +436,7 @@ proc fromBytes*(res: var FP12_BLS381, a: openarray[byte]): bool =
 #                   val: addr buffer[0])
 #   ECP2_BLS381_mapit(addr result, addr oct)
 
-proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
+proc mulCoFactorShifting*(point: ECP2_BLS381): ECP2_BLS381 =
   ## Multiplies point by a cofactor of G2
   var lowpart: ECP2_BLS381
   result = point
@@ -445,6 +449,20 @@ proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   mul(result, G2_CoFactorShift)
   mul(lowpart, G2_CoFactorLow)
   add(result, lowpart)
+
+proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
+  ## Multiplies point by a cofactor of G2
+  let p = point
+  result = point
+
+  for bitChar in G2_CoFactorBit:
+    add(result, result)
+
+    if bitChar == '1':
+      add(result, p)
+      echo "double and add"
+    else:
+      echo "double"
 
 proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   ## Perform transformation of keccak-256 context (which must be already
