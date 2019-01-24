@@ -158,6 +158,10 @@ proc add*(a: var ECP2_BLS381, b: ECP2_BLS381) {.inline.} =
   # ECP2_BLS381_add() always return 0.
   discard ECP2_BLS381_add(addr a, unsafeAddr b)
 
+proc double*(a: var ECP2_BLS381) {.inline.} =
+  ## Doubles point ``a``.
+  discard ECP2_BLS381_dbl(addr a)
+
 proc add*(a: var ECP_BLS381, b: ECP_BLS381) {.inline.} =
   ## Add point ``b`` to point ``a``.
   ECP_BLS381_add(addr a, unsafeAddr b)
