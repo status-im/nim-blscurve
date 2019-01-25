@@ -486,7 +486,10 @@ proc mulCoFactorRec*(point: ECP2_BLS381, n: string = G2_CoFactorBit): ECP2_BLS38
 
 proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   result = mulCoFactorRec(point)
+  var result2 = mulCoFactorShifting(point)
   result.affine()
+  result2.affine()
+  doAssert result == result2
 
 proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   ## Perform transformation of keccak-256 context (which must be already
