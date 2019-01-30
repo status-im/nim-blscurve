@@ -1,6 +1,9 @@
 # Nim BLS12-381 Curve implementation
 
-Wrapper for specific curve from [AMCL](https://github.com/milagro-crypto/amcl) and [Milagro-Crypto-C](https://github.com/milagro-crypto/milagro-crypto-c).
+[![Build Status](https://travis-ci.org/status-im/nim-blscurve.svg?branch=master)](https://travis-ci.org/status-im/nim-blscurve)
+[![Build status](https://ci.appveyor.com/api/projects/status/6l1il60ljfbtxw3g/branch/master?svg=true)](https://ci.appveyor.com/project/nimbus/nim-blscurve/branch/master)
+
+This library uses sources from [AMCL](https://github.com/milagro-crypto/amcl) and [Milagro-Crypto-C](https://github.com/milagro-crypto/milagro-crypto-c).
 
 Current curve supported:
 
