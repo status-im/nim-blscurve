@@ -6,7 +6,7 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import strutils, os, parseutils, unittest
+import strutils, os, unittest
 import nimcrypto/[sysrand, hash, keccak, utils]
 import ../blscurve/milagro, ../blscurve/bls, ../blscurve/common
 
@@ -114,14 +114,31 @@ proc align*(buffer: seq[byte], size: int): seq[byte] =
       result = buffer
       result.setLen(size)
 
+proc parseHex[T](s: string): T =
+  let length = len(s)
+  let size = sizeof(T) * 2
+  if length > 0:
+    var i = 0
+    result = cast[T](0)
+    let max = if length < size: length else: size
+    while i < max:
+      case s[i]
+      of '0'..'9':
+        result = (result shl 4) or cast[T](ord(s[i]) - ord('0'))
+      of 'a'..'f':
+        result = (result shl 4) or cast[T](ord(s[i]) - ord('a') + 10)
+      of 'A'..'F':
+        result = (result shl 4) or cast[T](ord(s[i]) - ord('A') + 10)
+      else:
+        break
+      inc(i)
+
 proc readCase01Vector(file: File, vector: var Case01Vector): bool =
   var p: array[6, BIG_384]
   var m = file.readStrings(8)
   if len(m) == 0:
     return false
-  var domain: int
-  discard parseHex("0x" & m[0], domain)
-  vector.domain = uint64(domain)
+  vector.domain = parseHex[uint64](m[0])
   vector.message = fromHex(m[1])
   discard p[0].fromHex(m[2])
   discard p[1].fromHex(m[3])
@@ -138,8 +155,7 @@ proc readCase02Vector(file: File, vector: var Case02Vector): bool =
   if len(m) == 0:
     return false
   var domain: int
-  discard parseHex("0x" & m[0], domain)
-  vector.domain = uint64(domain)
+  vector.domain = parseHex[uint64](m[0])
   vector.message = fromHex(m[1])
   vector.point = fromHex(m[2]) & fromHex(m[3])
   result = true
@@ -157,8 +173,7 @@ proc readCase04Vector(file: File, vector: var Case04Vector): bool =
   if len(m) == 0:
     return false
   var domain: int
-  discard parseHex("0x" & m[0], domain)
-  vector.domain = uint64(domain)
+  vector.domain = parseHex[uint64](m[0])
   vector.message = fromHex(m[1])
   vector.secretkey = fromHex(m[2])
   var sr = fromHex(m[3])

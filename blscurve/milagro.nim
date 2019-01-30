@@ -79,11 +79,6 @@ const
   DNLEN_384* = 2 * NLEN_384
 
 type
-  Octet* {.importc: "octet", header: milagroPath & "amcl.h"} = object
-    len* {.importc: "len".}: cint # Length in bytes
-    max* {.importc: "max".}: cint # Max length allowed - enforce truncation
-    val* {.importc: "val".}: pointer # Byte array
-
   BIG_384* = array[NLEN_384, Chunk]
   DBIG_384* = array[DNLEN_384, Chunk]
 
@@ -116,9 +111,6 @@ type
 
   GroupG1* = ECP_BLS381
   GroupG2* = ECP2_BLS381
-
-proc OCT_fromHex*(dst: ptr Octet, src: ptr char) {.milagro_func.}
-proc OCT_toHex*(src: ptr Octet, dst: ptr char) {.milagro_func.}
 
 when (sizeof(int) == 4) or defined(use32):
   proc BIG_384_toBytes*(b: ptr char, a: BIG_384) {.
@@ -199,9 +191,6 @@ proc ECP_BLS381_mul*(p: ptr ECP_BLS381, b: BIG_384) {.milagro_func.}
 proc ECP_BLS381_get*(x: BIG_384, y: BIG_384, p: ptr ECP_BLS381): cint {.
      milagro_func.}
 
-proc ECP_BLS381_fromOctet*(p: ptr ECP_BLS381, w: ptr Octet): cint {.
-     milagro_func.}
-proc ECP_BLS381_mapit*(p: ptr ECP_BLS381, w: ptr Octet) {.milagro_func.}
 proc ECP_BLS381_isinf*(p: ptr ECP_BLS381): cint {.milagro_func.}
 proc ECP_BLS381_inf*(p: ptr ECP_BLS381) {.milagro_func.}
 proc ECP_BLS381_add*(p: ptr ECP_BLS381, q: ptr ECP_BLS381) {.milagro_func.}
@@ -216,10 +205,6 @@ proc ECP2_BLS381_isinf*(p: ptr ECP2_BLS381): cint {.milagro_func.}
 proc ECP2_BLS381_inf*(p: ptr ECP2_BLS381) {.milagro_func.}
 proc ECP2_BLS381_neg*(p: ptr ECP2_BLS381) {.milagro_func.}
 proc ECP2_BLS381_mul*(p: ptr ECP2_BLS381, e: BIG_384) {.milagro_func.}
-proc ECP2_BLS381_toOctet*(w: ptr Octet, q: ptr ECP2_BLS381) {.milagro_func.}
-proc ECP2_BLS381_fromOctet*(q: ptr ECP2_BLS381, w: ptr Octet): cint {.
-     milagro_func.}
-proc ECP2_BLS381_mapit*(p: ptr ECP2_BLS381, w: ptr Octet) {.milagro_func.}
 proc ECP2_BLS381_add*(p: ptr ECP2_BLS381, q: ptr ECP2_BLS381): cint {.
      milagro_func.}
 proc ECP2_BLS381_generator*(g: ptr ECP2_BLS381) {.milagro_func.}
@@ -262,7 +247,4 @@ proc FP2_BLS381_sqr*(w: ptr FP2_BLS381, x: ptr FP2_BLS381) {. milagro_func.}
 proc FP2_BLS381_equals*(x: ptr FP2_BLS381, y: ptr FP2_BLS381): cint {.
      milagro_func.}
 proc FP12_BLS381_equals*(x: ptr FP12_BLS381, y: ptr FP12_BLS381): cint {.
-     milagro_func.}
-proc FP12_BLS381_toOctet*(w: ptr Octet, g: ptr FP12_BLS381) {.milagro_func.}
-proc FP12_BLS381_fromOctet*(g: ptr FP12_BLS381, w: ptr Octet): cint {.
      milagro_func.}

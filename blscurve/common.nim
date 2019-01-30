@@ -481,7 +481,7 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
   let length = if len(a) > MODBYTES_384: MODBYTES_384 else: len(a)
   for i in 0..<length:
     discard BIG_384_fshl(res, 8)
-    res[0] = res[0] + Chunk(a[i])
+    res[0] = res[0] + cast[Chunk](a[i])
   result = true
 
 proc fromHex*(res: var BIG_384, a: string): bool {.inline.} =
