@@ -668,6 +668,8 @@ proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
   # Set FP2 One
   one.setOne()
   while true:
+    # Without normalization of `x` 32bit version will fail
+    norm(x)
     if ECP2_BLS381_setx(addr result, addr x) == 1:
       break
     # Increment `x` by FP2(1, 0)
