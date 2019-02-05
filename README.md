@@ -1,10 +1,14 @@
 # Nim Milagro Crypto Library
 
+❗❗❗ - Status unmaintained
+
+As only the BLS12-381 curve is needed for Eth2.0, development has been moved to [Nim BLS Curve](https://github.com/status-im/nim-blscurve)
+
 [![Build Status (Travis)](https://img.shields.io/travis/status-im/nim-milagro-crypto/master.svg?label=Linux%20/%20macOS "Linux/macOS build status (Travis)")](https://travis-ci.org/status-im/nim-milagro-crypto)
 [![Windows build status (Appveyor)](https://img.shields.io/appveyor/ci/nimbus/nim-milagro-crypto/master.svg?label=Windows "Windows build status (Appveyor)")](https://ci.appveyor.com/project/nimbus/nim-milagro-crypto)
 [![License: Apache](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)
+![Status: unmaintained](https://img.shields.io/badge/status-unmaintained-red.svg)
 
 Wrapper for specific curve from [AMCL](https://github.com/milagro-crypto/amcl) and [Milagro-Crypto-C](https://github.com/milagro-crypto/milagro-crypto-c).
 
