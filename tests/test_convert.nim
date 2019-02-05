@@ -137,8 +137,7 @@ proc case04(root: YamlNode, path: string = "") =
 ## domain\n
 ## message\n
 ## private key\n
-## signature xre\n
-## signature xim\n
+## signature\n
 ## <empty line>\n"""
   var file = createFile(path, "case04_sign_messages.dat")
   try:
@@ -150,15 +149,13 @@ proc case04(root: YamlNode, path: string = "") =
         file.writeLine(norm(item["input"]["domain"].content))
         file.writeLine(norm(item["input"]["message"].content))
         file.writeLine(norm(item["input"]["privkey"].content))
-        for eitem in item["output"].items():
-          file.writeLine(norm(eitem.content))
+        file.writeLine(norm(item["output"].content))
     else:
       file.writeLine("")
       file.writeLine(norm(node["input"]["domain"].content))
       file.writeLine(norm(node["input"]["message"].content))
       file.writeLine(norm(node["input"]["privkey"].content))
-      for item in node["output"].items():
-        file.writeLine(norm(item.content))
+      file.writeLine(norm(node["output"].content))
   finally:
     file.close()
 
@@ -166,14 +163,10 @@ proc case06(root: YamlNode, path: string = "") =
   var header = """## case06_aggregate_sigs
 ##
 ## Format:
-## signature1 xre\n
-## signature1 xim\n
-## signature2 xre\n
-## signature2 xim\n
-## signature3 xre\n
-## signature3 xim\n
-## aggregated signature xre\n
-## aggregated signature xim\n
+## signature1\n
+## signature2\n
+## signature3\n
+## aggregated signature\n
 ## <empty line>\n"""
   var file = createFile(path, "case06_aggregate_sigs.dat")
   try:
@@ -183,17 +176,13 @@ proc case06(root: YamlNode, path: string = "") =
       for item in node.items():
         file.writeLine("")
         for iitem in item["input"].items():
-          for aitem in iitem.items():
-            file.writeLine(norm(aitem.content))
-        for oitem in item["output"].items():
-          file.writeLine(norm(oitem.content))
+          file.writeLine(norm(iitem.content))
+        file.writeLine(norm(item["output"].content))
     else:
       file.writeLine("")
       for item in node["input"].items():
-        for aitem in item.items():
-          file.writeLine(norm(aitem.content))
-      for item in node["output"].items():
         file.writeLine(norm(item.content))
+      file.writeLine(norm(node["output"].content))
   finally:
     file.close()
 

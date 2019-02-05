@@ -157,7 +157,7 @@ proc readCase02Vector(file: File, vector: var Case02Vector): bool =
   var domain: int
   vector.domain = parseHex[uint64](m[0])
   vector.message = fromHex(m[1])
-  vector.point = fromHex(m[2]) & fromHex(m[3])
+  vector.point = align(fromHex(m[2]), MODBYTES_384) & align(fromHex(m[3]), MODBYTES_384)
   result = true
 
 proc readCase03Vector(file: File, vector: var Case03Vector): bool =
@@ -169,34 +169,24 @@ proc readCase03Vector(file: File, vector: var Case03Vector): bool =
   result = true
 
 proc readCase04Vector(file: File, vector: var Case04Vector): bool =
-  var m = file.readStrings(5)
+  var m = file.readStrings(4)
   if len(m) == 0:
     return false
   var domain: int
   vector.domain = parseHex[uint64](m[0])
   vector.message = fromHex(m[1])
   vector.secretkey = fromHex(m[2])
-  var sr = fromHex(m[3])
-  var si = fromHex(m[4])
-  vector.signature = align(sr, MODBYTES_384) & align(si, MODBYTES_384)
+  vector.signature = align(fromHex(m[3]), MODBYTES_384 * 2)
   result = true
 
 proc readCase06Vector(file: File, vector: var Case06Vector): bool =
-  var m = file.readStrings(8)
+  var m = file.readStrings(4)
   if len(m) == 0:
     return false
-  var s1r = fromHex(m[0])
-  var s1i = fromHex(m[1])
-  var s2r = fromHex(m[2])
-  var s2i = fromHex(m[3])
-  var s3r = fromHex(m[4])
-  var s3i = fromHex(m[5])
-  var ar = fromHex(m[6])
-  var ai = fromHex(m[7])
-  vector.signature1 = align(s1r, MODBYTES_384) & align(s1i, MODBYTES_384)
-  vector.signature2 = align(s2r, MODBYTES_384) & align(s2i, MODBYTES_384)
-  vector.signature3 = align(s3r, MODBYTES_384) & align(s3i, MODBYTES_384)
-  vector.asignature = align(ar, MODBYTES_384) & align(ai, MODBYTES_384)
+  vector.signature1 = align(fromHex(m[0]), MODBYTES_384 * 2)
+  vector.signature2 = align(fromHex(m[1]), MODBYTES_384 * 2)
+  vector.signature3 = align(fromHex(m[2]), MODBYTES_384 * 2)
+  vector.asignature = align(fromHex(m[3]), MODBYTES_384 * 2)
   result = true
 
 proc readCase07Vector(file: File, vector: var Case07Vector): bool =
