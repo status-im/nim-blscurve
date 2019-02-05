@@ -6,4 +6,5 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import test_scheme, test_vectors
+import blscurve/[common, bls]
+export common, bls
