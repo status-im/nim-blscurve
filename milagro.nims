@@ -67,6 +67,12 @@ const amclh = """/*
 #define D_TYPE 0
 #define M_TYPE 1
 
+#define FP_ZERO 0
+#define FP_UNITY 1
+#define FP_SPARSER 2
+#define FP_SPARSE 3
+#define FP_DENSE 4
+
 /**
   @brief Portable representation of a big positive number
 */
@@ -171,7 +177,7 @@ proc clearFiles(dst, tb, tf, tc, base: string) =
     if fileExists(item):
       rmFile(item)
 
-proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx,
+proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
               cs: string) =
   let bd = tb & "_" & base
   var fnameh, data: string
@@ -222,13 +228,14 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx,
   fnameh = dst / "config_curve_" & tc & ".h"
   data = readFile(src / "config_curve.h")
   data = data.replace("XXX", bd)
-  data = data.replace("YYY",tf)
-  data = data.replace("ZZZ",tc)
-  data = data.replace("@CT@",ct)
-  data = data.replace("@PF@",pf)
-  data = data.replace("@ST@",stw)
-  data = data.replace("@SX@",sx)
-  data = data.replace("@CS@",cs)
+  data = data.replace("YYY", tf)
+  data = data.replace("ZZZ", tc)
+  data = data.replace("@CT@", ct)
+  data = data.replace("@PF@", pf)
+  data = data.replace("@ST@", stw)
+  data = data.replace("@SX@", sx)
+  data = data.replace("@CS@", cs)
+  data = data.replace("@AB@", ab)
   writeFile(fnameh, data)
 
   # big.c & big.h
@@ -321,6 +328,7 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx,
     data = readFile(src / item)
     data = data.replace("YYY", tf)
     data = data.replace("XXX", bd)
+    data = data.replace("ZZZ", tc)
     writeFile(fnameh, data)
 
   # ecp2.h & ecp2.c
@@ -397,9 +405,9 @@ else:
 ## Generating 32bit version of library.
 curveSet(srcPath, dstPath32, "384", "BLS381", "BLS381",
          "48", "29", "381", "3", "NOT_SPECIAL", "WEIERSTRASS", "BLS",
-         "M_TYPE", "NEGATIVEX", "128")
+         "M_TYPE", "NEGATIVEX", "65", "128")
 ## Generating 64bit version of library
 curveSet(srcPath, dstPath64, "384", "BLS381", "BLS381",
          "48", "58", "381", "3", "NOT_SPECIAL", "WEIERSTRASS", "BLS",
-         "M_TYPE", "NEGATIVEX", "128")
+         "M_TYPE", "NEGATIVEX", "65", "128")
 echo "SUCCESS: Milagro source files was successfully prepared!"

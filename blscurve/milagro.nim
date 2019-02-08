@@ -98,6 +98,7 @@ type
     a*: FP4_BLS381
     b*: FP4_BLS381
     c*: FP4_BLS381
+    t*: cint
 
   ECP_BLS381* = object
     x*: FP_BLS381
