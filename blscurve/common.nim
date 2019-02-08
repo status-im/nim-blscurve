@@ -15,6 +15,9 @@ import milagro
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
 
+const
+  AteBitsCount* = 65 ## ATE_BITS_BLS381 value
+
 when sizeof(int) == 4 or defined(use32):
   const
     G2_CoFactorHigh*: BIG_384 = [
@@ -127,15 +130,24 @@ proc cmp*(a: FP2_BLS381, b: FP2_BLS381): int {.inline.} =
     result = cmp(a.a, b.a)
 
 proc neg*(a: FP_BLS381): FP_BLS381 {.inline.} =
+  ## Return negated copy of ``a``. ``result = -a``.
   result = a
   FP_BLS381_neg(addr result, unsafeAddr a)
 
 proc neg*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Return negated copy of ``a``. ``result = -a``.
   result = a
   FP2_BLS381_neg(addr result, unsafeAddr a)
 
-proc neg*(a: var ECP2_BLS381) {.inline.} =
-  ECP2_BLS381_neg(addr a)
+proc neg*(a: ECP2_BLS381): ECP2_BLS381 {.inline.} =
+  ## Negates point ``a``. On exit a = -a.
+  result = a
+  ECP2_BLS381_neg(addr result)
+
+proc neg*(a: ECP_BLS381): ECP_BLS381 {.inline.} =
+  ## Negates point ``a``. On exit a = -a.
+  result = a
+  ECP_BLS381_neg(addr result)
 
 proc inf*(a: var ECP_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.
@@ -686,6 +698,33 @@ proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.
   PAIR_BLS381_ate(addr result, unsafeAddr pointG2, unsafeAddr pointG1)
   PAIR_BLS381_fexp(addr result)
+
+proc doublePairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
+                    pointG2_2: GroupG2, pointG1_2: GroupG1): bool =
+  ## Double pairing `magic` function.
+  var v: FP12_BLS381
+  var npoint = neg(pointG1_1)
+  PAIR_BLS381_double_ate(addr v, unsafeAddr pointG2_1, addr npoint,
+                         unsafeAddr pointG2_2, unsafeAddr pointG1_2)
+  PAIR_BLS381_fexp(addr v)
+
+  if FP12_BLS381_isunity(addr v) == 1:
+    result = true
+
+proc multiPairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
+                   pointG2_2: GroupG2, pointG1_2: GroupG1): bool =
+  ## New multi-pairing mechanism function.
+  var r: array[AteBitsCount, FP12_BLS381]
+  var v: FP12_BLS381
+  var npoint = neg(pointG1_1)
+  PAIR_BLS381_initmp(addr r[0])
+  PAIR_BLS381_another(addr r[0], unsafeAddr pointG2_1, addr npoint)
+  PAIR_BLS381_another(addr r[0], unsafeAddr pointG2_2, unsafeAddr pointG1_2)
+  PAIR_BLS381_miller(addr v, addr r[0])
+  PAIR_BLS381_fexp(addr v)
+
+  if FP12_BLS381_isunity(addr v) == 1:
+    result = true
 
 proc random*(a: var BIG_384) =
   ## Generates random big number `bit by bit` using nimcrypto's sysrand
