@@ -98,6 +98,7 @@ type
     a*: FP4_BLS381
     b*: FP4_BLS381
     c*: FP4_BLS381
+    t*: cint
 
   ECP_BLS381* = object
     x*: FP_BLS381
@@ -185,6 +186,11 @@ proc PAIR_BLS381_G1mul*(q: ptr ECP_BLS381, b: BIG_384) {.milagro_func.}
 proc PAIR_BLS381_G2mul*(p: ptr ECP2_BLS381, b: BIG_384) {.milagro_func.}
 proc PAIR_BLS381_GTpow*(x: ptr FP12_BLS381, b: BIG_384) {.milagro_func.}
 proc PAIR_BLS381_GTmember*(x: ptr FP12_BLS381): cint {.milagro_func.}
+proc PAIR_BLS381_another*(r: ptr FP12_BLS381, pv: ptr ECP2_BLS381,
+                          qv: ptr ECP_BLS381) {.milagro_func.}
+proc PAIR_BLS381_initmp*(r: ptr FP12_BLS381) {.milagro_func.}
+proc PAIR_BLS381_miller*(res: ptr FP12_BLS381; r: ptr FP12_BLS381) {.
+     milagro_func.}
 
 proc ECP_BLS381_generator*(g: ptr ECP_BLS381) {.milagro_func.}
 proc ECP_BLS381_mul*(p: ptr ECP_BLS381, b: BIG_384) {.milagro_func.}
@@ -200,6 +206,7 @@ proc ECP_BLS381_equals*(p: ptr ECP_BLS381, q: ptr ECP_BLS381): cint {.
 proc ECP_BLS381_rhs*(r, x: ptr FP_BLS381) {.milagro_func.}
 proc ECP_BLS381_setx*(p: ptr ECP_BLS381, x: BIG_384, s: cint): cint {.
      milagro_func.}
+proc ECP_BLS381_neg*(p: ptr ECP_BLS381) {.milagro_func.}
 
 proc ECP2_BLS381_isinf*(p: ptr ECP2_BLS381): cint {.milagro_func.}
 proc ECP2_BLS381_inf*(p: ptr ECP2_BLS381) {.milagro_func.}
@@ -248,3 +255,4 @@ proc FP2_BLS381_equals*(x: ptr FP2_BLS381, y: ptr FP2_BLS381): cint {.
      milagro_func.}
 proc FP12_BLS381_equals*(x: ptr FP12_BLS381, y: ptr FP12_BLS381): cint {.
      milagro_func.}
+proc FP12_BLS381_isunity*(x: ptr FP12_BLS381): cint {.milagro_func.}

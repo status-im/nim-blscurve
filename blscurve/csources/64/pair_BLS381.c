@@ -131,6 +131,140 @@ static void PAIR_BLS381_line(FP12_BLS381 *v,ECP2_BLS381 *A,ECP2_BLS381 *B,FP_BLS
     }
 
     FP12_BLS381_from_FP4s(v,&a,&b,&c);
+	v->type=FP_SPARSER;
+}
+
+
+/* prepare ate parameter, n=6u+2 (BN) or n=u (BLS), n3=3*n */
+int PAIR_BLS381_nbits(BIG_384_58 n3,BIG_384_58 n)
+{
+	BIG_384_58 x;
+    BIG_384_58_rcopy(x,CURVE_Bnx_BLS381);
+
+#if PAIRING_FRIENDLY_BLS381==BN
+    BIG_384_58_pmul(n,x,6);
+#if SIGN_OF_X_BLS381==POSITIVEX
+	BIG_384_58_inc(n,2);
+#else
+    BIG_384_58_dec(n,2);
+#endif
+
+#else
+    BIG_384_58_copy(n,x);
+#endif
+
+    BIG_384_58_norm(n);
+	BIG_384_58_pmul(n3,n,3);
+	BIG_384_58_norm(n3);
+
+    return BIG_384_58_nbits(n3);
+}
+
+/*
+	For multi-pairing, product of n pairings
+	1. Declare FP12 array of length number of bits in Ate parameter
+	2. Initialise this array by calling PAIR_initmp()
+	3. Accumulate each pairing by calling PAIR_another() n times
+	4. Call PAIR_miller()
+	5. Call final exponentiation PAIR_fexp()
+*/
+
+/* prepare for multi-pairing */
+void PAIR_BLS381_initmp(FP12_BLS381 r[])
+{
+	int i;
+	for (i=ATE_BITS_BLS381-1; i>=0; i--)
+		FP12_BLS381_one(&r[i]);
+	return;
+}
+
+/* basic Miller loop */
+void PAIR_BLS381_miller(FP12_BLS381 *res,FP12_BLS381 r[])
+{
+	int i;
+    FP12_BLS381_one(res);
+	for (i=ATE_BITS_BLS381-1; i>=1; i--)
+	{
+		FP12_BLS381_sqr(res,res);
+		FP12_BLS381_ssmul(res,&r[i]);
+	}
+
+#if SIGN_OF_X_BLS381==NEGATIVEX
+    FP12_BLS381_conj(res,res);
+#endif
+	FP12_BLS381_ssmul(res,&r[0]);
+	return;
+}
+
+/* Accumulate another set of line functions for n-pairing */
+void PAIR_BLS381_another(FP12_BLS381 r[],ECP2_BLS381* PV,ECP_BLS381* QV)
+{
+    int i,j,nb,bt;
+	BIG_384_58 x,n,n3;
+    FP12_BLS381 lv,lv2;
+    ECP2_BLS381 A,NP,P;
+	ECP_BLS381 Q;
+	FP_BLS381 Qx,Qy;
+#if PAIRING_FRIENDLY_BLS381==BN
+	ECP2_BLS381 K;
+    FP2_BLS381 X;
+    FP_BLS381_rcopy(&Qx,Fra_BLS381);
+    FP_BLS381_rcopy(&Qy,Frb_BLS381);
+    FP2_BLS381_from_FPs(&X,&Qx,&Qy);
+#if SEXTIC_TWIST_BLS381==M_TYPE
+	FP2_BLS381_inv(&X,&X);
+	FP2_BLS381_norm(&X);
+#endif
+#endif
+
+	nb=PAIR_BLS381_nbits(n3,n);
+
+	ECP2_BLS381_copy(&P,PV);
+	ECP_BLS381_copy(&Q,QV);
+
+	ECP2_BLS381_affine(&P);
+	ECP_BLS381_affine(&Q);
+
+	FP_BLS381_copy(&Qx,&(Q.x));
+	FP_BLS381_copy(&Qy,&(Q.y));
+
+	ECP2_BLS381_copy(&A,&P);
+	ECP2_BLS381_copy(&NP,&P); ECP2_BLS381_neg(&NP);
+
+	for (i=nb-2; i>=1; i--)
+	{
+		PAIR_BLS381_line(&lv,&A,&A,&Qx,&Qy);
+
+		bt=BIG_384_58_bit(n3,i)-BIG_384_58_bit(n,i); // bt=BIG_bit(n,i);
+		if (bt==1)
+		{
+			PAIR_BLS381_line(&lv2,&A,&P,&Qx,&Qy);
+			FP12_BLS381_smul(&lv,&lv2);
+		}
+		if (bt==-1)
+		{
+			PAIR_BLS381_line(&lv2,&A,&NP,&Qx,&Qy);
+			FP12_BLS381_smul(&lv,&lv2);
+		}
+		FP12_BLS381_ssmul(&r[i],&lv);
+	}
+
+#if PAIRING_FRIENDLY_BLS381==BN
+
+#if SIGN_OF_X_BLS381==NEGATIVEX
+	ECP2_BLS381_neg(&A);
+#endif
+
+	ECP2_BLS381_copy(&K,&P);
+	ECP2_BLS381_frob(&K,&X);
+	PAIR_BLS381_line(&lv,&A,&K,&Qx,&Qy);
+	ECP2_BLS381_frob(&K,&X);
+	ECP2_BLS381_neg(&K);
+	PAIR_BLS381_line(&lv2,&A,&K,&Qx,&Qy);
+	FP12_BLS381_smul(&lv,&lv2);
+	FP12_BLS381_ssmul(&r[0],&lv);
+
+#endif
 }
 
 /* Optimal R-ate pairing r=e(P,Q) */
@@ -142,7 +276,7 @@ void PAIR_BLS381_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1)
     int i,nb,bt;
     ECP2_BLS381 A,NP,P;
 	ECP_BLS381 Q;
-    FP12_BLS381 lv;
+    FP12_BLS381 lv,lv2;
 #if PAIRING_FRIENDLY_BLS381==BN
     ECP2_BLS381 KA;
     FP2_BLS381 X;
@@ -157,22 +291,7 @@ void PAIR_BLS381_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1)
 #endif
 #endif
 
-    BIG_384_58_rcopy(x,CURVE_Bnx_BLS381);
-
-#if PAIRING_FRIENDLY_BLS381==BN
-    BIG_384_58_pmul(n,x,6);
-#if SIGN_OF_X_BLS381==POSITIVEX
-    BIG_384_58_inc(n,2);
-#else
-    BIG_384_58_dec(n,2);
-#endif
-#else
-    BIG_384_58_copy(n,x);
-#endif
-
-    BIG_384_58_norm(n);
-    BIG_384_58_pmul(n3,n,3);
-    BIG_384_58_norm(n3);
+	nb=PAIR_BLS381_nbits(n3,n);
 
 	ECP2_BLS381_copy(&P,P1);
 	ECP_BLS381_copy(&Q,Q1);
@@ -187,26 +306,25 @@ void PAIR_BLS381_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1)
 	ECP2_BLS381_copy(&NP,&P); ECP2_BLS381_neg(&NP);
 
     FP12_BLS381_one(r);
-    nb=BIG_384_58_nbits(n3);  //n
 
     /* Main Miller Loop */
     for (i=nb-2; i>=1; i--)   //0
     {
-        FP12_BLS381_sqr(r,r);
+		FP12_BLS381_sqr(r,r);
         PAIR_BLS381_line(&lv,&A,&A,&Qx,&Qy);
-        FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
-        bt=BIG_384_58_bit(n3,i)-BIG_384_58_bit(n,i);
+
+		bt=BIG_384_58_bit(n3,i)-BIG_384_58_bit(n,i); // bt=BIG_bit(n,i);
         if (bt==1)
         {
-
-            PAIR_BLS381_line(&lv,&A,&P,&Qx,&Qy);
-            FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
+            PAIR_BLS381_line(&lv2,&A,&P,&Qx,&Qy);
+            FP12_BLS381_smul(&lv,&lv2);
         }
-        if (bt==-1)
-        {
-            PAIR_BLS381_line(&lv,&A,&NP,&Qx,&Qy);
-            FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
-        }
+		if (bt==-1)
+		{
+            PAIR_BLS381_line(&lv2,&A,&NP,&Qx,&Qy);
+            FP12_BLS381_smul(&lv,&lv2);
+		}
+		FP12_BLS381_ssmul(r,&lv);
 
     }
 
@@ -217,17 +335,19 @@ void PAIR_BLS381_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1)
 
     /* R-ate fixup required for BN curves */
 #if PAIRING_FRIENDLY_BLS381==BN
-    ECP2_BLS381_copy(&KA,&P);
-    ECP2_BLS381_frob(&KA,&X);
+
 #if SIGN_OF_X_BLS381==NEGATIVEX
     ECP2_BLS381_neg(&A);
 #endif
+
+    ECP2_BLS381_copy(&KA,&P);
+    ECP2_BLS381_frob(&KA,&X);
     PAIR_BLS381_line(&lv,&A,&KA,&Qx,&Qy);
-    FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
     ECP2_BLS381_frob(&KA,&X);
     ECP2_BLS381_neg(&KA);
-    PAIR_BLS381_line(&lv,&A,&KA,&Qx,&Qy);
-    FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
+    PAIR_BLS381_line(&lv2,&A,&KA,&Qx,&Qy);
+	FP12_BLS381_smul(&lv,&lv2);
+    FP12_BLS381_ssmul(r,&lv);
 #endif
 }
 
@@ -239,7 +359,7 @@ void PAIR_BLS381_double_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1,ECP2_B
     int i,nb,bt;
     ECP2_BLS381 A,B,NP,NR,P,R;
 	ECP_BLS381 Q,S;
-    FP12_BLS381 lv;
+    FP12_BLS381 lv,lv2;
 #if PAIRING_FRIENDLY_BLS381==BN
     FP2_BLS381 X;
     ECP2_BLS381 K;
@@ -253,23 +373,7 @@ void PAIR_BLS381_double_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1,ECP2_B
     FP2_BLS381_norm(&X);
 #endif
 #endif
-
-    BIG_384_58_rcopy(x,CURVE_Bnx_BLS381);
-
-#if PAIRING_FRIENDLY_BLS381==BN
-    BIG_384_58_pmul(n,x,6);
-#if SIGN_OF_X_BLS381==POSITIVEX
-    BIG_384_58_inc(n,2);
-#else
-    BIG_384_58_dec(n,2);
-#endif
-#else
-    BIG_384_58_copy(n,x);
-#endif
-
-    BIG_384_58_norm(n);
-    BIG_384_58_pmul(n3,n,3);
-    BIG_384_58_norm(n3);
+	nb=PAIR_BLS381_nbits(n3,n);
 
 	ECP2_BLS381_copy(&P,P1);
 	ECP_BLS381_copy(&Q,Q1);
@@ -295,38 +399,32 @@ void PAIR_BLS381_double_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1,ECP2_B
 	ECP2_BLS381_copy(&NP,&P); ECP2_BLS381_neg(&NP);
 	ECP2_BLS381_copy(&NR,&R); ECP2_BLS381_neg(&NR);
 
-
     FP12_BLS381_one(r);
-    nb=BIG_384_58_nbits(n3);
 
     /* Main Miller Loop */
     for (i=nb-2; i>=1; i--)
     {
         FP12_BLS381_sqr(r,r);
         PAIR_BLS381_line(&lv,&A,&A,&Qx,&Qy);
-        FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
+        PAIR_BLS381_line(&lv2,&B,&B,&Sx,&Sy);
+		FP12_BLS381_smul(&lv,&lv2);
+        FP12_BLS381_ssmul(r,&lv);
 
-        PAIR_BLS381_line(&lv,&B,&B,&Sx,&Sy);
-        FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
-
-        bt=BIG_384_58_bit(n3,i)-BIG_384_58_bit(n,i);
+		bt=BIG_384_58_bit(n3,i)-BIG_384_58_bit(n,i); // bt=BIG_bit(n,i);
         if (bt==1)
         {
             PAIR_BLS381_line(&lv,&A,&P,&Qx,&Qy);
-            FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
-
-            PAIR_BLS381_line(&lv,&B,&R,&Sx,&Sy);
-            FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
+            PAIR_BLS381_line(&lv2,&B,&R,&Sx,&Sy);
+			FP12_BLS381_smul(&lv,&lv2);
+            FP12_BLS381_ssmul(r,&lv);
         }
-
-        if (bt==-1)
-        {
+		if (bt==-1)
+		{
             PAIR_BLS381_line(&lv,&A,&NP,&Qx,&Qy);
-            FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
- 
-            PAIR_BLS381_line(&lv,&B,&NR,&Sx,&Sy);
-            FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
-        }
+            PAIR_BLS381_line(&lv2,&B,&NR,&Sx,&Sy);
+			FP12_BLS381_smul(&lv,&lv2);
+            FP12_BLS381_ssmul(r,&lv);
+		}
 
     }
 
@@ -346,24 +444,21 @@ void PAIR_BLS381_double_ate(FP12_BLS381 *r,ECP2_BLS381 *P1,ECP_BLS381 *Q1,ECP2_B
 
     ECP2_BLS381_copy(&K,&P);
     ECP2_BLS381_frob(&K,&X);
-
     PAIR_BLS381_line(&lv,&A,&K,&Qx,&Qy);
-    FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
     ECP2_BLS381_frob(&K,&X);
     ECP2_BLS381_neg(&K);
-    PAIR_BLS381_line(&lv,&A,&K,&Qx,&Qy);
-    FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
+    PAIR_BLS381_line(&lv2,&A,&K,&Qx,&Qy);
+	FP12_BLS381_smul(&lv,&lv2);
+    FP12_BLS381_ssmul(r,&lv);
 
     ECP2_BLS381_copy(&K,&R);
     ECP2_BLS381_frob(&K,&X);
-
     PAIR_BLS381_line(&lv,&B,&K,&Sx,&Sy);
-    FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
     ECP2_BLS381_frob(&K,&X);
     ECP2_BLS381_neg(&K);
-    PAIR_BLS381_line(&lv,&B,&K,&Sx,&Sy);
-    FP12_BLS381_smul(r,&lv,SEXTIC_TWIST_BLS381);
-
+    PAIR_BLS381_line(&lv2,&B,&K,&Sx,&Sy);
+	FP12_BLS381_smul(&lv,&lv2);
+    FP12_BLS381_ssmul(r,&lv);
 #endif
 }
 

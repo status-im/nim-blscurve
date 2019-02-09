@@ -22,6 +22,7 @@ under the License.
 /* FP12 elements are of the form a+i.b+i^2.c */
 
 #include "fp12_BLS381.h"
+#include "config_curve_BLS381.h"
 
 /* return 1 if b==c, no branching */
 static int teq(sign32 b,sign32 c)
@@ -81,6 +82,7 @@ void FP12_BLS381_copy(FP12_BLS381 *w,FP12_BLS381 *x)
     FP4_BLS381_copy(&(w->a),&(x->a));
     FP4_BLS381_copy(&(w->b),&(x->b));
     FP4_BLS381_copy(&(w->c),&(x->c));
+	w->type=x->type;
 }
 
 /* FP12 w=1 */
@@ -90,6 +92,7 @@ void FP12_BLS381_one(FP12_BLS381 *w)
     FP4_BLS381_one(&(w->a));
     FP4_BLS381_zero(&(w->b));
     FP4_BLS381_zero(&(w->c));
+	w->type=FP_UNITY;
 }
 
 /* return 1 if x==y, else 0 */
@@ -118,6 +121,7 @@ void FP12_BLS381_from_FP4(FP12_BLS381 *w,FP4_BLS381 *a)
     FP4_BLS381_copy(&(w->a),a);
     FP4_BLS381_zero(&(w->b));
     FP4_BLS381_zero(&(w->c));
+	w->type=FP_SPARSER;
 }
 
 /* Create FP12 from 3 FP4's */
@@ -127,6 +131,7 @@ void FP12_BLS381_from_FP4s(FP12_BLS381 *w,FP4_BLS381 *a,FP4_BLS381 *b,FP4_BLS381
     FP4_BLS381_copy(&(w->a),a);
     FP4_BLS381_copy(&(w->b),b);
     FP4_BLS381_copy(&(w->c),c);
+	w->type=FP_DENSE;
 }
 
 /* Granger-Scott Unitary Squaring. This does not benefit from lazy reduction */
@@ -167,6 +172,7 @@ void FP12_BLS381_usqr(FP12_BLS381 *w,FP12_BLS381 *x)
     FP4_BLS381_add(&(w->b),&B,&(w->b));
     FP4_BLS381_add(&(w->c),&C,&(w->c));
 
+	w->type=FP_DENSE;
     FP12_BLS381_reduce(w);	    /* reduce here as in pow function repeated squarings would trigger multiple reductions */
 }
 
@@ -177,6 +183,12 @@ void FP12_BLS381_sqr(FP12_BLS381 *w,FP12_BLS381 *x)
     /* Use Chung-Hasan SQR2 method from http://cacr.uwaterloo.ca/techreports/2006/cacr2006-24.pdf */
 
     FP4_BLS381 A,B,C,D;
+
+	if (x->type<=FP_UNITY)
+	{
+		FP12_BLS381_copy(w,x);
+		return;
+	}
 
     FP4_BLS381_sqr(&A,&(x->a));
     FP4_BLS381_mul(&B,&(x->b),&(x->c));
@@ -208,6 +220,11 @@ void FP12_BLS381_sqr(FP12_BLS381 *w,FP12_BLS381 *x)
     FP4_BLS381_add(&(w->a),&(w->a),&B);
     FP4_BLS381_add(&(w->b),&C,&D);
     FP4_BLS381_add(&(w->c),&(w->c),&A);
+
+	if (x->type==FP_SPARSER)
+		w->type=FP_SPARSE;
+	else
+		w->type=FP_DENSE;
 
     FP12_BLS381_norm(w);
 }
@@ -267,100 +284,287 @@ void FP12_BLS381_mul(FP12_BLS381 *w,FP12_BLS381 *y)
     FP4_BLS381_times_i(&z3);
     FP4_BLS381_add(&(w->a),&z0,&z3);
 
+	w->type=FP_DENSE;
+    FP12_BLS381_norm(w);
+}
+
+/* FP12 full multiplication w=w*y */
+/* Supports sparse multiplicands */
+/* Usually w is denser than y */
+void FP12_BLS381_ssmul(FP12_BLS381 *w,FP12_BLS381 *y)
+{
+	FP4_BLS381 z0,z1,z2,z3,t0,t1;
+	if (w->type==FP_UNITY)
+	{
+		FP12_BLS381_copy(w,y);
+		return;
+	}
+	if (y->type==FP_UNITY)
+		return;
+
+	if (y->type >= FP_SPARSE)
+	{
+		FP4_BLS381_mul(&z0,&(w->a),&(y->a));  // xa.ya   always 11x11
+
+#if SEXTIC_TWIST_BLS381 == M_TYPE
+		if (y->type==FP_SPARSE || w->type==FP_SPARSE)
+		{
+			FP2_BLS381_mul(&z2.b,&(w->b).b,&(y->b).b);
+			FP2_BLS381_zero(&z2.a);
+			if (y->type!=FP_SPARSE)
+				FP2_BLS381_mul(&z2.a,&(w->b).b,&(y->b).a);
+			if (w->type!=FP_SPARSE)
+				FP2_BLS381_mul(&z2.a,&(w->b).a,&(y->b).b);
+			FP4_BLS381_times_i(&z2);
+		}
+		else
+#endif
+			FP4_BLS381_mul(&z2,&(w->b),&(y->b));  // xb.yb  could be 00x00 or 01x01 or or 10x10 or 11x00 or 11x10 or 11x01 or 11x11 
+
+		FP4_BLS381_add(&t0,&(w->a),&(w->b));  // (xa+xb)
+		FP4_BLS381_add(&t1,&(y->a),&(y->b));  // (ya+yb)
+
+		FP4_BLS381_norm(&t0);
+		FP4_BLS381_norm(&t1);
+
+		FP4_BLS381_mul(&z1,&t0,&t1); // (xa+xb)(ya+yb)  always 11x11
+		FP4_BLS381_add(&t0,&(w->b),&(w->c));  // (xb+xc)
+		FP4_BLS381_add(&t1,&(y->b),&(y->c));  // (yb+yc)
+
+		FP4_BLS381_norm(&t0);
+		FP4_BLS381_norm(&t1);
+
+		FP4_BLS381_mul(&z3,&t0,&t1);	// (xb+xc)(yb+yc)   could be anything...
+		FP4_BLS381_neg(&t0,&z0);		// -(xa.ya)
+		FP4_BLS381_neg(&t1,&z2);		// -(xb.yb)
+
+		FP4_BLS381_add(&z1,&z1,&t0);  
+		FP4_BLS381_add(&(w->b),&z1,&t1); // /wb = (xa+xb)(ya+yb) -(xa.ya) -(xb.yb)						= xa.yb + xb.ya
+
+		FP4_BLS381_add(&z3,&z3,&t1);        // (xb+xc)(yb+yc) -(xb.yb)
+		FP4_BLS381_add(&z2,&z2,&t0);        // (xb.yb) - (xa.ya)
+
+		FP4_BLS381_add(&t0,&(w->a),&(w->c));  // (xa+xc)
+		FP4_BLS381_add(&t1,&(y->a),&(y->c));  // (ya+yc)
+
+		FP4_BLS381_norm(&t0);
+		FP4_BLS381_norm(&t1);
+
+		FP4_BLS381_mul(&t0,&t1,&t0);	// (xa+xc)(ya+yc)    always 11x11
+		FP4_BLS381_add(&z2,&z2,&t0);	// (xb.yb) - (xa.ya) + (xa+xc)(ya+yc)
+
+#if SEXTIC_TWIST_BLS381 == D_TYPE
+		if (y->type==FP_SPARSE || w->type==FP_SPARSE)
+		{
+			FP2_BLS381_mul(&t0.a,&(w->c).a,&(y->c).a);
+			FP2_BLS381_zero(&t0.b);
+			if (y->type!=FP_SPARSE)
+				FP2_BLS381_mul(&t0.b,&(w->c).a,&(y->c).b);
+			if (w->type!=FP_SPARSE)
+				FP2_BLS381_mul(&t0.b,&(w->c).b,&(y->c).a);
+		}
+		else
+#endif
+			FP4_BLS381_mul(&t0,&(w->c),&(y->c)); // (xc.yc)  could be anything
+			
+		FP4_BLS381_neg(&t1,&t0);			  // -(xc.yc) 
+
+		FP4_BLS381_add(&(w->c),&z2,&t1);		// wc = (xb.yb) - (xa.ya) + (xa+xc)(ya+yc) - (xc.yc)	=  xb.yb + xc.ya + xa.yc
+		FP4_BLS381_add(&z3,&z3,&t1);			// (xb+xc)(yb+yc) -(xb.yb) - (xc.yc)					=  xb.yc + xc.yb
+		FP4_BLS381_times_i(&t0);				// i.(xc.yc)
+		FP4_BLS381_add(&(w->b),&(w->b),&t0);   // wb = (xa+xb)(ya+yb) -(xa.ya) -(xb.yb) +i(xc.yc)
+		FP4_BLS381_norm(&z3);
+		FP4_BLS381_times_i(&z3);				// i[(xb+xc)(yb+yc) -(xb.yb) - (xc.yc)]					= i(xb.yc + xc.yb)
+		FP4_BLS381_add(&(w->a),&z0,&z3);		// wa = xa.ya + i(xb.yc + xc.yb)
+	} else {
+		if (w->type==FP_SPARSER)
+		{
+			FP12_BLS381_smul(w,y);
+			return;
+		}
+ // dense by sparser - 13m 
+#if SEXTIC_TWIST_BLS381 == D_TYPE
+		FP4_BLS381_copy(&z3,&(w->b));
+		FP4_BLS381_mul(&z0,&(w->a),&(y->a));
+
+		FP4_BLS381_pmul(&z2,&(w->b),&(y->b).a);
+		FP4_BLS381_add(&(w->b),&(w->a),&(w->b));
+		FP4_BLS381_copy(&t1,&(y->a));
+		FP2_BLS381_add(&t1.a,&t1.a,&(y->b).a);
+
+		FP4_BLS381_norm(&t1);
+		FP4_BLS381_norm(&(w->b));
+
+		FP4_BLS381_mul(&(w->b),&(w->b),&t1);
+		FP4_BLS381_add(&z3,&z3,&(w->c));
+		FP4_BLS381_norm(&z3);
+		FP4_BLS381_pmul(&z3,&z3,&(y->b).a);
+		FP4_BLS381_neg(&t0,&z0);
+		FP4_BLS381_neg(&t1,&z2);
+
+		FP4_BLS381_add(&(w->b),&(w->b),&t0);   // z1=z1-z0
+		FP4_BLS381_add(&(w->b),&(w->b),&t1);   // z1=z1-z2
+
+		FP4_BLS381_add(&z3,&z3,&t1);        // z3=z3-z2
+		FP4_BLS381_add(&z2,&z2,&t0);        // z2=z2-z0
+
+		FP4_BLS381_add(&t0,&(w->a),&(w->c));
+		FP4_BLS381_norm(&t0);
+		FP4_BLS381_norm(&z3);
+
+		FP4_BLS381_mul(&t0,&(y->a),&t0);
+		FP4_BLS381_add(&(w->c),&z2,&t0);
+
+		FP4_BLS381_times_i(&z3);
+		FP4_BLS381_add(&(w->a),&z0,&z3);
+#endif
+#if SEXTIC_TWIST_BLS381 == M_TYPE
+		FP4_BLS381_mul(&z0,&(w->a),&(y->a));
+		FP4_BLS381_add(&t0,&(w->a),&(w->b));
+		FP4_BLS381_norm(&t0);
+
+		FP4_BLS381_mul(&z1,&t0,&(y->a));
+		FP4_BLS381_add(&t0,&(w->b),&(w->c));
+		FP4_BLS381_norm(&t0);
+
+		FP4_BLS381_pmul(&z3,&t0,&(y->c).b);
+		FP4_BLS381_times_i(&z3);
+
+		FP4_BLS381_neg(&t0,&z0);
+		FP4_BLS381_add(&z1,&z1,&t0);   // z1=z1-z0
+
+		FP4_BLS381_copy(&(w->b),&z1);
+		FP4_BLS381_copy(&z2,&t0);
+
+		FP4_BLS381_add(&t0,&(w->a),&(w->c));
+		FP4_BLS381_add(&t1,&(y->a),&(y->c));
+
+		FP4_BLS381_norm(&t0);
+		FP4_BLS381_norm(&t1);
+
+		FP4_BLS381_mul(&t0,&t1,&t0);
+		FP4_BLS381_add(&z2,&z2,&t0);
+
+		FP4_BLS381_pmul(&t0,&(w->c),&(y->c).b);
+		FP4_BLS381_times_i(&t0);
+		FP4_BLS381_neg(&t1,&t0);
+		FP4_BLS381_times_i(&t0);
+
+		FP4_BLS381_add(&(w->c),&z2,&t1);
+		FP4_BLS381_add(&z3,&z3,&t1);
+
+		FP4_BLS381_add(&(w->b),&(w->b),&t0);
+		FP4_BLS381_norm(&z3);
+		FP4_BLS381_times_i(&z3);
+		FP4_BLS381_add(&(w->a),&z0,&z3);
+
+#endif
+	}
+	w->type=FP_DENSE;
     FP12_BLS381_norm(w);
 }
 
 /* FP12 multiplication w=w*y */
-/* SU= 744 */
 /* catering for special case that arises from special form of ATE pairing line function */
-void FP12_BLS381_smul(FP12_BLS381 *w,FP12_BLS381 *y,int type)
+/* w and y are both sparser line functions - cost = 6m */ 
+void FP12_BLS381_smul(FP12_BLS381 *w,FP12_BLS381 *y)
 {
-    FP4_BLS381 z0,z1,z2,z3,t0,t1;
+	FP2_BLS381 w1,w2,w3,ta,tb,tc,td,te,t;
 
-    if (type==D_TYPE)
-    {
-        // y->c is 0
+//	if (type==D_TYPE)
+//	{ 
+#if SEXTIC_TWIST_BLS381 == D_TYPE
+	FP2_BLS381_mul(&w1,&(w->a).a,&(y->a).a); // A1.A2
+	FP2_BLS381_mul(&w2,&(w->a).b,&(y->a).b); // B1.B2
+	FP2_BLS381_mul(&w3,&(w->b).a,&(y->b).a); // C1.C2
 
-        FP4_BLS381_copy(&z3,&(w->b));
-        FP4_BLS381_mul(&z0,&(w->a),&(y->a));
+	FP2_BLS381_add(&ta,&(w->a).a,&(w->a).b); // A1+B1
+	FP2_BLS381_add(&tb,&(y->a).a,&(y->a).b); // A2+B2
+	FP2_BLS381_norm(&ta);
+	FP2_BLS381_norm(&tb);
+	FP2_BLS381_mul(&tc,&ta,&tb);			// (A1+B1)(A2+B2)
+	FP2_BLS381_add(&t,&w1,&w2);
+	FP2_BLS381_neg(&t,&t);
+	FP2_BLS381_add(&tc,&tc,&t);			// (A1+B1)(A2+B2)-A1.A2-B1*B2 =  (A1.B2+A2.B1)		
+				
+	FP2_BLS381_add(&ta,&(w->a).a,&(w->b).a); // A1+C1
+	FP2_BLS381_add(&tb,&(y->a).a,&(y->b).a); // A2+C2
+	FP2_BLS381_norm(&ta);
+	FP2_BLS381_norm(&tb);
+	FP2_BLS381_mul(&td,&ta,&tb);			// (A1+C1)(A2+C2)
+	FP2_BLS381_add(&t,&w1,&w3);
+	FP2_BLS381_neg(&t,&t);
+	FP2_BLS381_add(&td,&td,&t);			// (A1+C1)(A2+C2)-A1.A2-C1*C2 =  (A1.C2+A2.C1)		
 
-        FP4_BLS381_pmul(&z2,&(w->b),&(y->b).a);
-        FP4_BLS381_add(&(w->b),&(w->a),&(w->b));
-        FP4_BLS381_copy(&t1,&(y->a));
-        FP2_BLS381_add(&t1.a,&t1.a,&(y->b).a);
+	FP2_BLS381_add(&ta,&(w->a).b,&(w->b).a); // B1+C1
+	FP2_BLS381_add(&tb,&(y->a).b,&(y->b).a); // B2+C2
+	FP2_BLS381_norm(&ta);
+	FP2_BLS381_norm(&tb);
+	FP2_BLS381_mul(&te,&ta,&tb);			// (B1+C1)(B2+C2)
+	FP2_BLS381_add(&t,&w2,&w3);
+	FP2_BLS381_neg(&t,&t);
+	FP2_BLS381_add(&te,&te,&t);			// (B1+C1)(B2+C2)-B1.B2-C1*C2 =  (B1.C2+B2.C1)		
 
-        FP4_BLS381_norm(&t1);
-        FP4_BLS381_norm(&(w->b));
+	FP2_BLS381_mul_ip(&w2);
+	FP2_BLS381_add(&w1,&w1,&w2);
+	FP4_BLS381_from_FP2s(&(w->a),&w1,&tc);
+	FP4_BLS381_from_FP2s(&(w->b),&td,&te); // only norm these 2
+	FP4_BLS381_from_FP2(&(w->c),&w3);
 
-        FP4_BLS381_mul(&(w->b),&(w->b),&t1);
-        FP4_BLS381_add(&z3,&z3,&(w->c));
-        FP4_BLS381_norm(&z3);
-        FP4_BLS381_pmul(&z3,&z3,&(y->b).a);
-        FP4_BLS381_neg(&t0,&z0);
-        FP4_BLS381_neg(&t1,&z2);
+	FP4_BLS381_norm(&(w->a));
+	FP4_BLS381_norm(&(w->b));
+#endif
+//	} else { 
+#if SEXTIC_TWIST_BLS381 == M_TYPE
+	FP2_BLS381_mul(&w1,&(w->a).a,&(y->a).a); // A1.A2
+	FP2_BLS381_mul(&w2,&(w->a).b,&(y->a).b); // B1.B2
+	FP2_BLS381_mul(&w3,&(w->c).b,&(y->c).b); // F1.F2
 
-        FP4_BLS381_add(&(w->b),&(w->b),&t0);   // z1=z1-z0
-        FP4_BLS381_add(&(w->b),&(w->b),&t1);   // z1=z1-z2
+	FP2_BLS381_add(&ta,&(w->a).a,&(w->a).b); // A1+B1
+	FP2_BLS381_add(&tb,&(y->a).a,&(y->a).b); // A2+B2
+	FP2_BLS381_norm(&ta);
+	FP2_BLS381_norm(&tb);
+	FP2_BLS381_mul(&tc,&ta,&tb);			// (A1+B1)(A2+B2)
+	FP2_BLS381_add(&t,&w1,&w2);
+	FP2_BLS381_neg(&t,&t);
+	FP2_BLS381_add(&tc,&tc,&t);			// (A1+B1)(A2+B2)-A1.A2-B1*B2 =  (A1.B2+A2.B1)		
+				
+	FP2_BLS381_add(&ta,&(w->a).a,&(w->c).b); // A1+F1
+	FP2_BLS381_add(&tb,&(y->a).a,&(y->c).b); // A2+F2
+	FP2_BLS381_norm(&ta);
+	FP2_BLS381_norm(&tb);
+	FP2_BLS381_mul(&td,&ta,&tb);			// (A1+F1)(A2+F2)
+	FP2_BLS381_add(&t,&w1,&w3);
+	FP2_BLS381_neg(&t,&t);
+	FP2_BLS381_add(&td,&td,&t);			// (A1+F1)(A2+F2)-A1.A2-F1*F2 =  (A1.F2+A2.F1)		
 
-        FP4_BLS381_add(&z3,&z3,&t1);        // z3=z3-z2
-        FP4_BLS381_add(&z2,&z2,&t0);        // z2=z2-z0
+	FP2_BLS381_add(&ta,&(w->a).b,&(w->c).b); // B1+F1
+	FP2_BLS381_add(&tb,&(y->a).b,&(y->c).b); // B2+F2
+	FP2_BLS381_norm(&ta);
+	FP2_BLS381_norm(&tb);
+	FP2_BLS381_mul(&te,&ta,&tb);			// (B1+F1)(B2+F2)
+	FP2_BLS381_add(&t,&w2,&w3);
+	FP2_BLS381_neg(&t,&t);
+	FP2_BLS381_add(&te,&te,&t);			// (B1+F1)(B2+F2)-B1.B2-F1*F2 =  (B1.F2+B2.F1)	
 
-        FP4_BLS381_add(&t0,&(w->a),&(w->c));
+	FP2_BLS381_mul_ip(&w2);
+	FP2_BLS381_add(&w1,&w1,&w2);
+	FP4_BLS381_from_FP2s(&(w->a),&w1,&tc);
 
-        FP4_BLS381_norm(&t0);
-        FP4_BLS381_norm(&z3);
+	FP2_BLS381_mul_ip(&w3);
+	FP2_BLS381_norm(&w3);
+	FP4_BLS381_from_FP2H(&(w->b),&w3);
 
-        FP4_BLS381_mul(&t0,&(y->a),&t0);
-        FP4_BLS381_add(&(w->c),&z2,&t0);
+	FP2_BLS381_norm(&te);
+	FP2_BLS381_mul_ip(&te);
+	FP4_BLS381_from_FP2s(&(w->c),&te,&td);
 
-        FP4_BLS381_times_i(&z3);
-        FP4_BLS381_add(&(w->a),&z0,&z3);
-    }
+	FP4_BLS381_norm(&(w->a));
+	FP4_BLS381_norm(&(w->c));
+#endif
 
-    if (type==M_TYPE)
-    {
-        // y->b is zero
-        FP4_BLS381_mul(&z0,&(w->a),&(y->a));
-        FP4_BLS381_add(&t0,&(w->a),&(w->b));
-        FP4_BLS381_norm(&t0);
-
-        FP4_BLS381_mul(&z1,&t0,&(y->a));
-        FP4_BLS381_add(&t0,&(w->b),&(w->c));
-        FP4_BLS381_norm(&t0);
-
-        FP4_BLS381_pmul(&z3,&t0,&(y->c).b);
-        FP4_BLS381_times_i(&z3);
-
-        FP4_BLS381_neg(&t0,&z0);
-        FP4_BLS381_add(&z1,&z1,&t0);   // z1=z1-z0
-
-        FP4_BLS381_copy(&(w->b),&z1);
-
-        FP4_BLS381_copy(&z2,&t0);
-
-        FP4_BLS381_add(&t0,&(w->a),&(w->c));
-        FP4_BLS381_add(&t1,&(y->a),&(y->c));
-
-        FP4_BLS381_norm(&t0);
-        FP4_BLS381_norm(&t1);
-
-        FP4_BLS381_mul(&t0,&t1,&t0);
-        FP4_BLS381_add(&z2,&z2,&t0);
-
-        FP4_BLS381_pmul(&t0,&(w->c),&(y->c).b);
-        FP4_BLS381_times_i(&t0);
-        FP4_BLS381_neg(&t1,&t0);
-        FP4_BLS381_times_i(&t0);
-
-        FP4_BLS381_add(&(w->c),&z2,&t1);
-        FP4_BLS381_add(&z3,&z3,&t1);
-
-        FP4_BLS381_add(&(w->b),&(w->b),&t0);
-        FP4_BLS381_norm(&z3);
-        FP4_BLS381_times_i(&z3);
-        FP4_BLS381_add(&(w->a),&z0,&z3);
-    }
-    FP12_BLS381_norm(w);
+//	}
+	w->type=FP_SPARSE;
 }
 
 /* Set w=1/x */
@@ -401,7 +605,7 @@ void FP12_BLS381_inv(FP12_BLS381 *w,FP12_BLS381 *x)
     FP4_BLS381_mul(&(w->a),&f0,&f3);
     FP4_BLS381_mul(&(w->b),&f1,&f3);
     FP4_BLS381_mul(&(w->c),&f2,&f3);
-
+	w->type=FP_DENSE;
 }
 
 /* constant time powering by small integer of max length bts */
@@ -611,6 +815,7 @@ void FP12_BLS381_frob(FP12_BLS381 *w,FP2_BLS381 *f)
 
     FP4_BLS381_pmul(&(w->b),&(w->b),f);
     FP4_BLS381_pmul(&(w->c),&(w->c),&f2);
+	w->type=FP_DENSE;
 }
 
 /* SU= 8 */
@@ -722,5 +927,7 @@ void FP12_BLS381_cmove(FP12_BLS381 *f,FP12_BLS381 *g,int d)
     FP4_BLS381_cmove(&(f->a),&(g->a),d);
     FP4_BLS381_cmove(&(f->b),&(g->b),d);
     FP4_BLS381_cmove(&(f->c),&(g->c),d);
+	d=~(d-1);
+	f->type^=(f->type^g->type)&d;
 }
 

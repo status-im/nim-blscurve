@@ -149,6 +149,31 @@ proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
   result = sign(sigkey, domain, mdctx)
   mdctx.clear()
 
+# proc verify*(sig: Signature, mdctx: keccak256, domain: uint64,
+#              verkey: VerKey): bool =
+#   ## Verify signature ``sig`` using Verification Key ``verkey`` and keccak-256
+#   ## context ``mdctx`` over domain ``domain``.
+#   ##
+#   ## Returns ``true`` if message verification succeeded, ``false`` if
+#   ## verification failed.
+#   if sig.point.isinf():
+#     result = false
+#   else:
+#     var gen = generator1()
+#     var point = hashToG2(mdctx, domain)
+#     var lhs = atePairing(sig.point, gen)
+#     var rhs = atePairing(point, verkey.point)
+#     result = (lhs == rhs)
+
+# proc verify2*(sig: Signature, mdctx: keccak256, domain: uint64,
+#                verkey: VerKey): bool =
+#   if sig.point.isinf():
+#     result = false
+#   else:
+#     var gen = generator1()
+#     var point = hashToG2(mdctx, domain)
+#     result = doublePairing(sig.point, gen, point, verkey.point)
+
 proc verify*(sig: Signature, mdctx: keccak256, domain: uint64,
              verkey: VerKey): bool =
   ## Verify signature ``sig`` using Verification Key ``verkey`` and keccak-256
@@ -161,9 +186,7 @@ proc verify*(sig: Signature, mdctx: keccak256, domain: uint64,
   else:
     var gen = generator1()
     var point = hashToG2(mdctx, domain)
-    var lhs = atePairing(sig.point, gen)
-    var rhs = atePairing(point, verkey.point)
-    result = (lhs == rhs)
+    result = multiPairing(sig.point, gen, point, verkey.point)
 
 proc verify*[T: byte|char](sig: Signature, message: openarray[T],
                            domain: uint64, verkey: VerKey): bool {.inline.} =
