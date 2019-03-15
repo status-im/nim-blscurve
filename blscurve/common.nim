@@ -388,7 +388,7 @@ proc setx*(p: var ECP_BLS381, x: BIG_384, greatest: bool): int =
   FP_BLS381_nres(addr rhs, x)
   ECP_BLS381_rhs(addr rhs, addr rhs)
   FP_BLS381_redc(t, addr rhs)
-  if BIG_384_jacobi(t, m) != 1:
+  if BIG_384_jacobi(t, m) == 0:
     p.inf()
     result = 0
   else:
@@ -414,7 +414,7 @@ proc setx*(p: var ECP_BLS381, x: BIG_384, parity: int): int =
   FP_BLS381_nres(addr rhs, x)
   ECP_BLS381_rhs(addr rhs, addr rhs)
   FP_BLS381_redc(t, addr rhs)
-  if BIG_384_jacobi(t, m) != 1:
+  if BIG_384_jacobi(t, m) == 0:
     p.inf()
     result = 0
   else:
@@ -515,16 +515,17 @@ proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
     var x0, x1, y0: BIG_384
     if point.get(x, y) == -1:
       zeroMem(addr res[0], MODBYTES_384 * 2)
+      res[0] = res[0] or (1'u8 shl 7) or (1'u8 shl 6)
       result = true
     else:
       FP_BLS381_redc(x0, addr x.a)
       FP_BLS381_redc(x1, addr x.b)
-      FP_BLS381_redc(y0, addr y.a)
-      var parity = int(BIG_384_parity(y0))
-      discard toBytes(x0, res.toOpenArray(0, MODBYTES_384 - 1))
-      discard toBytes(x1, res.toOpenArray(MODBYTES_384, MODBYTES_384 * 2 - 1))
-      if parity == 1:
-        res[0] = res[0] or (1'u8 shl 7)
+      var negy = y.neg()
+      discard toBytes(x1, res.toOpenArray(0, MODBYTES_384 - 1))
+      discard toBytes(x0, res.toOpenArray(MODBYTES_384, MODBYTES_384 * 2 - 1))
+      res[0] = res[0] or (1'u8 shl 7)
+      if cmp(y, negy) > 0:
+        res[0] = res[0] or (1'u8 shl 5)
       result = true
 
 proc toHex*(point: ECP2_BLS381): string =
@@ -549,21 +550,24 @@ proc fromBytes*(res: var ECP2_BLS381, data: openarray[byte]): bool =
   ##
   ## Returns ``true`` on success, ``false`` otherwise.
   if len(data) >= MODBYTES_384 * 2:
-    if isFullZero(data.toOpenArray(0, MODBYTES_384 * 2 - 1)):
-      res.inf()
-      result = true
-    else:
-      var x0, x1: BIG_384
-      var buffer: array[MODBYTES_384, byte]
-      copyMem(addr buffer[0], unsafeAddr data[0], MODBYTES_384)
-      var parity = int((buffer[0] shr 7) and 1'u8)
-      buffer[0] = buffer[0] and 0x3F'u8
-      if x0.fromBytes(buffer):
-        if x1.fromBytes(data.toOpenArray(MODBYTES_384, MODBYTES_384 * 2 - 1)):
-          var x: FP2_BLS381
-          x.fromBigs(x0, x1)
-          if res.setx(x, parity) == 1:
-            result = true
+    if (data[0] and (1'u8 shl 7)) != 0:
+      if (data[0] and (1'u8 shl 6)) != 0:
+        # Infinity point
+        res.inf()
+        result = true
+      else:
+        var buffer: array[MODBYTES_384, byte]
+        var x1, x0: BIG384
+        let greatest = (data[0] and (1'u8 shl 5)) != 0'u8
+        copyMem(addr buffer[0], unsafeAddr data[0], MODBYTES_384)
+        buffer[0] = buffer[0] and 0x1F'u8
+        if x1.fromBytes(buffer):
+          copyMem(addr buffer[0], unsafeAddr data[MODBYTES_384], MODBYTES_384)
+          if x0.fromBytes(buffer):
+            var x: FP2_BLS381
+            x.fromBigs(x0, x1)
+            if res.setx(x, greatest) == 1:
+              result = true
 
 proc fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
   ## Unserialize ECP2(G2) point from hexadecimal string ``a`` to ``res``.
@@ -586,11 +590,16 @@ proc toBytes*(point: ECP_BLS381, res: var openarray[byte]): bool =
     let parity = point.get(x, y)
     if parity == -1:
       zeroMem(addr res[0], MODBYTES_384)
+      res[0] = res[0] or (1'u8 shl 7) or (1'u8 shl 6)
       result = true
     else:
+      var ny = nres(y)
+      var negy = ny.neg()
+      negy.norm()
       discard toBytes(x, res.toOpenArray(0, MODBYTES_384 - 1))
-      if parity == 1:
-        res[0] = res[0] or (1'u8 shl 7)
+      if cmp(ny, negy) > 0:
+        res[0] = res[0] or (1'u8 shl 5)
+      res[0] = res[0] or (1'u8 shl 7)
       result = true
 
 proc toHex*(point: ECP_BLS381): string =
@@ -615,18 +624,20 @@ proc fromBytes*(res: var ECP_BLS381, data: openarray[byte]): bool =
   ##
   ## Returns ``true`` on success, ``false`` otherwise.
   if len(data) >= MODBYTES_384:
-    if isFullZero(data.toOpenArray(0, MODBYTES_384 - 1)):
-      res.inf()
-      result = true
-    else:
-      var x: BIG_384
-      var buffer: array[MODBYTES_384, byte]
-      copyMem(addr buffer[0], unsafeAddr data[0], MODBYTES_384)
-      var parity = int((buffer[0] shr 7) and 1'u8)
-      buffer[0] = buffer[0] and 0x3F'u8
-      if x.fromBytes(buffer):
-        if res.setx(x, parity) == 1:
-          result = true
+    if (data[0] and (1'u8 shl 7)) != 0:
+      if (data[0] and (1'u8 shl 6)) != 0:
+        # Infinity point
+        res.inf()
+        result = true
+      else:
+        var x: BIG_384
+        var buffer: array[MODBYTES_384, byte]
+        copyMem(addr buffer[0], unsafeAddr data[0], MODBYTES_384)
+        let greatest = (data[0] and (1'u8 shl 5)) != 0'u8
+        buffer[0] = buffer[0] and 0x1F'u8
+        if x.fromBytes(buffer):
+          if res.setx(x, greatest) == 1:
+            result = true
 
 proc fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
   ## Unserialize ECP point from hexadecimal string ``a`` to ``res``.
