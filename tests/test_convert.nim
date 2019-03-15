@@ -202,7 +202,7 @@ proc case07(root: YamlNode, path: string = "") =
     if node.kind == ySequence:
       for item in node.items():
         file.writeLine("")
-        for iitem in node["input"].items():
+        for iitem in item["input"].items():
           file.writeLine(norm(iitem.content))
         file.writeLine(norm(item["output"].content))
     else:

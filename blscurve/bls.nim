@@ -93,7 +93,7 @@ proc getKey*(a: SigKey): VerKey {.inline.} =
 
 proc toBytes*[T: SigKey|VerKey|Signature](obj: T,
                                           data: var openarray[byte]): bool =
-  ## Serialize ``SignatureKey``, ``VerificaitonKey`` or ``Signature`` to raw
+  ## Serialize ``SignatureKey``, ``VerificationKey`` or ``Signature`` to raw
   ## binary form and store it to ``data``.
   ##
   ## For ``SigKey`` length of ``data`` array must be at least
