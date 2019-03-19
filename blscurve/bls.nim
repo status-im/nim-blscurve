@@ -23,7 +23,7 @@ type
     sigkey*: SigKey
     verkey*: VerKey
 
-  BLSError* = object of Exception
+  BLSError* = object of CatchableError
   BLSDecodeError* = object of BLSError
   BLSEncodeError* = object of BLSError
 
