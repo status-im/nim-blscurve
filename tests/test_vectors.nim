@@ -6,7 +6,8 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import strutils, os, unittest
+import strutils except fromHex
+import os, unittest
 import nimcrypto/[sysrand, hash, keccak, utils]
 import ../blscurve/milagro, ../blscurve/bls, ../blscurve/common
 
