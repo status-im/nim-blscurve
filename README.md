@@ -28,6 +28,29 @@ To keep track of upstream:
 - Test
 - Commit
 
+## Implementation stability
+
+This repo follows Ethereum 2.0 requirements.
+
+Besides the standardization work described below, no changes are planned upstream
+for the foreseeable future.
+
+Currently (Jun 2019) a cross-blockchain working group is working to standardize BLS signatures
+for the following blockchains:
+- Algorand
+- Chia Network
+- Dfinity
+- Ethereum 2.0
+- Filecoin
+- Zcash Sapling
+
+Standardization work is led by:
+- Dan Boneh, Professor at Stanford University and co-author of BLS
+- Sergey Gorbunov, Assistant Professor at the University of Waterloo and working at Algorand
+
+IETF draft submission: https://tools.ietf.org/html/draft-boneh-bls-signature-00
+Repo for collaboration on the draft: https://github.com/pairingwg/bls_standard
+
 ## License
 
 Licensed and distributed under either of
