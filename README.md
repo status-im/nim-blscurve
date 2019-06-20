@@ -9,6 +9,9 @@ Current curve supported:
 
   - BLS12-381 (ZK-SNARKS)
 
+For signature and verification purposes, raw messages are first hashed with SHA256 (SHA2)
+following Ethereum requirements 2.0
+
 ## Installation
 
 You can install the developement version of the library through nimble with the following command
