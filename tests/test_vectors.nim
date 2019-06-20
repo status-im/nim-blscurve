@@ -8,7 +8,7 @@
 # those terms.
 import strutils except fromHex
 import os, unittest
-import nimcrypto/[sysrand, hash, keccak, utils]
+import nimcrypto/[sysrand, hash, sha2, utils]
 import ../blscurve/milagro, ../blscurve/bls, ../blscurve/common
 
 type
@@ -208,7 +208,7 @@ suite "Ethereum2 specification BLS381-12 test vectors suite":
     while true:
       if not f.readCase01Vector(vector):
         break
-      var ctx: keccak256
+      var ctx: sha256
       ctx.init()
       ctx.update(vector.message)
       var point = hashToG2(ctx, vector.domain)
@@ -220,7 +220,7 @@ suite "Ethereum2 specification BLS381-12 test vectors suite":
     while true:
       if not f.readCase02Vector(vector):
         break
-      var ctx: keccak256
+      var ctx: sha256
       ctx.init()
       ctx.update(vector.message)
       var point = hashToG2(ctx, vector.domain)
