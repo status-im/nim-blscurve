@@ -7,7 +7,7 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 import unittest, ospaths
-import nimcrypto/[sysrand, hash, keccak, utils]
+import nimcrypto/[sysrand, hash, sha2, utils]
 import ../blscurve/bls, ../blscurve/common
 
 const messages = [
@@ -57,7 +57,7 @@ suite "BLS381-12 test suite (public interface)":
     var msg1 = "Some msg"
     var msg2 = "Other msg"
     var msg3 = ""
-    var hctx1, hctx2, hctx3: keccak256
+    var hctx1, hctx2, hctx3: sha256
     hctx1.init()
     hctx2.init()
     hctx3.init()
@@ -74,7 +74,7 @@ suite "BLS381-12 test suite (public interface)":
     var kps = [KeyPair.random(), KeyPair.random(), KeyPair.random(),
                KeyPair.random(), KeyPair.random()]
     for message in messages:
-      var hh = keccak256.digest(message)
+      var hh = sha256.digest(message)
       var vks = newSeq[VerKey]()
       var svks = newSeq[Signature]()
       for i in 0..<5:

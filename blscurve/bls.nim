@@ -6,7 +6,7 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import nimcrypto/[sysrand, utils, hash, keccak]
+import nimcrypto/[sysrand, utils, hash, sha2]
 import milagro, common
 
 type
@@ -132,8 +132,8 @@ proc toHex*[T: SigKey|VerKey|Signature](obj: T): string =
   else:
     result = obj.point.toHex()
 
-proc sign*(sigkey: SigKey, domain: uint64, mdctx: keccak256): Signature =
-  ## Sign keccak-256 context using Signature Key ``sigkey`` over domain
+proc sign*(sigkey: SigKey, domain: uint64, mdctx: sha256): Signature =
+  ## Sign sha2-256 context using Signature Key ``sigkey`` over domain
   ## ``domain``.
   var point = hashToG2(mdctx, domain)
   point.mul(sigkey.x)
@@ -143,15 +143,15 @@ proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
                          message: openarray[T]): Signature =
   ## Sign message ``message`` using Signature Key ``sigkey`` over domain
   ## ``domain``.
-  var mdctx: keccak256
+  var mdctx: sha256
   mdctx.init()
   mdctx.update(message)
   result = sign(sigkey, domain, mdctx)
   mdctx.clear()
 
-# proc verify*(sig: Signature, mdctx: keccak256, domain: uint64,
+# proc verify*(sig: Signature, mdctx: sha256, domain: uint64,
 #              verkey: VerKey): bool =
-#   ## Verify signature ``sig`` using Verification Key ``verkey`` and keccak-256
+#   ## Verify signature ``sig`` using Verification Key ``verkey`` and sha2-256
 #   ## context ``mdctx`` over domain ``domain``.
 #   ##
 #   ## Returns ``true`` if message verification succeeded, ``false`` if
@@ -165,7 +165,7 @@ proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
 #     var rhs = atePairing(point, verkey.point)
 #     result = (lhs == rhs)
 
-# proc verify2*(sig: Signature, mdctx: keccak256, domain: uint64,
+# proc verify2*(sig: Signature, mdctx: sha256, domain: uint64,
 #                verkey: VerKey): bool =
 #   if sig.point.isinf():
 #     result = false
@@ -174,9 +174,9 @@ proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
 #     var point = hashToG2(mdctx, domain)
 #     result = doublePairing(sig.point, gen, point, verkey.point)
 
-proc verify*(sig: Signature, mdctx: keccak256, domain: uint64,
+proc verify*(sig: Signature, mdctx: sha256, domain: uint64,
              verkey: VerKey): bool =
-  ## Verify signature ``sig`` using Verification Key ``verkey`` and keccak-256
+  ## Verify signature ``sig`` using Verification Key ``verkey`` and sha2-256
   ## context ``mdctx`` over domain ``domain``.
   ##
   ## Returns ``true`` if message verification succeeded, ``false`` if
@@ -195,7 +195,7 @@ proc verify*[T: byte|char](sig: Signature, message: openarray[T],
   ##
   ## Return ``true`` if message verification succeeded, ``false`` if
   ## verification failed.
-  var mdctx: keccak256
+  var mdctx: sha256
   mdctx.init()
   mdctx.update(message)
   result = verify(sig, mdctx, domain, verkey)

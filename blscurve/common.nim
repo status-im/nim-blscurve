@@ -7,7 +7,7 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 import endians
-import nimcrypto/[sysrand, utils, hash, keccak]
+import nimcrypto/[sysrand, utils, hash, sha2]
 import milagro
 
 {.deadCodeElim: on.}
@@ -657,15 +657,15 @@ proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   mul(lowpart, G2_CoFactorLow)
   add(result, lowpart)
 
-proc hashToG2*(msgctx: keccak256, domain: uint64): ECP2_BLS381 =
-  ## Perform transformation of keccak-256 context (which must be already
+proc hashToG2*(msgctx: sha256, domain: uint64): ECP2_BLS381 =
+  ## Perform transformation of sha2-256 context (which must be already
   ## updated with ``message``) over domain ``domain`` to point in G2.
   var
     bebuf: array[8, byte]
     buffer: array[MODBYTES_384, byte]
     xre, xim: BIG_384
     x, one: FP2_BLS381
-  # Copy context of `msgctx` which is keccak256(message)
+  # Copy context of `msgctx` which is sha256(message)
   var ctx1 = msgctx
   var ctx2 = msgctx
   # Convert `domain` to its big-endian representation
