@@ -18,7 +18,7 @@
 */
 
 /**
- * @file ecp.h
+ * @file ecp_BLS381.h
  * @author Mike Scott
  * @brief ECP Header File
  *

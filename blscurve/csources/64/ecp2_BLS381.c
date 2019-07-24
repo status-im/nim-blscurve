@@ -128,9 +128,9 @@ void ECP2_BLS381_affine(ECP2_BLS381 *P)
 /* SU= 16 */
 int ECP2_BLS381_get(FP2_BLS381 *x,FP2_BLS381 *y,ECP2_BLS381 *P)
 {
-	ECP2_BLS381 W;
-	ECP2_BLS381_copy(&W,P);
-	ECP2_BLS381_affine(&W);
+    ECP2_BLS381 W;
+    ECP2_BLS381_copy(&W,P);
+    ECP2_BLS381_affine(&W);
     if (ECP2_BLS381_isinf(&W)) return -1;
     FP2_BLS381_copy(y,&(W.y));
     FP2_BLS381_copy(x,&(W.x));
@@ -259,7 +259,7 @@ int ECP2_BLS381_set(ECP2_BLS381 *P,FP2_BLS381 *x,FP2_BLS381 *y)
 
     if (!FP2_BLS381_equals(&y2,&rhs))
     {
-		ECP2_BLS381_inf(P);
+        ECP2_BLS381_inf(P);
         return 0;
     }
 
@@ -279,7 +279,7 @@ int ECP2_BLS381_setx(ECP2_BLS381 *P,FP2_BLS381 *x)
 
     if (!FP2_BLS381_sqrt(&y,&y))
     {
-		ECP2_BLS381_inf(P);
+        ECP2_BLS381_inf(P);
         return 0;
     }
 
@@ -444,9 +444,9 @@ int ECP2_BLS381_add(ECP2_BLS381 *P,ECP2_BLS381 *Q)
 /* SU= 16 */
 void ECP2_BLS381_sub(ECP2_BLS381 *P,ECP2_BLS381 *Q)
 {
-	ECP2_BLS381 NQ;
-	ECP2_BLS381_copy(&NQ,Q);
-	ECP2_BLS381_neg(&NQ);
+    ECP2_BLS381 NQ;
+    ECP2_BLS381_copy(&NQ,Q);
+    ECP2_BLS381_neg(&NQ);
     ECP2_BLS381_add(P,&NQ);
 }
 
@@ -534,15 +534,15 @@ void ECP2_BLS381_frob(ECP2_BLS381 *P,FP2_BLS381 *X)
 
 // Bos & Costello https://eprint.iacr.org/2013/458.pdf
 // Faz-Hernandez & Longa & Sanchez  https://eprint.iacr.org/2013/158.pdf
-// Side channel attack secure 
+// Side channel attack secure
 
 void ECP2_BLS381_mul4(ECP2_BLS381 *P,ECP2_BLS381 Q[4],BIG_384_58 u[4])
 {
     int i,j,k,nb,pb,bt;
-	ECP2_BLS381 T[8],W;
+    ECP2_BLS381 T[8],W;
     BIG_384_58 t[4],mt;
-	sign8 w[NLEN_384_58*BASEBITS_384_58+1];
-	sign8 s[NLEN_384_58*BASEBITS_384_58+1];
+    sign8 w[NLEN_384_58*BASEBITS_384_58+1];
+    sign8 s[NLEN_384_58*BASEBITS_384_58+1];
 
     for (i=0; i<4; i++)
     {
@@ -552,24 +552,24 @@ void ECP2_BLS381_mul4(ECP2_BLS381 *P,ECP2_BLS381 Q[4],BIG_384_58 u[4])
 // Precomputed table
     ECP2_BLS381_copy(&T[0],&Q[0]); // Q[0]
     ECP2_BLS381_copy(&T[1],&T[0]);
-	ECP2_BLS381_add(&T[1],&Q[1]);	// Q[0]+Q[1]
+    ECP2_BLS381_add(&T[1],&Q[1]);	// Q[0]+Q[1]
     ECP2_BLS381_copy(&T[2],&T[0]);
-	ECP2_BLS381_add(&T[2],&Q[2]);	// Q[0]+Q[2]
-	ECP2_BLS381_copy(&T[3],&T[1]);
-	ECP2_BLS381_add(&T[3],&Q[2]);	// Q[0]+Q[1]+Q[2]
-	ECP2_BLS381_copy(&T[4],&T[0]);
-	ECP2_BLS381_add(&T[4],&Q[3]);  // Q[0]+Q[3]
-	ECP2_BLS381_copy(&T[5],&T[1]);
-	ECP2_BLS381_add(&T[5],&Q[3]);	// Q[0]+Q[1]+Q[3]
-	ECP2_BLS381_copy(&T[6],&T[2]);
-	ECP2_BLS381_add(&T[6],&Q[3]);	// Q[0]+Q[2]+Q[3]
-	ECP2_BLS381_copy(&T[7],&T[3]);
-	ECP2_BLS381_add(&T[7],&Q[3]);	// Q[0]+Q[1]+Q[2]+Q[3]
+    ECP2_BLS381_add(&T[2],&Q[2]);	// Q[0]+Q[2]
+    ECP2_BLS381_copy(&T[3],&T[1]);
+    ECP2_BLS381_add(&T[3],&Q[2]);	// Q[0]+Q[1]+Q[2]
+    ECP2_BLS381_copy(&T[4],&T[0]);
+    ECP2_BLS381_add(&T[4],&Q[3]);  // Q[0]+Q[3]
+    ECP2_BLS381_copy(&T[5],&T[1]);
+    ECP2_BLS381_add(&T[5],&Q[3]);	// Q[0]+Q[1]+Q[3]
+    ECP2_BLS381_copy(&T[6],&T[2]);
+    ECP2_BLS381_add(&T[6],&Q[3]);	// Q[0]+Q[2]+Q[3]
+    ECP2_BLS381_copy(&T[7],&T[3]);
+    ECP2_BLS381_add(&T[7],&Q[3]);	// Q[0]+Q[1]+Q[2]+Q[3]
 
 // Make it odd
-	pb=1-BIG_384_58_parity(t[0]);
-	BIG_384_58_inc(t[0],pb);
-	BIG_384_58_norm(t[0]);
+    pb=1-BIG_384_58_parity(t[0]);
+    BIG_384_58_inc(t[0],pb);
+    BIG_384_58_norm(t[0]);
 
 // Number of bits
     BIG_384_58_zero(mt);
@@ -579,33 +579,33 @@ void ECP2_BLS381_mul4(ECP2_BLS381 *P,ECP2_BLS381 Q[4],BIG_384_58 u[4])
     }
     nb=1+BIG_384_58_nbits(mt);
 
-// Sign pivot 
-	s[nb-1]=1;
-	for (i=0;i<nb-1;i++)
-	{
+// Sign pivot
+    s[nb-1]=1;
+    for (i=0; i<nb-1; i++)
+    {
         BIG_384_58_fshr(t[0],1);
-		s[i]=2*BIG_384_58_parity(t[0])-1;
-	}
+        s[i]=2*BIG_384_58_parity(t[0])-1;
+    }
 
 // Recoded exponent
     for (i=0; i<nb; i++)
     {
-		w[i]=0;
-		k=1;
-		for (j=1; j<4; j++)
-		{
-			bt=s[i]*BIG_384_58_parity(t[j]);
-			BIG_384_58_fshr(t[j],1);
+        w[i]=0;
+        k=1;
+        for (j=1; j<4; j++)
+        {
+            bt=s[i]*BIG_384_58_parity(t[j]);
+            BIG_384_58_fshr(t[j],1);
 
-			BIG_384_58_dec(t[j],(bt>>1));
-			BIG_384_58_norm(t[j]);
-			w[i]+=bt*k;
-			k*=2;
+            BIG_384_58_dec(t[j],(bt>>1));
+            BIG_384_58_norm(t[j]);
+            w[i]+=bt*k;
+            k*=2;
         }
-    }		
+    }
 
 // Main loop
-	ECP2_BLS381_select(P,T,2*w[nb-1]+1);
+    ECP2_BLS381_select(P,T,2*w[nb-1]+1);
     for (i=nb-2; i>=0; i--)
     {
         ECP2_BLS381_select(&W,T,2*w[i]+s[i]);
@@ -614,9 +614,9 @@ void ECP2_BLS381_mul4(ECP2_BLS381 *P,ECP2_BLS381 Q[4],BIG_384_58 u[4])
     }
 
 // apply correction
-	ECP2_BLS381_copy(&W,P);   
-	ECP2_BLS381_sub(&W,&Q[0]);
-	ECP2_BLS381_cmove(P,&W,pb);
+    ECP2_BLS381_copy(&W,P);
+    ECP2_BLS381_sub(&W,&Q[0]);
+    ECP2_BLS381_cmove(P,&W,pb);
 
     ECP2_BLS381_affine(P);
 }
@@ -713,12 +713,12 @@ void ECP2_BLS381_mapit(ECP2_BLS381 *Q,octet *W)
 
 void ECP2_BLS381_generator(ECP2_BLS381 *G)
 {
-	FP2_BLS381 wx,wy;
+    FP2_BLS381 wx,wy;
 
-    FP_BLS381_rcopy(&(wx.a),CURVE_Pxa_BLS381); 
-    FP_BLS381_rcopy(&(wx.b),CURVE_Pxb_BLS381); 
-    FP_BLS381_rcopy(&(wy.a),CURVE_Pya_BLS381); 
-    FP_BLS381_rcopy(&(wy.b),CURVE_Pyb_BLS381);     
+    FP_BLS381_rcopy(&(wx.a),CURVE_Pxa_BLS381);
+    FP_BLS381_rcopy(&(wx.b),CURVE_Pxb_BLS381);
+    FP_BLS381_rcopy(&(wy.a),CURVE_Pya_BLS381);
+    FP_BLS381_rcopy(&(wy.b),CURVE_Pyb_BLS381);
 
-	ECP2_BLS381_set(G,&wx,&wy);
+    ECP2_BLS381_set(G,&wx,&wy);
 }

@@ -18,7 +18,7 @@
 */
 
 /**
- * @file fp2.h
+ * @file fp2_BLS381.h
  * @author Mike Scott
  * @brief FP2 Header File
  *

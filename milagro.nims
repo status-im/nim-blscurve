@@ -6,9 +6,9 @@ mode = ScriptMode.Verbose
 ## 64bit limbs. It also removes random/hash/crypto related functions.
 ##
 ## Usage:
-## 
+##
 ## nim -e milagro.nims <srcpath> <dstpath>
-## 
+##
 ## <srcpath> - source path of milagro's C sources. By default current working
 ## path will be used.
 ## <dstpath> - destination path where two directories `32` and `64` will be
@@ -67,11 +67,11 @@ const amclh = """/*
 #define D_TYPE 0
 #define M_TYPE 1
 
-#define FP_ZERO 0
-#define FP_UNITY 1
-#define FP_SPARSER 2
-#define FP_SPARSE 3
-#define FP_DENSE 4
+#define AMCL_FP_ZERO 0
+#define AMCL_FP_UNITY 1
+#define AMCL_FP_SPARSER 2
+#define AMCL_FP_SPARSE 3
+#define AMCL_FP_DENSE 4
 
 /**
   @brief Portable representation of a big positive number
@@ -121,21 +121,21 @@ proc commentLine(data, name: string): string =
 proc checkFiles(src, tc: string): bool =
   ## Returns ``true`` if all the files in ``files`` array present in filesystem.
   let files = [
-    "arch.h",
-    "config_big.h",
-    "config_field.h",
-    "config_curve.h",
-    "big.h", "big.c",
-    "fp.h", "fp.c",
-    "fp2.h", "fp2.c",
-    "fp4.h", "fp4.c",
-    "fp12.h", "fp12.c",
-    "ecp.h", "ecp.c",
-    "ecp2.h", "ecp.c",
-    "pair.h", "pair.c",
-    "rom_curve_" & tc & ".c",
-    "rom_field_" & tc & ".c",
-    "oct.c"
+    "include" / "arch.h.in",
+    "include" / "config_big.h.in",
+    "include" / "config_field.h.in",
+    "include" / "config_curve.h.in",
+    "include" / "big.h.in", "src" / "big.c.in",
+    "include" / "fp.h.in", "src" / "fp.c.in",
+    "include" / "fp2.h.in", "src" / "fp2.c.in",
+    "include" / "fp4.h.in", "src" / "fp4.c.in",
+    "include" / "fp12.h.in", "src" / "fp12.c.in",
+    "include" / "ecp.h.in", "src" / "ecp.c.in",
+    "include" / "ecp2.h.in", "src" / "ecp2.c.in",
+    "include" / "pair.h.in", "src" / "pair.c.in",
+     "src" / ("rom_curve_" & tc & ".c"),
+     "src" / ("rom_field_" & tc & ".c"),
+     "src" / "oct.c"
   ]
   result = true
   for item in files:
@@ -190,7 +190,7 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
 
   # arch.h
   fnameh = dst / "arch.h"
-  data = readFile(src / "arch.h")
+  data = readFile(src / "include" / "arch.h.in")
   if base == "58":
     data = data.replace("@WL@", "64")
     nmax = 30
@@ -201,7 +201,7 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
 
   # config_big.h
   fnameh = dst / "config_big_" & bd & ".h"
-  data = readFile(src / "config_big.h")
+  data = readFile(src / "include" / "config_big.h.in")
   data = data.replace("XXX", bd)
   data = data.replace("@NB@", nb)
   data = data.replace("@BASE@", base)
@@ -209,7 +209,7 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
 
   # config_field.h
   fnameh = dst / "config_field_" & tf & ".h"
-  data = readFile(src / "config_field.h")
+  data = readFile(src / "include" / "config_field.h.in")
   data = data.replace("XXX", bd)
   data = data.replace("YYY", tf)
   data = data.replace("@NBT@", nbt)
@@ -226,7 +226,7 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
 
   # config_curve.h
   fnameh = dst / "config_curve_" & tc & ".h"
-  data = readFile(src / "config_curve.h")
+  data = readFile(src / "include" / "config_curve.h.in")
   data = data.replace("XXX", bd)
   data = data.replace("YYY", tf)
   data = data.replace("ZZZ", tc)
@@ -239,14 +239,14 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
   writeFile(fnameh, data)
 
   # big.c & big.h
-  for item in ["big.c", "big.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "big.c.in", "include" / "big.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "big_" & bd & ".h"
     else:
       fnameh = dst / "big_" & bd & ".c"
     data = readFile(src / item)
     data = data.replace("XXX", bd)
-    if item.endsWith(".c"):
+    if item.endsWith(".c.in"):
       if base == "58":
         data = data.commentFunction("BIG_384_58_random(")
         data = data.commentFunction("BIG_384_58_randomnum(")
@@ -264,8 +264,8 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
     writeFile(fnameh, data)
 
   # fp.c & fp.h
-  for item in ["fp.c", "fp.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "fp.c.in", "include" / "fp.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "fp_" & tf & ".h"
     else:
       fnameh = dst / "fp_" & tf & ".c"
@@ -275,8 +275,8 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
     writeFile(fnameh, data)
 
   # ecp.c & ecp.h
-  for item in ["ecp.c", "ecp.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "ecp.c.in", "include" / "ecp.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "ecp_" & tc & ".h"
     else:
       fnameh = dst / "ecp_" & tc & ".c"
@@ -288,17 +288,17 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
 
   # rom_curve_<>.c
   fnameh = dst / "rom_curve_" & tc & ".c"
-  data = readFile(src / "rom_curve_" & tc & ".c")
+  data = readFile(src / "src" / ("rom_curve_" & tc & ".c"))
   writeFile(fnameh, data)
 
   # rom_field_<>.c
   fnameh = dst / "rom_field_" & tc & ".c"
-  data = readFile(src / "rom_field_" & tc & ".c")
+  data = readFile(src / "src" / ("rom_field_" & tc & ".c"))
   writeFile(fnameh, data)
 
   # fp2.h & fp2.c
-  for item in ["fp2.c", "fp2.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "fp2.c.in", "include" / "fp2.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "fp2_" & tf & ".h"
     else:
       fnameh = dst / "fp2_" & tf & ".c"
@@ -308,8 +308,8 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
     writeFile(fnameh, data)
 
   # fp4.h & fp4.c
-  for item in ["fp4.c", "fp4.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "fp4.c.in", "include" / "fp4.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "fp4_" & tf & ".h"
     else:
       fnameh = dst / "fp4_" & tf & ".c"
@@ -320,8 +320,8 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
     writeFile(fnameh, data)
 
   # fp12.h & fp12.c
-  for item in ["fp12.c", "fp12.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "fp12.c.in", "include" / "fp12.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "fp12_" & tf & ".h"
     else:
       fnameh = dst / "fp12_" & tf & ".c"
@@ -332,8 +332,8 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
     writeFile(fnameh, data)
 
   # ecp2.h & ecp2.c
-  for item in ["ecp2.c", "ecp2.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "ecp2.c.in", "include" / "ecp2.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "ecp2_" & tf & ".h"
     else:
       fnameh = dst / "ecp2_" & tf & ".c"
@@ -344,8 +344,8 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
     writeFile(fnameh, data)
 
   # pair.h & pair.c
-  for item in ["pair.c", "pair.h"]:
-    if item.endsWith(".h"):
+  for item in ["src" / "pair.c.in", "include" / "pair.h.in"]:
+    if item.endsWith(".h.in"):
       fnameh = dst / "pair_" & tc & ".h"
     else:
       fnameh = dst / "pair_" & tc & ".c"
@@ -356,7 +356,7 @@ proc curveSet(src, dst, tb, tf, tc, nb, base, nbt, m8, mt, ct, pf, stw, sx, ab,
     writeFile(fnameh, data)
 
   # oct.c
-  data = readFile(src / "oct.c")
+  data = readFile(src / "src" / "oct.c")
   data = data.commentFunction("OCT_rand")
   writeFile(dst / "oct.c", data)
 

@@ -279,7 +279,6 @@ void FP2_BLS381_rawoutput(FP2_BLS381 *w)
 /* SU= 128 */
 void FP2_BLS381_inv(FP2_BLS381 *w,FP2_BLS381 *x)
 {
-    BIG_384_29 m,b;
     FP_BLS381 w1,w2;
 
     FP2_BLS381_norm(x);
@@ -287,7 +286,7 @@ void FP2_BLS381_inv(FP2_BLS381 *w,FP2_BLS381 *x)
     FP_BLS381_sqr(&w2,&(x->b));
     FP_BLS381_add(&w1,&w1,&w2);
 
-	FP_BLS381_inv(&w1,&w1);
+    FP_BLS381_inv(&w1,&w1);
 
     FP_BLS381_mul(&(w->a),&(x->a),&w1);
     FP_BLS381_neg(&w1,&w1);
@@ -384,7 +383,6 @@ void FP2_BLS381_pow(FP2_BLS381 *r,FP2_BLS381* a,BIG_384_29 b)
 
 int FP2_BLS381_sqrt(FP2_BLS381 *w,FP2_BLS381 *u)
 {
-    BIG_384_29 b;
     FP_BLS381 w1,w2;
     FP2_BLS381_copy(w,u);
     if (FP2_BLS381_iszilch(w)) return 1;
@@ -416,7 +414,7 @@ int FP2_BLS381_sqrt(FP2_BLS381 *w,FP2_BLS381 *u)
     FP_BLS381_copy(&(w->a),&w2);
     FP_BLS381_add(&w2,&w2,&w2);
 
-	FP_BLS381_inv(&w2,&w2);
+    FP_BLS381_inv(&w2,&w2);
 
     FP_BLS381_mul(&(w->b),&(w->b),&w2);
     return 1;
