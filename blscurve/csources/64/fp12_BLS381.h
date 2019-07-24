@@ -18,7 +18,7 @@
 */
 
 /**
- * @file fp12.h
+ * @file fp12_BLS381.h
  * @author Mike Scott
  * @brief FP12 Header File
  *
@@ -38,7 +38,7 @@ typedef struct
     FP4_BLS381 a; /**< first part of FP12 */
     FP4_BLS381 b; /**< second part of FP12 */
     FP4_BLS381 c; /**< third part of FP12 */
-	int type;
+    int type;  /**< Type */
 } FP12_BLS381;
 
 extern const BIG_384_58 Fra_BLS381; /**< real part of BN curve Frobenius Constant */
@@ -68,6 +68,13 @@ extern void FP12_BLS381_copy(FP12_BLS381 *x,FP12_BLS381 *y);
 	@param x FP12 instance to be set to one
  */
 extern void FP12_BLS381_one(FP12_BLS381 *x);
+
+/**	@brief Set FP12 to zero
+ *
+	@param x FP12 instance to be set to zero
+ */
+extern void FP12_BLS381_zero(FP12_BLS381 *x);
+
 /**	@brief Tests for equality of two FP12s
  *
 	@param x FP12 instance to be compared

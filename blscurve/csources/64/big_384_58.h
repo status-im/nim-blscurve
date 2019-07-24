@@ -18,7 +18,7 @@
 */
 
 /**
- * @file big.h
+ * @file big_384_58.h
  * @author Mike Scott
  * @brief BIG Header File
  *
@@ -552,6 +552,14 @@ extern void BIG_384_58_invmodp(BIG_384_58 x,BIG_384_58 y,BIG_384_58 n);
 	@param m new truncated size
 */
 extern void BIG_384_58_mod2m(BIG_384_58 x,int m);
+
+/** @brief Calculate x=x mod 2^m
+ *
+	Truncation
+	@param x DBIG number, on reduced mod 2^m
+	@param m new truncated size
+*/
+extern void BIG_384_58_dmod2m(DBIG_384_58 x,int m);
 
 /**	@brief Calculates a*b+c+*d
  *

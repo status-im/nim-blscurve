@@ -143,7 +143,7 @@ void BIG_384_58_toBytes(char *b,BIG_384_58 a)
     int i;
     BIG_384_58 c;
     BIG_384_58_copy(c,a);
-	BIG_384_58_norm(c);
+    BIG_384_58_norm(c);
     for (i=MODBYTES_384_58-1; i>=0; i--)
     {
         b[i]=c[0]&0xff;
@@ -371,8 +371,8 @@ void BIG_384_58_add(BIG_384_58 c,BIG_384_58 a,BIG_384_58 b)
 void BIG_384_58_or(BIG_384_58 c,BIG_384_58 a,BIG_384_58 b)
 {
     int i;
-	BIG_384_58_norm(a);
-	BIG_384_58_norm(b);
+    BIG_384_58_norm(a);
+    BIG_384_58_norm(b);
     for (i=0; i<NLEN_384_58; i++)
         c[i]=a[i]|b[i];
 #ifdef DEBUG_NORM
@@ -876,28 +876,28 @@ void BIG_384_58_shr(BIG_384_58 a,int k)
 /* Fast combined shift, subtract and norm. Return sign of result */
 int BIG_384_58_ssn(BIG_384_58 r,BIG_384_58 a,BIG_384_58 m)
 {
-	int i,n=NLEN_384_58-1;
-	chunk carry;
-	m[0]=(m[0]>>1)|((m[1]<<(BASEBITS_384_58-1))&BMASK_384_58);
-	r[0]=a[0]-m[0];
+    int i,n=NLEN_384_58-1;
+    chunk carry;
+    m[0]=(m[0]>>1)|((m[1]<<(BASEBITS_384_58-1))&BMASK_384_58);
+    r[0]=a[0]-m[0];
     carry=r[0]>>BASEBITS_384_58;
     r[0]&=BMASK_384_58;
-    
-	for (i=1;i<n;i++)
-	{
-		m[i]=(m[i]>>1)|((m[i+1]<<(BASEBITS_384_58-1))&BMASK_384_58);
-		r[i]=a[i]-m[i]+carry;
-		carry=r[i]>>BASEBITS_384_58;
-		r[i]&=BMASK_384_58;
-	}
-	
-	m[n]>>=1;
-	r[n]=a[n]-m[n]+carry;
+
+    for (i=1; i<n; i++)
+    {
+        m[i]=(m[i]>>1)|((m[i+1]<<(BASEBITS_384_58-1))&BMASK_384_58);
+        r[i]=a[i]-m[i]+carry;
+        carry=r[i]>>BASEBITS_384_58;
+        r[i]&=BMASK_384_58;
+    }
+
+    m[n]>>=1;
+    r[n]=a[n]-m[n]+carry;
 #ifdef DEBUG_NORM
     r[MPV_384_58]=1;
     r[MNV_384_58]=0;
 #endif
-	return ((r[n]>>(CHUNK-1))&1);
+    return ((r[n]>>(CHUNK-1))&1);
 }
 
 /* Faster shift right of a by k bits. Return shifted out part */
@@ -1040,9 +1040,9 @@ int BIG_384_58_dcomp(DBIG_384_58 a,DBIG_384_58 b)
 int BIG_384_58_nbits(BIG_384_58 a)
 {
     int bts,k=NLEN_384_58-1;
-	BIG_384_58 t;
+    BIG_384_58 t;
     chunk c;
-	BIG_384_58_copy(t,a);
+    BIG_384_58_copy(t,a);
     BIG_384_58_norm(t);
     while (k>=0 && t[k]==0) k--;
     if (k<0) return 0;
@@ -1060,9 +1060,9 @@ int BIG_384_58_nbits(BIG_384_58 a)
 int BIG_384_58_dnbits(DBIG_384_58 a)
 {
     int bts,k=DNLEN_384_58-1;
-	DBIG_384_58 t;
+    DBIG_384_58 t;
     chunk c;
-	BIG_384_58_dcopy(t,a);
+    BIG_384_58_dcopy(t,a);
     BIG_384_58_dnorm(t);
     while (k>=0 && t[k]==0) k--;
     if (k<0) return 0;
@@ -1083,8 +1083,8 @@ void BIG_384_58_mod(BIG_384_58 b,BIG_384_58 c1)
 {
     int k=0;
     BIG_384_58 r; /**/
-	BIG_384_58 c;
-	BIG_384_58_copy(c,c1);
+    BIG_384_58 c;
+    BIG_384_58_copy(c,c1);
 
     BIG_384_58_norm(b);
     if (BIG_384_58_comp(b,c)<0)
@@ -1300,9 +1300,9 @@ int BIG_384_58_lastbits(BIG_384_58 a,int n)
 void BIG_384_58_modmul(BIG_384_58 r,BIG_384_58 a1,BIG_384_58 b1,BIG_384_58 m)
 {
     DBIG_384_58 d;
-	BIG_384_58 a,b;
-	BIG_384_58_copy(a,a1);
-	BIG_384_58_copy(b,b1);
+    BIG_384_58 a,b;
+    BIG_384_58_copy(a,a1);
+    BIG_384_58_copy(b,b1);
     BIG_384_58_mod(a,m);
     BIG_384_58_mod(b,m);
 
@@ -1315,8 +1315,8 @@ void BIG_384_58_modmul(BIG_384_58 r,BIG_384_58 a1,BIG_384_58 b1,BIG_384_58 m)
 void BIG_384_58_modsqr(BIG_384_58 r,BIG_384_58 a1,BIG_384_58 m)
 {
     DBIG_384_58 d;
-	BIG_384_58 a;
-	BIG_384_58_copy(a,a1);
+    BIG_384_58 a;
+    BIG_384_58_copy(a,a1);
     BIG_384_58_mod(a,m);
     BIG_384_58_sqr(d,a);
     BIG_384_58_dmod(r,d,m);
@@ -1326,8 +1326,8 @@ void BIG_384_58_modsqr(BIG_384_58 r,BIG_384_58 a1,BIG_384_58 m)
 /* SU= 16 */
 void BIG_384_58_modneg(BIG_384_58 r,BIG_384_58 a1,BIG_384_58 m)
 {
-	BIG_384_58 a;
-	BIG_384_58_copy(a,a1);
+    BIG_384_58 a;
+    BIG_384_58_copy(a,a1);
     BIG_384_58_mod(a,m);
     BIG_384_58_sub(r,m,a);
 }
@@ -1338,9 +1338,9 @@ void BIG_384_58_moddiv(BIG_384_58 r,BIG_384_58 a1,BIG_384_58 b1,BIG_384_58 m)
 {
     DBIG_384_58 d;
     BIG_384_58 z;
-	BIG_384_58 a,b;
-	BIG_384_58_copy(a,a1);
-	BIG_384_58_copy(b,b1);
+    BIG_384_58 a,b;
+    BIG_384_58_copy(a,a1);
+    BIG_384_58_copy(b,b1);
 
     BIG_384_58_mod(a,m);
     BIG_384_58_invmodp(z,b,m);
@@ -1464,6 +1464,20 @@ void BIG_384_58_mod2m(BIG_384_58 x,int m)
     msk=((chunk)1<<bt)-1;
     x[wd]&=msk;
     for (i=wd+1; i<NLEN_384_58; i++) x[i]=0;
+}
+
+/* set x = x mod 2^m */
+void BIG_384_58_dmod2m(DBIG_384_58 x,int m)
+{
+    int i,wd,bt;
+    chunk msk;
+    BIG_384_58_norm(x);
+
+    wd=m/BASEBITS_384_58;
+    bt=m%BASEBITS_384_58;
+    msk=((chunk)1<<bt)-1;
+    x[wd]&=msk;
+    for (i=wd+1; i<DNLEN_384_58; i++) x[i]=0;
 }
 
 // new

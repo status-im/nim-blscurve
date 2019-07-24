@@ -18,7 +18,7 @@
 */
 
 /**
- * @file fp.h
+ * @file fp_BLS381.h
  * @author Mike Scott
  * @brief FP Header File
  *

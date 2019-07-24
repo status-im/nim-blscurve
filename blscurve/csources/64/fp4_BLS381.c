@@ -110,7 +110,7 @@ void FP4_BLS381_neg(FP4_BLS381 *w,FP4_BLS381 *x)
 {
     /* Just one field neg */
     FP2_BLS381 m,t;
-	FP4_BLS381_norm(x);
+    FP4_BLS381_norm(x);
     FP2_BLS381_add(&m,&(x->a),&(x->b));
     FP2_BLS381_neg(&m,&m);
     FP2_BLS381_add(&t,&m,&(x->b));
@@ -334,7 +334,7 @@ void FP4_BLS381_pow(FP4_BLS381 *r,FP4_BLS381* a,BIG_384_58 b)
     BIG_384_58_copy(z,b);
     BIG_384_58_norm(z);
     FP4_BLS381_copy(&w,a);
-	FP4_BLS381_norm(&w);
+    FP4_BLS381_norm(&w);
     FP4_BLS381_one(r);
 
     while(1)
@@ -397,14 +397,14 @@ void FP4_BLS381_xtr_pow(FP4_BLS381 *r,FP4_BLS381 *x,BIG_384_58 n)
     FP2_BLS381_from_BIG(&w,v);
     FP4_BLS381_from_FP2(&a,&w);
 
-	FP4_BLS381_copy(&sf,x);
-	FP4_BLS381_norm(&sf);
+    FP4_BLS381_copy(&sf,x);
+    FP4_BLS381_norm(&sf);
     FP4_BLS381_copy(&b,&sf);
     FP4_BLS381_xtr_D(&c,&sf);
 
     par=BIG_384_58_parity(n);
     BIG_384_58_copy(v,n);
-	BIG_384_58_norm(v);
+    BIG_384_58_norm(v);
     BIG_384_58_shr(v,1);
     if (par==0)
     {
@@ -600,7 +600,7 @@ int FP4_BLS381_sqrt(FP4_BLS381 *r,FP4_BLS381* x)
     FP4_BLS381_copy(r,x);
     if (FP4_BLS381_iszilch(x))
         return 1;
-    
+
     FP2_BLS381_copy(&a,&(x->a));
     FP2_BLS381_copy(&s,&(x->b));
 
@@ -662,14 +662,14 @@ void FP4_BLS381_div_i(FP4_BLS381 *f)
 
 void FP4_BLS381_div_2i(FP4_BLS381 *f)
 {
-	FP2_BLS381 u,v;
-	FP2_BLS381_copy(&u,&(f->a));
-	FP2_BLS381_copy(&v,&(f->b));
-	FP2_BLS381_div_ip2(&u);
-	FP2_BLS381_add(&v,&v,&v);
-	FP2_BLS381_norm(&v);
-	FP2_BLS381_copy(&(f->a),&v);
-	FP2_BLS381_copy(&(f->b),&u);
+    FP2_BLS381 u,v;
+    FP2_BLS381_copy(&u,&(f->a));
+    FP2_BLS381_copy(&v,&(f->b));
+    FP2_BLS381_div_ip2(&u);
+    FP2_BLS381_add(&v,&v,&v);
+    FP2_BLS381_norm(&v);
+    FP2_BLS381_copy(&(f->a),&v);
+    FP2_BLS381_copy(&(f->b),&u);
 }
 
 #endif

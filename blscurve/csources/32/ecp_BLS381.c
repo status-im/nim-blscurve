@@ -191,7 +191,7 @@ void ECP_BLS381_rhs(FP_BLS381 *v,FP_BLS381 *x)
 
     FP_BLS381_mul(&t,v,&t);
     FP_BLS381_sub(&t,&t,&one);
-	FP_BLS381_norm(&t);
+    FP_BLS381_norm(&t);
     if (CURVE_A_BLS381==1) FP_BLS381_sub(v,v,&one);
 
     if (CURVE_A_BLS381==-1)
@@ -200,10 +200,10 @@ void ECP_BLS381_rhs(FP_BLS381 *v,FP_BLS381 *x)
         FP_BLS381_norm(v);
         FP_BLS381_neg(v,v);
     }
-	FP_BLS381_norm(v);
-	FP_BLS381_inv(&t,&t);
-	FP_BLS381_mul(v,v,&t);
-	FP_BLS381_reduce(v);
+    FP_BLS381_norm(v);
+    FP_BLS381_inv(&t,&t);
+    FP_BLS381_mul(v,v,&t);
+    FP_BLS381_reduce(v);
 #endif
 
 #if CURVETYPE_BLS381==MONTGOMERY
@@ -239,7 +239,7 @@ int ECP_BLS381_set(ECP_BLS381 *P,BIG_384_29 x)
         ECP_BLS381_inf(P);
         return 0;
     }
- 
+
     FP_BLS381_nres(&(P->x),x);
     FP_BLS381_one(&(P->z));
     return 1;
@@ -248,11 +248,11 @@ int ECP_BLS381_set(ECP_BLS381 *P,BIG_384_29 x)
 /* Extract x coordinate as BIG */
 int ECP_BLS381_get(BIG_384_29 x,ECP_BLS381 *P)
 {
-	ECP_BLS381 W;
-	ECP_BLS381_copy(&W,P);
-	ECP_BLS381_affine(&W);
+    ECP_BLS381 W;
+    ECP_BLS381_copy(&W,P);
+    ECP_BLS381_affine(&W);
     if (ECP_BLS381_isinf(&W)) return -1;
-    FP_BLS381_redc(x,&(Wx));
+    FP_BLS381_redc(x,&(W.x));
     return 0;
 }
 
@@ -262,10 +262,10 @@ int ECP_BLS381_get(BIG_384_29 x,ECP_BLS381 *P)
 /* SU=16 */
 int ECP_BLS381_get(BIG_384_29 x,BIG_384_29 y,ECP_BLS381 *P)
 {
-	ECP_BLS381 W;
+    ECP_BLS381 W;
     int s;
-	ECP_BLS381_copy(&W,P);
-	ECP_BLS381_affine(&W);
+    ECP_BLS381_copy(&W,P);
+    ECP_BLS381_affine(&W);
 
     if (ECP_BLS381_isinf(&W)) return -1;
 
@@ -336,26 +336,27 @@ int ECP_BLS381_setx(ECP_BLS381 *P,BIG_384_29 x,int s)
 #endif
 
 void ECP_BLS381_cfp(ECP_BLS381 *P)
-{ /* multiply point by curves cofactor */
-	BIG_384_29 c;
-	int cf=CURVE_Cof_I_BLS381;
-	if (cf==1) return;
-	if (cf==4)
-	{
-		ECP_BLS381_dbl(P);
-		ECP_BLS381_dbl(P);
-		return;
-	}
-	if (cf==8)
-	{
-		ECP_BLS381_dbl(P);
-		ECP_BLS381_dbl(P);
-		ECP_BLS381_dbl(P);
-		return;
-	}
-	BIG_384_29_rcopy(c,CURVE_Cof_BLS381);
-	ECP_BLS381_mul(P,c);
-	return;
+{
+    /* multiply point by curves cofactor */
+    BIG_384_29 c;
+    int cf=CURVE_Cof_I_BLS381;
+    if (cf==1) return;
+    if (cf==4)
+    {
+        ECP_BLS381_dbl(P);
+        ECP_BLS381_dbl(P);
+        return;
+    }
+    if (cf==8)
+    {
+        ECP_BLS381_dbl(P);
+        ECP_BLS381_dbl(P);
+        ECP_BLS381_dbl(P);
+        return;
+    }
+    BIG_384_29_rcopy(c,CURVE_Cof_BLS381);
+    ECP_BLS381_mul(P,c);
+    return;
 }
 
 /* map BIG to point on curve of correct order */
@@ -364,25 +365,26 @@ void ECP_BLS381_cfp(ECP_BLS381 *P)
 void ECP_BLS381_mapit(ECP_BLS381 *P,octet *W)
 {
     BIG_384_29 q,x;
-	BIG_384_29_fromBytes(x,W->val);
+    BIG_384_29_fromBytes(x,W->val);
     BIG_384_29_rcopy(q,Modulus_BLS381);
     BIG_384_29_mod(x,q);
 
-	for (;;)
-	{
-		for (;;)
-		{
+    for (;;)
+    {
+        for (;;)
+        {
 #if CURVETYPE_BLS381!=MONTGOMERY
-			ECP_BLS381_setx(P,x,0);
+            ECP_BLS381_setx(P,x,0);
 #else
-			ECP_BLS381_set(P,x);
+            ECP_BLS381_set(P,x);
 #endif
-			BIG_384_29_inc(x,1); BIG_384_29_norm(x);
-			if (!ECP_BLS381_isinf(P)) break;
-		}
-		ECP_BLS381_cfp(P);
-		if (!ECP_BLS381_isinf(P)) break;
-	}
+            BIG_384_29_inc(x,1);
+            BIG_384_29_norm(x);
+            if (!ECP_BLS381_isinf(P)) break;
+        }
+        ECP_BLS381_cfp(P);
+        if (!ECP_BLS381_isinf(P)) break;
+    }
 }
 
 /* Convert P to Affine, from (x,y,z) to (x,y) */
@@ -390,12 +392,11 @@ void ECP_BLS381_mapit(ECP_BLS381 *P,octet *W)
 void ECP_BLS381_affine(ECP_BLS381 *P)
 {
     FP_BLS381 one,iz;
-    BIG_384_29 b;
     if (ECP_BLS381_isinf(P)) return;
     FP_BLS381_one(&one);
     if (FP_BLS381_equals(&(P->z),&one)) return;
 
-	FP_BLS381_inv(&iz,&(P->z));
+    FP_BLS381_inv(&iz,&(P->z));
     FP_BLS381_mul(&(P->x),&(P->x),&iz);
 
 #if CURVETYPE_BLS381==EDWARDS || CURVETYPE_BLS381==WEIERSTRASS
@@ -514,20 +515,20 @@ void ECP_BLS381_toOctet(octet *W,ECP_BLS381 *P,bool compress)
 #else
     BIG_384_29 x,y;
     ECP_BLS381_get(x,y,P);
-	if (compress)
-	{
-		W->val[0]=0x02;
-		if (BIG_384_29_parity(y)==1) W->val[0]=0x03;
-		W->len=MODBYTES_384_29+1;
-		BIG_384_29_toBytes(&(W->val[1]),x);
-	}
-	else
-	{
-		W->val[0]=4;
-		W->len=2*MODBYTES_384_29+1;
-		BIG_384_29_toBytes(&(W->val[1]),x);
-		BIG_384_29_toBytes(&(W->val[MODBYTES_384_29+1]),y);
-	}
+    if (compress)
+    {
+        W->val[0]=0x02;
+        if (BIG_384_29_parity(y)==1) W->val[0]=0x03;
+        W->len=MODBYTES_384_29+1;
+        BIG_384_29_toBytes(&(W->val[1]),x);
+    }
+    else
+    {
+        W->val[0]=4;
+        W->len=2*MODBYTES_384_29+1;
+        BIG_384_29_toBytes(&(W->val[1]),x);
+        BIG_384_29_toBytes(&(W->val[MODBYTES_384_29+1]),y);
+    }
 #endif
 }
 
@@ -542,17 +543,17 @@ int ECP_BLS381_fromOctet(ECP_BLS381 *P,octet *W)
     return 0;
 #else
     BIG_384_29 x,y;
-	int typ=W->val[0];
-	BIG_384_29_fromBytes(x,&(W->val[1]));
-	if (typ==0x04)
-	{
-		BIG_384_29_fromBytes(y,&(W->val[MODBYTES_384_29+1]));
-		if (ECP_BLS381_set(P,x,y)) return 1;
-	}
-	if (typ==0x02 || typ==0x03)
-	{
-		if (ECP_BLS381_setx(P,x,typ&1)) return 1;
-	}
+    int typ=W->val[0];
+    BIG_384_29_fromBytes(x,&(W->val[1]));
+    if (typ==0x04)
+    {
+        BIG_384_29_fromBytes(y,&(W->val[MODBYTES_384_29+1]));
+        if (ECP_BLS381_set(P,x,y)) return 1;
+    }
+    if (typ==0x02 || typ==0x03)
+    {
+        if (ECP_BLS381_setx(P,x,typ&1)) return 1;
+    }
     return 0;
 #endif
 }
@@ -591,7 +592,7 @@ void ECP_BLS381_dbl(ECP_BLS381 *P)
         FP_BLS381_mul(&y3,&y3,&t0);				//y3.mul(t0);
         FP_BLS381_add(&y3,&y3,&x3);				//y3.add(x3);
         FP_BLS381_mul(&t1,&(P->x),&(P->y));			//t1.mul(y);
-       
+
         FP_BLS381_norm(&t0);					//x.norm();
         FP_BLS381_mul(&(P->x),&t0,&t1);		//x.mul(t1);
         FP_BLS381_add(&(P->x),&(P->x),&(P->x));	//x.add(x);
@@ -780,7 +781,7 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
         FP_BLS381_mul(&t2,&(P->z),&(Q->z));		//t2.mul(Q.z);
         FP_BLS381_add(&t3,&(P->x),&(P->y));		//t3.add(y);
         FP_BLS381_norm(&t3);					//t3.norm();
- 
+
         FP_BLS381_add(&t4,&(Q->x),&(Q->y));		//t4.add(Q.y);
         FP_BLS381_norm(&t4);					//t4.norm();
         FP_BLS381_mul(&t3,&t3,&t4);			//t3.mul(t4);
@@ -847,7 +848,7 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
         FP_BLS381_add(&t4,&(Q->x),&(Q->y));		//t4.add(Q.y);
         FP_BLS381_norm(&t4);					//t4.norm();//5
         FP_BLS381_mul(&t3,&t3,&t4);			//t3.mul(t4);//6
-    
+
         FP_BLS381_add(&t4,&t0,&t1);			//t4.add(t1); //t4.norm(); //7
         FP_BLS381_sub(&t3,&t3,&t4);			//t3.sub(t4);
         FP_BLS381_norm(&t3);					//t3.norm(); //8
@@ -914,7 +915,7 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
         FP_BLS381_mul(&x3,&x3,&t3);			//x3.mul(t3);//39
         FP_BLS381_sub(&(P->x),&x3,&t1);			//x3.sub(t1);//40
         FP_BLS381_mul(&z3,&z3,&t4);			//z3.mul(t4);//41
- 
+
         FP_BLS381_mul(&t1,&t3,&t0);			//t1.mul(t0);//42
         FP_BLS381_add(&(P->z),&z3,&t1);			//z3.add(t1);
         FP_BLS381_norm(&(P->x));				//x.norm();
@@ -981,9 +982,9 @@ void ECP_BLS381_add(ECP_BLS381 *P,ECP_BLS381 *Q)
 /* SU=16 */
 void  ECP_BLS381_sub(ECP_BLS381 *P,ECP_BLS381 *Q)
 {
-	ECP_BLS381 NQ;
-	ECP_BLS381_copy(&NQ,Q);
-	ECP_BLS381_neg(&NQ);
+    ECP_BLS381 NQ;
+    ECP_BLS381_copy(&NQ,Q);
+    ECP_BLS381_neg(&NQ);
     ECP_BLS381_add(P,&NQ);
 }
 
@@ -1219,13 +1220,13 @@ void ECP_BLS381_mul2(ECP_BLS381 *P,ECP_BLS381 *Q,BIG_384_29 e,BIG_384_29 f)
 
 void ECP_BLS381_generator(ECP_BLS381 *G)
 {
-	BIG_384_29 x,y;
-	BIG_384_29_rcopy(x,CURVE_Gx_BLS381);
+    BIG_384_29 x,y;
+    BIG_384_29_rcopy(x,CURVE_Gx_BLS381);
 #if CURVETYPE_BLS381!=MONTGOMERY
-	BIG_384_29_rcopy(y,CURVE_Gy_BLS381);
+    BIG_384_29_rcopy(y,CURVE_Gy_BLS381);
     ECP_BLS381_set(G,x,y);
 #else
-	ECP_BLS381_set(G,x);
+    ECP_BLS381_set(G,x);
 #endif
 }
 

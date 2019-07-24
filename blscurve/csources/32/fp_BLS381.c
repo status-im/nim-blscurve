@@ -208,7 +208,7 @@ int FP_BLS381_iszilch(FP_BLS381 *x)
 {
     BIG_384_29 m,t;
     BIG_384_29_rcopy(m,Modulus_BLS381);
-	BIG_384_29_copy(t,x->g);
+    BIG_384_29_copy(t,x->g);
     BIG_384_29_mod(t,m);
     return BIG_384_29_iszilch(t);
 }
@@ -256,9 +256,9 @@ void FP_BLS381_zero(FP_BLS381 *x)
 
 int FP_BLS381_equals(FP_BLS381 *x,FP_BLS381 *y)
 {
-	FP_BLS381 xg,yg;
-	FP_BLS381_copy(&xg,x);
-	FP_BLS381_copy(&yg,y);
+    FP_BLS381 xg,yg;
+    FP_BLS381_copy(&xg,x);
+    FP_BLS381_copy(&yg,y);
     FP_BLS381_reduce(&xg);
     FP_BLS381_reduce(&yg);
     if (BIG_384_29_comp(xg.g,yg.g)==0) return 1;
@@ -348,12 +348,12 @@ void FP_BLS381_imul(FP_BLS381 *r,FP_BLS381 *a,int c)
         // don't want to do this - only a problem for Montgomery modulus and larger constants
         BIG_384_29_zero(k);
         BIG_384_29_inc(k,c);
-		BIG_384_29_norm(k);
+        BIG_384_29_norm(k);
         FP_BLS381_nres(&f,k);
         FP_BLS381_mul(r,a,&f);
     }
 #endif
- 
+
     if (s)
     {
         FP_BLS381_neg(r,r);
@@ -427,21 +427,21 @@ static int logb2(unsign32 v)
 // Note that MAXXES is bounded to be 2-bits less than half a word
 static int quo(BIG_384_29 n,BIG_384_29 m)
 {
-	int sh;
-	chunk num,den;
-	int hb=CHUNK/2;
-	if (TBITS_BLS381<hb)
-	{
-		sh=hb-TBITS_BLS381;
-		num=(n[NLEN_384_29-1]<<sh)|(n[NLEN_384_29-2]>>(BASEBITS_384_29-sh));
-		den=(m[NLEN_384_29-1]<<sh)|(m[NLEN_384_29-2]>>(BASEBITS_384_29-sh));
-	}
-	else
-	{
-		num=n[NLEN_384_29-1];
-		den=m[NLEN_384_29-1];
-	}
-	return (int)(num/(den+1));
+    int sh;
+    chunk num,den;
+    int hb=CHUNK/2;
+    if (TBITS_BLS381<hb)
+    {
+        sh=hb-TBITS_BLS381;
+        num=(n[NLEN_384_29-1]<<sh)|(n[NLEN_384_29-2]>>(BASEBITS_384_29-sh));
+        den=(m[NLEN_384_29-1]<<sh)|(m[NLEN_384_29-2]>>(BASEBITS_384_29-sh));
+    }
+    else
+    {
+        num=n[NLEN_384_29-1];
+        den=m[NLEN_384_29-1];
+    }
+    return (int)(num/(den+1));
 }
 
 /* SU= 48 */
@@ -449,33 +449,33 @@ static int quo(BIG_384_29 n,BIG_384_29 m)
 void FP_BLS381_reduce(FP_BLS381 *a)
 {
     BIG_384_29 m,r;
-	int sr,sb,q;
-	chunk carry;
+    int sr,sb,q;
+    chunk carry;
 
     BIG_384_29_rcopy(m,Modulus_BLS381);
 
-	BIG_384_29_norm(a->g);
+    BIG_384_29_norm(a->g);
 
-	if (a->XES>16)
-	{
-		q=quo(a->g,m);
-		carry=BIG_384_29_pmul(r,m,q);
-		r[NLEN_384_29-1]+=(carry<<BASEBITS_384_29); // correction - put any carry out back in again
-		BIG_384_29_sub(a->g,a->g,r);
-		BIG_384_29_norm(a->g);
-		sb=2;
-	}
-	else sb=logb2(a->XES-1);  // sb does not depend on the actual data
+    if (a->XES>16)
+    {
+        q=quo(a->g,m);
+        carry=BIG_384_29_pmul(r,m,q);
+        r[NLEN_384_29-1]+=(carry<<BASEBITS_384_29); // correction - put any carry out back in again
+        BIG_384_29_sub(a->g,a->g,r);
+        BIG_384_29_norm(a->g);
+        sb=2;
+    }
+    else sb=logb2(a->XES-1);  // sb does not depend on the actual data
 
-	BIG_384_29_fshl(m,sb);
+    BIG_384_29_fshl(m,sb);
 
-	while (sb>0)
-	{
+    while (sb>0)
+    {
 // constant time...
-		sr=BIG_384_29_ssn(r,a->g,m);  // optimized combined shift, subtract and norm
-		BIG_384_29_cmove(a->g,r,1-sr);
-		sb--;
-	}
+        sr=BIG_384_29_ssn(r,a->g,m);  // optimized combined shift, subtract and norm
+        BIG_384_29_cmove(a->g,r,1-sr);
+        sb--;
+    }
 
     //BIG_384_29_mod(a->g,m);
     a->XES=1;
@@ -538,134 +538,148 @@ void FP_BLS381_div2(FP_BLS381 *r,FP_BLS381 *a)
 
 static void FP_BLS381_fpow(FP_BLS381 *r,FP_BLS381 *x)
 {
-	int i,j,k,bw,w,c,nw,lo,m,n;
-	FP_BLS381 xp[11],t,key;
-	const int ac[]={1,2,3,6,12,15,30,60,120,240,255};
+    int i,j,k,bw,w,c,nw,lo,m,n;
+    FP_BLS381 xp[11],t,key;
+    const int ac[]= {1,2,3,6,12,15,30,60,120,240,255};
 // phase 1
-	FP_BLS381_copy(&xp[0],x);	// 1 
-	FP_BLS381_sqr(&xp[1],x); // 2
-	FP_BLS381_mul(&xp[2],&xp[1],x);  //3
-	FP_BLS381_sqr(&xp[3],&xp[2]);  // 6 
-	FP_BLS381_sqr(&xp[4],&xp[3]); // 12
-	FP_BLS381_mul(&xp[5],&xp[4],&xp[2]); // 15
-	FP_BLS381_sqr(&xp[6],&xp[5]); // 30
-	FP_BLS381_sqr(&xp[7],&xp[6]); // 60
-	FP_BLS381_sqr(&xp[8],&xp[7]); // 120
-	FP_BLS381_sqr(&xp[9],&xp[8]); // 240
-	FP_BLS381_mul(&xp[10],&xp[9],&xp[5]); // 255
+    FP_BLS381_copy(&xp[0],x);	// 1
+    FP_BLS381_sqr(&xp[1],x); // 2
+    FP_BLS381_mul(&xp[2],&xp[1],x);  //3
+    FP_BLS381_sqr(&xp[3],&xp[2]);  // 6
+    FP_BLS381_sqr(&xp[4],&xp[3]); // 12
+    FP_BLS381_mul(&xp[5],&xp[4],&xp[2]); // 15
+    FP_BLS381_sqr(&xp[6],&xp[5]); // 30
+    FP_BLS381_sqr(&xp[7],&xp[6]); // 60
+    FP_BLS381_sqr(&xp[8],&xp[7]); // 120
+    FP_BLS381_sqr(&xp[9],&xp[8]); // 240
+    FP_BLS381_mul(&xp[10],&xp[9],&xp[5]); // 255
 
-#if MODTYPE_BLS381==PSEUDO_MERSENNE 
-	n=MODBITS_BLS381;
+#if MODTYPE_BLS381==PSEUDO_MERSENNE
+    n=MODBITS_BLS381;
 #endif
 #if MODTYPE_BLS381==GENERALISED_MERSENNE  // Goldilocks ONLY
-	n=MODBITS_BLS381/2;
+    n=MODBITS_BLS381/2;
 #endif
 
-	if (MOD8_BLS381==5)
+    if (MOD8_BLS381==5)
     {
-		n-=3;
-		c=(MConst_BLS381+5)/8;
-	} else {
-		n-=2;
-		c=(MConst_BLS381+3)/4;
-	}
+        n-=3;
+        c=(MConst_BLS381+5)/8;
+    }
+    else
+    {
+        n-=2;
+        c=(MConst_BLS381+3)/4;
+    }
 
-	bw=0; w=1; while (w<c) {w*=2; bw+=1;}
-	k=w-c;
+    bw=0;
+    w=1;
+    while (w<c)
+    {
+        w*=2;
+        bw+=1;
+    }
+    k=w-c;
 
-	if (k!=0)
-	{
-		i=10; while (ac[i]>k) i--;
-		FP_BLS381_copy(&key,&xp[i]); 
-		k-=ac[i];
-	}
-	while (k!=0)
-	{
-		i--;
-		if (ac[i]>k) continue;
-		FP_BLS381_mul(&key,&key,&xp[i]);
-		k-=ac[i]; 
-	}
+    if (k!=0)
+    {
+        i=10;
+        while (ac[i]>k) i--;
+        FP_BLS381_copy(&key,&xp[i]);
+        k-=ac[i];
+    }
+    while (k!=0)
+    {
+        i--;
+        if (ac[i]>k) continue;
+        FP_BLS381_mul(&key,&key,&xp[i]);
+        k-=ac[i];
+    }
 
-// phase 2 
-	FP_BLS381_copy(&xp[1],&xp[2]);
-	FP_BLS381_copy(&xp[2],&xp[5]);
-	FP_BLS381_copy(&xp[3],&xp[10]);
+// phase 2
+    FP_BLS381_copy(&xp[1],&xp[2]);
+    FP_BLS381_copy(&xp[2],&xp[5]);
+    FP_BLS381_copy(&xp[3],&xp[10]);
 
-	j=3; m=8;
-	nw=n-bw;
-	while (2*m<nw)
-	{
-		FP_BLS381_copy(&t,&xp[j++]);
-		for (i=0;i<m;i++)
-			FP_BLS381_sqr(&t,&t); 
-		FP_BLS381_mul(&xp[j],&xp[j-1],&t); 
-		m*=2;
-	}
+    j=3;
+    m=8;
+    nw=n-bw;
+    while (2*m<nw)
+    {
+        FP_BLS381_copy(&t,&xp[j++]);
+        for (i=0; i<m; i++)
+            FP_BLS381_sqr(&t,&t);
+        FP_BLS381_mul(&xp[j],&xp[j-1],&t);
+        m*=2;
+    }
 
-	lo=nw-m;
-	FP_BLS381_copy(r,&xp[j]);
+    lo=nw-m;
+    FP_BLS381_copy(r,&xp[j]);
 
-	while (lo!=0)
-	{
-		m/=2; j--;
-		if (lo<m) continue;
-		lo-=m;
-		FP_BLS381_copy(&t,r);
-		for (i=0;i<m;i++)
-			FP_BLS381_sqr(&t,&t);
-		FP_BLS381_mul(r,&t,&xp[j]);
-	}
+    while (lo!=0)
+    {
+        m/=2;
+        j--;
+        if (lo<m) continue;
+        lo-=m;
+        FP_BLS381_copy(&t,r);
+        for (i=0; i<m; i++)
+            FP_BLS381_sqr(&t,&t);
+        FP_BLS381_mul(r,&t,&xp[j]);
+    }
 // phase 3
 
-	if (bw!=0)
-	{
-		for (i=0;i<bw;i++ )
-			FP_BLS381_sqr(r,r);
-		FP_BLS381_mul(r,r,&key);
-	}
+    if (bw!=0)
+    {
+        for (i=0; i<bw; i++ )
+            FP_BLS381_sqr(r,r);
+        FP_BLS381_mul(r,r,&key);
+    }
 #if MODTYPE_BLS381==GENERALISED_MERSENNE  // Goldilocks ONLY
-	FP_BLS381_copy(&key,r);
-	FP_BLS381_sqr(&t,&key);
-	FP_BLS381_mul(r,&t,x);
-	for (i=0;i<n+1;i++)
-		FP_BLS381_sqr(r,r);
-	FP_BLS381_mul(r,r,&key);
+    FP_BLS381_copy(&key,r);
+    FP_BLS381_sqr(&t,&key);
+    FP_BLS381_mul(r,&t,x);
+    for (i=0; i<n+1; i++)
+        FP_BLS381_sqr(r,r);
+    FP_BLS381_mul(r,r,&key);
 #endif
 }
 
 void FP_BLS381_inv(FP_BLS381 *r,FP_BLS381 *x)
 {
-	FP_BLS381 y,t;
-	FP_BLS381_fpow(&y,x);
+    FP_BLS381 y,t;
+    FP_BLS381_fpow(&y,x);
     if (MOD8_BLS381==5)
-    { // r=x^3.y^8
-		FP_BLS381_sqr(&t,x);
-		FP_BLS381_mul(&t,&t,x);
-		FP_BLS381_sqr(&y,&y);
-		FP_BLS381_sqr(&y,&y);
-		FP_BLS381_sqr(&y,&y);
-		FP_BLS381_mul(r,&t,&y);
-	} else {
-		FP_BLS381_sqr(&y,&y);
-		FP_BLS381_sqr(&y,&y);
-		FP_BLS381_mul(r,&y,x);
-	}
+    {
+        // r=x^3.y^8
+        FP_BLS381_sqr(&t,x);
+        FP_BLS381_mul(&t,&t,x);
+        FP_BLS381_sqr(&y,&y);
+        FP_BLS381_sqr(&y,&y);
+        FP_BLS381_sqr(&y,&y);
+        FP_BLS381_mul(r,&t,&y);
+    }
+    else
+    {
+        FP_BLS381_sqr(&y,&y);
+        FP_BLS381_sqr(&y,&y);
+        FP_BLS381_mul(r,&y,x);
+    }
 }
 
 #else
 
 void FP_BLS381_pow(FP_BLS381 *r,FP_BLS381 *a,BIG_384_29 b)
 {
-	sign8 w[1+(NLEN_384_29*BASEBITS_384_29+3)/4];
-	FP_BLS381 tb[16];
-	BIG_384_29 t;
-	int i,nb;
+    sign8 w[1+(NLEN_384_29*BASEBITS_384_29+3)/4];
+    FP_BLS381 tb[16];
+    BIG_384_29 t;
+    int i,nb;
 
-	FP_BLS381_norm(a);
+    FP_BLS381_norm(a);
     BIG_384_29_norm(b);
-	BIG_384_29_copy(t,b);
-	nb=1+(BIG_384_29_nbits(t)+3)/4;
+    BIG_384_29_copy(t,b);
+    nb=1+(BIG_384_29_nbits(t)+3)/4;
     /* convert exponent to 4-bit window */
     for (i=0; i<nb; i++)
     {
@@ -673,22 +687,22 @@ void FP_BLS381_pow(FP_BLS381 *r,FP_BLS381 *a,BIG_384_29 b)
         BIG_384_29_dec(t,w[i]);
         BIG_384_29_norm(t);
         BIG_384_29_fshr(t,4);
-    }	
+    }
 
-	FP_BLS381_one(&tb[0]);
-	FP_BLS381_copy(&tb[1],a);
-	for (i=2;i<16;i++)
-		FP_BLS381_mul(&tb[i],&tb[i-1],a);
-	
-	FP_BLS381_copy(r,&tb[w[nb-1]]);
+    FP_BLS381_one(&tb[0]);
+    FP_BLS381_copy(&tb[1],a);
+    for (i=2; i<16; i++)
+        FP_BLS381_mul(&tb[i],&tb[i-1],a);
+
+    FP_BLS381_copy(r,&tb[w[nb-1]]);
     for (i=nb-2; i>=0; i--)
     {
-		FP_BLS381_sqr(r,r);
-		FP_BLS381_sqr(r,r);
-		FP_BLS381_sqr(r,r);
-		FP_BLS381_sqr(r,r);
-		FP_BLS381_mul(r,r,&tb[w[i]]);
-	}
+        FP_BLS381_sqr(r,r);
+        FP_BLS381_sqr(r,r);
+        FP_BLS381_sqr(r,r);
+        FP_BLS381_sqr(r,r);
+        FP_BLS381_mul(r,r,&tb[w[i]]);
+    }
     FP_BLS381_reduce(r);
 }
 
@@ -696,11 +710,11 @@ void FP_BLS381_pow(FP_BLS381 *r,FP_BLS381 *a,BIG_384_29 b)
 void FP_BLS381_inv(FP_BLS381 *w,FP_BLS381 *x)
 {
 
-	BIG_384_29 m2;
-	BIG_384_29_rcopy(m2,Modulus_BLS381);
-	BIG_384_29_dec(m2,2);
-	BIG_384_29_norm(m2);
-	FP_BLS381_pow(w,x,m2);
+    BIG_384_29 m2;
+    BIG_384_29_rcopy(m2,Modulus_BLS381);
+    BIG_384_29_dec(m2,2);
+    BIG_384_29_norm(m2);
+    FP_BLS381_pow(w,x,m2);
 }
 #endif
 
@@ -743,25 +757,25 @@ void FP_BLS381_sqrt(FP_BLS381 *r,FP_BLS381 *a)
         FP_BLS381_copy(&i,a); // i=x
         BIG_384_29_fshl(i.g,1); // i=2x
 #if MODTYPE_BLS381 == PSEUDO_MERSENNE   || MODTYPE_BLS381==GENERALISED_MERSENNE
-		FP_BLS381_fpow(&v,&i);
+        FP_BLS381_fpow(&v,&i);
 #else
         BIG_384_29_dec(b,5);
         BIG_384_29_norm(b);
-        BIG_384_29_fshr(b,3); // (p-5)/8 
+        BIG_384_29_fshr(b,3); // (p-5)/8
         FP_BLS381_pow(&v,&i,b); // v=(2x)^(p-5)/8
 #endif
         FP_BLS381_mul(&i,&i,&v); // i=(2x)^(p+3)/8
         FP_BLS381_mul(&i,&i,&v); // i=(2x)^(p-1)/4
         BIG_384_29_dec(i.g,1);  // i=(2x)^(p-1)/4 - 1
-        FP_BLS381_mul(r,a,&v);  
+        FP_BLS381_mul(r,a,&v);
         FP_BLS381_mul(r,r,&i);
         FP_BLS381_reduce(r);
     }
     if (MOD8_BLS381==3 || MOD8_BLS381==7)
     {
 #if MODTYPE_BLS381 == PSEUDO_MERSENNE   || MODTYPE_BLS381==GENERALISED_MERSENNE
-		FP_BLS381_fpow(r,a);
-		FP_BLS381_mul(r,r,a);
+        FP_BLS381_fpow(r,a);
+        FP_BLS381_mul(r,r,a);
 #else
         BIG_384_29_inc(b,1);
         BIG_384_29_norm(b);

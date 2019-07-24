@@ -18,7 +18,7 @@
 */
 
 /**
- * @file fp4.h
+ * @file fp4_BLS381.h
  * @author Mike Scott
  * @brief FP4 Header File
  *
