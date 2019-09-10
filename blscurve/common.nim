@@ -473,7 +473,7 @@ proc toBytes*(a: BIG_384, res: var openarray[byte]): bool =
     discard BIG_384_norm(c)
     for i in countdown(MODBYTES_384 - 1, 0):
       res[i] = byte(c[0] and 0xFF)
-      BIG_384_fshr(c, 8)
+      discard BIG_384_fshr(c, 8)
     result = true
 
 proc toHex*(a: BIG_384): string {.inline.} =
