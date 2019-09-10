@@ -126,7 +126,7 @@ when (sizeof(int) == 4) or defined(use32):
        importc: "BIG_384_29_shr", cdecl.}
   proc BIG_384_shl*(a: BIG_384, s: cint) {.
        importc: "BIG_384_29_shl", cdecl.}
-  proc BIG_384_fshr*(a: BIG_384, s: cint) {.
+  proc BIG_384_fshr*(a: BIG_384, s: cint): cint {.
        importc: "BIG_384_29_fshr", cdecl.}
   proc BIG_384_fshl*(a: BIG_384, s: cint): cint {.
        importc: "BIG_384_29_fshl", cdecl.}
@@ -157,7 +157,7 @@ elif sizeof(int) == 8:
        importc: "BIG_384_58_shr", cdecl.}
   proc BIG_384_shl*(a: BIG_384, s: cint) {.
        importc: "BIG_384_58_shl", cdecl.}
-  proc BIG_384_fshr*(a: BIG_384, s: cint) {.
+  proc BIG_384_fshr*(a: BIG_384, s: cint): cint {.
        importc: "BIG_384_58_fshr", cdecl.}
   proc BIG_384_fshl*(a: BIG_384, s: cint): cint {.
        importc: "BIG_384_58_fshl", cdecl.}
