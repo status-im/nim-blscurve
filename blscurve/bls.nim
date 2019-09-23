@@ -34,14 +34,14 @@ const
   RawSignatureSize* = MODBYTES_384 * 2
 
 proc init*(T: SigKey | VerKey): auto =
-  ## Initialize ``SignatureKey``, ``VerificaitonKey`` to the infinitiy point
+  ## Initialize ``SignatureKey``, ``VerificationKey`` to the infinitiy point
   var ret: T
   ret.point.inf()
   ret
 
 proc init*[T: SigKey|VerKey|Signature](obj: var T,
                                        data: openarray[byte]): bool {.inline.} =
-  ## Initialize ``SignatureKey``, ``VerificaitonKey`` or ``Signature`` from
+  ## Initialize ``SignatureKey``, ``VerificationKey`` or ``Signature`` from
   ## raw binary representation ``data``.
   ##
   ## Procedure returns ``true`` on success and ``false`` otherwise.
@@ -52,7 +52,7 @@ proc init*[T: SigKey|VerKey|Signature](obj: var T,
 
 proc init*[T: SigKey|VerKey|Signature](obj: var T,
                                        data: string): bool {.inline.} =
-  ## Initialize ``SignatureKey``, ``VerificaitonKey`` or ``Signature`` from
+  ## Initialize ``SignatureKey``, ``VerificationKey`` or ``Signature`` from
   ## hexadecimal string representation ``data``
   ##
   ## Procedure returns ``true`` on success and ``false`` otherwise.
@@ -63,7 +63,7 @@ proc init*[T: SigKey|VerKey|Signature](obj: var T,
 
 proc init*[T: SigKey|VerKey|Signature](t: typedesc[T],
                                        data: openarray[byte]): T {.inline.} =
-  ## Initialize ``SignatureKey``, ``VerificaitonKey`` or ``Signature`` from
+  ## Initialize ``SignatureKey``, ``VerificationKey`` or ``Signature`` from
   ## raw binary representation ``data`` and return constructed object.
   when T is SigKey:
     let res = result.x.fromBytes(data)
@@ -74,7 +74,7 @@ proc init*[T: SigKey|VerKey|Signature](t: typedesc[T],
 
 proc init*[T: SigKey|VerKey|Signature](t: typedesc[T],
                                        data: string): T {.inline.} =
-  ## Initialize ``SignatureKey``, ``VerificaitonKey`` or ``Signature`` from
+  ## Initialize ``SignatureKey``, ``VerificationKey`` or ``Signature`` from
   ## hexadecimal string representation ``data`` and return constructed object.
   when T is SigKey:
     let res = result.x.fromHex(data)
@@ -133,7 +133,7 @@ proc getBytes*(sig: Signature): array[RawSignatureSize, byte] =
 
 proc toHex*[T: SigKey|VerKey|Signature](obj: T): string =
   ## Return hexadecimal string representation of ``SignatureKey``,
-  ## ``VerificaitonKey`` or ``Signature``.
+  ## ``VerificationKey`` or ``Signature``.
   when T is SigKey:
     result = obj.x.toHex()
   else:
