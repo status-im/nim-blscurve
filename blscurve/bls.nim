@@ -7,6 +7,7 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 import nimcrypto/[sysrand, utils, hash, sha2]
+import stew/endians2
 import milagro, common
 
 type
@@ -31,6 +32,12 @@ const
   RawSignatureKeySize* = MODBYTES_384
   RawVerificationKeySize* = MODBYTES_384
   RawSignatureSize* = MODBYTES_384 * 2
+
+proc init*(T: SigKey | VerKey): auto =
+  ## Initialize ``SignatureKey``, ``VerificaitonKey`` to the infinitiy point
+  var ret: T
+  ret.point.inf()
+  ret
 
 proc init*[T: SigKey|VerKey|Signature](obj: var T,
                                        data: openarray[byte]): bool {.inline.} =
@@ -132,14 +139,18 @@ proc toHex*[T: SigKey|VerKey|Signature](obj: T): string =
   else:
     result = obj.point.toHex()
 
-proc sign*(sigkey: SigKey, domain: uint64, mdctx: sha256): Signature =
+proc sign*(sigkey: SigKey, domain: Domain, mdctx: sha256): Signature =
   ## Sign sha2-256 context using Signature Key ``sigkey`` over domain
   ## ``domain``.
   var point = hashToG2(mdctx, domain)
   point.mul(sigkey.x)
   result.point = point
 
-proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
+proc sign*(
+    sigkey: SigKey, domain: uint64, mdctx: sha256): Signature {.deprecated.} =
+  sign(sigkey, domain.toBytesBE(), mdctx)
+
+proc sign*[T: byte|char](sigkey: SigKey, domain: Domain,
                          message: openarray[T]): Signature =
   ## Sign message ``message`` using Signature Key ``sigkey`` over domain
   ## ``domain``.
@@ -148,6 +159,10 @@ proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
   mdctx.update(message)
   result = sign(sigkey, domain, mdctx)
   mdctx.clear()
+
+proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
+                         message: openarray[T]): Signature {.deprecated.} =
+  sign(sigkey, domain.toBytesBE(), message)
 
 # proc verify*(sig: Signature, mdctx: sha256, domain: uint64,
 #              verkey: VerKey): bool =
@@ -174,7 +189,7 @@ proc sign*[T: byte|char](sigkey: SigKey, domain: uint64,
 #     var point = hashToG2(mdctx, domain)
 #     result = doublePairing(sig.point, gen, point, verkey.point)
 
-proc verify*(sig: Signature, mdctx: sha256, domain: uint64,
+proc verify*(sig: Signature, mdctx: sha256, domain: Domain,
              verkey: VerKey): bool =
   ## Verify signature ``sig`` using Verification Key ``verkey`` and sha2-256
   ## context ``mdctx`` over domain ``domain``.
@@ -188,8 +203,12 @@ proc verify*(sig: Signature, mdctx: sha256, domain: uint64,
     var point = hashToG2(mdctx, domain)
     result = multiPairing(sig.point, gen, point, verkey.point)
 
+proc verify*(sig: Signature, mdctx: sha256, domain: uint64,
+             verkey: VerKey): bool {.deprecated.} =
+  verify(sig, mdctx, domain.toBytesBE(), verkey)
+
 proc verify*[T: byte|char](sig: Signature, message: openarray[T],
-                           domain: uint64, verkey: VerKey): bool {.inline.} =
+                           domain: Domain, verkey: VerKey): bool {.inline.} =
   ## Verify signature ``sig`` using Verification Key ``verkey`` and message
   ## ``message`` over domain ``domain``.
   ##
@@ -200,6 +219,10 @@ proc verify*[T: byte|char](sig: Signature, message: openarray[T],
   mdctx.update(message)
   result = verify(sig, mdctx, domain, verkey)
   mdctx.clear()
+
+proc verify*[T: byte|char](sig: Signature, message: openarray[T],
+                           domain: uint64, verkey: VerKey): bool {.deprecated.} =
+  verify(sig, message, domain.toBytesBE(), verkey)
 
 proc combine*(sig1: var Signature, sig2: Signature) =
   ## Aggregates signature ``sig2`` into ``sig1``.

@@ -6,17 +6,18 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import endians
 import nimcrypto/[sysrand, utils, hash, sha2]
+import stew/endians2
 import milagro
-
-{.deadCodeElim: on.}
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
 
 const
   AteBitsCount* = 65 ## ATE_BITS_BLS381 value
+
+type
+  Domain* = array[8, byte]
 
 when sizeof(int) == 4 or defined(use32):
   const
@@ -657,33 +658,29 @@ proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   mul(lowpart, G2_CoFactorLow)
   add(result, lowpart)
 
-proc hashToG2*(msgctx: sha256, domain: uint64): ECP2_BLS381 =
+proc hashToG2*(msgctx: sha256, domain: array[8, byte]): ECP2_BLS381 =
   ## Perform transformation of sha2-256 context (which must be already
   ## updated with ``message``) over domain ``domain`` to point in G2.
+  ## https://github.com/ethereum/eth2.0-specs/blob/v0.8.3/specs/bls_signature.md#hash_to_g2
+
   var
-    bebuf: array[8, byte]
     buffer: array[MODBYTES_384, byte]
     xre, xim: BIG_384
     x, one: FP2_BLS381
-  # Copy context of `msgctx` which is sha256(message)
+
   var ctx1 = msgctx
-  var ctx2 = msgctx
-  # Convert `domain` to its big-endian representation
-  bigEndian64(addr bebuf[0], unsafeAddr domain)
-  # Update hash context with domain value
-  ctx1.update(bebuf)
-  ctx2.update(bebuf)
+  ctx1.update(domain)
+
+  var ctx2 = ctx1
+
   # Update hash context with coordinate marker
-  bebuf[0] = 0x01
-  ctx1.update(bebuf.toOpenArray(0, 0))
-  bebuf[0] = 0x02
-  ctx2.update(bebuf.toOpenArray(0, 0))
+  ctx1.update([0x01'u8])
+  ctx2.update([0x02'u8])
+
   # Obtain result hash
   var xrehash = ctx1.finish()
   var ximhash = ctx2.finish()
-  # Clear contexts
-  ctx1.clear()
-  ctx2.clear()
+
   discard xre.fromBytes(xrehash.data)
   discard xim.fromBytes(ximhash.data)
   # Convert (xre, xim) to FP2.
@@ -704,6 +701,12 @@ proc hashToG2*(msgctx: sha256, domain: uint64): ECP2_BLS381 =
    result.y = negy
   # Scale with G2 CoFactor
   result = mulCoFactor(result)
+
+proc hashToG2*(msgctx: sha256, domain: uint64): ECP2_BLS381 {.deprecated: "domain should be bytes now" .} =
+  # TODO this is an old version of the BLS hash function that has since changed
+  #      to use a byte array directly, to avoid endianess issues.
+  # Convert `domain` to its big-endian representation
+  hashToG2(msgctx, domain.toBytesBE())
 
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.
