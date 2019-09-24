@@ -5,7 +5,9 @@ description   = "BLS381-12 Curve implementation"
 license       = "Apache License 2.0"
 
 ### Dependencies
-requires "nim >= 0.18.1", "nimcrypto"
+requires "nim >= 0.19.6",
+         "nimcrypto",
+         "stew"
 
 ### Helper functions
 proc test(name: string, defaultLang = "c") =
