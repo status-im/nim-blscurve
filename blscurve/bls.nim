@@ -151,7 +151,8 @@ proc sign*(sigkey: SigKey, domain: Domain, mdctx: sha256): Signature =
   result.point = point
 
 proc sign*(
-    sigkey: SigKey, domain: uint64, mdctx: sha256): Signature {.deprecated.} =
+    sigkey: SigKey, domain: uint64, mdctx: sha256): Signature {.
+    deprecated: "The domain parameter should be a bytes array".} =
   sign(sigkey, domain.toBytesBE(), mdctx)
 
 proc sign*[T: byte|char](sigkey: SigKey, domain: Domain,
