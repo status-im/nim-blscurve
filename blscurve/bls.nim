@@ -33,7 +33,7 @@ const
   RawVerificationKeySize* = MODBYTES_384
   RawSignatureSize* = MODBYTES_384 * 2
 
-proc init*(v: VerKey | Signature) =
+proc init*(v: var VerKey|Signature) =
   ## Initialize ``VerificationKey``, ``Signature`` to the infinitiy point
   v.point.inf()
 
