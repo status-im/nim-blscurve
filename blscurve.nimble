@@ -5,18 +5,14 @@ description   = "BLS381-12 Curve implementation"
 license       = "Apache License 2.0"
 
 ### Dependencies
-requires "nim >= 0.19.6",
+requires "nim >= 1.0.4",
          "nimcrypto",
          "stew"
 
-### Helper functions
-proc test(name: string, defaultLang = "c") =
-  if not dirExists "build":
-    mkDir "build"
-  --run
-  switch("out", ("./build/" & name))
-  setCommand defaultLang, "tests/" & name & ".nim"
-
 ### tasks
 task test, "Run all tests":
-  test "all_tests"
+  # Private prerequisites/primitives
+  exec "nim c -r --hints:off --warnings:off --outdir:build blscurve/hkdf.nim"
+
+  # Public BLS API
+  exec "nim c -r --hints:off --warnings:off --outdir:build tests/all_tests.nim"
