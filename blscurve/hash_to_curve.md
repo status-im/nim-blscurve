@@ -183,6 +183,50 @@ Operations:
 9.  If sgn0(u) != sgn0(y), set y = -y
 10. return (x, y)
 
+Implementation
+
+> 🛈 This is a constant-time implementation
+
+The following procedure implements the simplified SWU mapping in a straight-line fashion.
+Appendix D gives an optimized straight-line procedure for P-256.
+For more information on optimizing this mapping, see
+Wahby and Boneh Section 4 or the example code found at [hash2curve-repo](https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve).
+
+~~~
+map_to_curve_simple_swu(u)
+Input: u, an element of F.
+Output: (x, y), a point on E.
+
+Constants:
+1.  c1 = -B / A
+2.  c2 = -1 / Z
+
+Steps:
+1.  tv1 = Z * u^2
+2.  tv2 = tv1^2
+3.   x1 = tv1 + tv2
+4.   x1 = inv0(x1)
+5.   e1 = x1 == 0
+6.   x1 = x1 + 1
+7.   x1 = CMOV(x1, c2, e1)    # If (tv1 + tv2) == 0, set x1 = -1 / Z
+8.   x1 = x1 * c1      # x1 = (-B / A) * (1 + (1 / (Z^2 * u^4 + Z * u^2)))
+9.  gx1 = x1^2
+10. gx1 = gx1 + A
+11. gx1 = gx1 * x1
+12. gx1 = gx1 + B             # gx1 = g(x1) = x1^3 + A * x1 + B
+13.  x2 = tv1 * x1            # x2 = Z * u^2 * x1
+14. tv2 = tv1 * tv2
+15. gx2 = gx1 * tv2           # gx2 = (Z * u^2)^3 * gx1
+16.  e2 = is_square(gx1)
+17.   x = CMOV(x2, x1, e2)    # If is_square(gx1), x = x1, else x = x2
+18.  y2 = CMOV(gx2, gx1, e2)  # If is_square(gx1), y2 = gx1, else y2 = gx2
+19.   y = sqrt(y2)
+20.  e3 = sgn0(u) == sgn0(y)  # Fix sign of y
+21.   y = CMOV(-y, y, e3)
+22. return (x, y)
+~~~
+
+
 3-isogeny map for BLS12-381 G2
 ----------------------------------------------------------------------
 Appendix C.2
