@@ -139,7 +139,7 @@ func hkdfExpand*[T](ctx: var HMAC[T],
   var t: MDigest[T.bits]
   let oArray = cast[ptr UncheckedArray[byte]](output)
 
-  for i in 0 .. N:
+  for i in 0'u .. N:
     ctx.init(prk.data)
     # T(0) = empty string
     if i != 0:
