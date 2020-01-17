@@ -18,8 +18,6 @@
 #   - Specific PR: https://github.com/ethereum/py_ecc/pull/83/files
 
 # This file has a companion markdown file with the relevant part of the standard.
-# Important: the standard seem to assume that strings are 0x00 terminated
-#            and that that null bytes is part of the hashed message.
 
 # Implementation
 # ----------------------------------------------------------------------
@@ -42,7 +40,13 @@ func hashToBaseFP2[T](
   ##
   ## Inputs
   ## - msg + msgLen: the message to hash
-  ##   msg[msgLen] should be the null byte 0x00
+  ##   msg[msgLen] should be the null byte 0x00 (i.e there is an extra null-byte)
+  ##   This is an exceptional case where a string is required to end by a null-byte.
+  ##   This is a cryptographic security requirement.
+  ##   The null byte is not taken into account in msgLen.
+  ##   Non-empty Nim strings always end by a null-byte and do not require special handling.
+  ##   ⚠️: Raw byte-buffers are not null-byte terminated and require
+  ##       preprocessing. THis would trigger a buffer-overflow otherwise.
   ## - ctr: 0, 1 or 2.
   ##   Create independant instances of HKDF-Expand (random oracle)
   ##   from the same HKDF-Extract pseudo-random key
@@ -71,8 +75,16 @@ func hashToBaseFP2[T](
     info: array[5, byte]
     t: array[L_BLS, byte]
 
-  assert cast[ptr UncheckedArray[byte]](msg)[msgLen] == 0x00
-  hkdfExtract(ctx, mprime, domainSepTag, domainSepTagLen, msg, msgLen)
+  # The input message to HKDF has a null-byte appended to make it
+  # indistinguishable to a random oracle. (Spec section 5.1)
+  # Non-empty Nim strings have an extra null-byte after their declared length
+  # and no extra preprocessing is needed.
+  # If the input is a raw-byte buffer instead of a string,
+  # it REQUIRES allocation in a buffer
+  # with an extra null-byte beyond the declared length.
+  assert not msg.isNil
+  assert cast[ptr UncheckedArray[byte]](msg)[msgLen+1] == 0x00
+  hkdfExtract(ctx, mprime, domainSepTag, domainSepTagLen, msg, msgLen+1)
 
   info[0] = ord'H'
   info[1] = ord'2'
@@ -116,7 +128,7 @@ when isMainModule:
       # Important: do we need to include the null byte at the end?
       let pointFP2 = hashToBaseFP2(
         ctx,
-        pmsg, msg.len.uint + 1,
+        pmsg, msg.len.uint,
         ctr,
         pdst, dst.len.uint
       )

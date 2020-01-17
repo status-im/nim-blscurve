@@ -5,17 +5,12 @@ for the BLS12-381 pairing-friendly elliptic curve.
 
 Hash to Elliptic curve implementation for BLS12-381.
 - IETF Standard Draft: https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-04
-  - Algorithm description in section 8.7
-  - This includes a specific appendix for BLS12-381 (Appendix C)
+  - Formatted HTML version: https://cfrg.github.io/draft-irtf-cfrg-hash-to-curve/draft-irtf-cfrg-hash-to-curve.html
 - IETF Implementation: https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve
   - The following can be used as a test vector generator:
     https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve/blob/6cf7fa97/poc/suite_bls12381g2.sage
 - Ethereum Foundation implementation: https://github.com/ethereum/py_ecc
   - Specific PR: https://github.com/ethereum/py_ecc/pull/83/files
-
-> ⚠️ Important: the standard seem to assume that strings are 0x00 terminated
-           and that that null bytes is part of the hashed message.
-
 
 hash_to_curve
 ----------------------------------------------------------------------
@@ -99,6 +94,19 @@ Steps:
 4.   t = HKDF-Expand(m', info, L)
 5.   e_i = OS2IP(t) mod p
 6. return u = (e_1, ..., e_m)
+
+> ⚠️ Important:
+>   in the invocation of HKDF-Extract, the message is
+>   the message is appended with a null-byte
+>
+>   Section 5.1
+>   > Finally, hash_to_base appends one zero byte to msg in the invocation
+>   > of HKDF-Extract. This ensures that the use of HKDF in hash_to_base
+>   > This ensures that the use of HKDF in hash_to_base
+>   > is indifferentiable from a random oracle (see \[LBB19\], Lemma 8 and
+>   > \[DRST12\], Theorems 4.3 and 4.4).  (In particular, this approach works
+>   > because it ensures that the final byte of each HMAC invocation in
+>   > HKDF-Extract and HKDF-Expand is distinct.)
 
 > 🛈 Note:
 >
