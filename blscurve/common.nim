@@ -177,6 +177,13 @@ proc iszilch*(a: FP2_BLS381): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
   result = (FP2_BLS381_iszilch(unsafeAddr a) == 1)
 
+proc cmov*(a: var FP2_BLS381, b: FP2_BLS381, c: bool) {.inline.} =
+  ## Conditional copy of FP2 element (without branching)
+  ## if c: a = b
+  ## if not c: a is unchanged
+  ## This is a constant time operation
+  FP2_BLS381_cmove(addr a, unsafeAddr b, cint(c))
+
 proc parity*(a: FP2_BLS381): int {.inline.} =
   ## Returns parity for ``a``.
   var t: BIG_384

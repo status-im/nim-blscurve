@@ -131,13 +131,38 @@ func mapToCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
   ## Output:
   ## - (x, y), a point on G2
 
-  {.noSideEffect.}:
+  {.noSideEffect.}: # Only globals accessed are A, B, Z, c1, c2.
+                    # we use globals to ensure they are computed only once.
     let # Constants, See 8.9.2. BLS12-381 G2 suite
       A {.global.} = toFP2(   0,  240)   # A' = 240 * I
       B {.global.} = toFP2(1012, 1012)   # B' = 1012 * (1+I)
       Z {.global.} = neg toFP2(2, 1)     # Z  = -(2+I)
-      c1 {.global.} = neg mul(B, inv(A)) # -B/A
+      c1 {.global.} = neg mul(B, inv(A)) # -B/A -- TODO: can we compute that as -(B * 1/A)
       c2 {.global.} = neg inv(Z)         # -1/Z
+
+    var one {.global.} = block:
+      # TODO, we need an increment procedure
+      #       this is incredibly inefficient
+      var one: FP2_BLS381
+      setOne(one)
+      one
+
+  {.noSideEffect.}:
+    let tv1 = mul(Z, sqr(u))
+    var tv2 = sqr(tv1)
+    var x1 = add(tv1, tv2)
+    x1 = inv(x1)                         # TODO: Spec defines inv0(0) == 0; inv0(x) == x^(q-2)
+    let e1 = x1.isZilch()
+    x1.add(x1, one)
+    x1.cmov(c2, e1)                      # If (tv1 + tv2) == 0, set x1 = -1 / Z
+    x1.mul(x1, c1)                       # x1 = (-B / A) * (1 + (1 / (Z² * u^4 + Z * u²)))
+    let gx1 = sqr(x1)
+    gx1.add(gx1, A)
+    gx1.mul(gx1, x1)
+    gx1.add(gx1, B)                      # gx1 = g(x1) = x1^3 + A * x1 + B
+    let x2 = mul(tv1, x1)                # x2 = Z * u² * x1
+    tv2.mul(tv1, tv2)
+    gx2.mul(gx1, tv2)                    # gx2 = (Z * u²)³ * gx1
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
