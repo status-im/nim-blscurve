@@ -118,6 +118,23 @@ proc toFP2(x, y: uint64): FP2_BLS381 =
 
   result.fromBigs(xBig, yBig)
 
+proc isSquare(a: FP2_BLS381): bool =
+  ## Returns true if ``a`` is a square in the FP2 field
+  ## This is NOT a constant-time operation (Milagro has branches)
+
+  # Constant-time implementation:
+  #
+  # is_square(x) := { True,  if x^((q - 1) / 2) is 0 or 1 in F;
+  #                 { False, otherwise.
+  #
+  # In an extension field of order q:
+  #   q - 1 (mod q) ≡ -1 (mod q)
+  #
+  # For now, we use Milagro built-in sqrt which returns true if
+  # a is a quadratic residue (congruent to a perfect square mod q)
+  var tmp: FP2_BLS381
+  result = sqrt(tmp, a)
+
 func mapToCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
   ## Implementation of map_to_curve_simple_swu
   ## for the G2 curve of BLS12-381 curve.
@@ -156,13 +173,13 @@ func mapToCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
     x1.add(x1, one)
     x1.cmov(c2, e1)                      # If (tv1 + tv2) == 0, set x1 = -1 / Z
     x1.mul(x1, c1)                       # x1 = (-B / A) * (1 + (1 / (Z² * u^4 + Z * u²)))
-    let gx1 = sqr(x1)
+    var gx1 = sqr(x1)
     gx1.add(gx1, A)
     gx1.mul(gx1, x1)
     gx1.add(gx1, B)                      # gx1 = g(x1) = x1^3 + A * x1 + B
     let x2 = mul(tv1, x1)                # x2 = Z * u² * x1
     tv2.mul(tv1, tv2)
-    gx2.mul(gx1, tv2)                    # gx2 = (Z * u²)³ * gx1
+    let gx2 = mul(gx1, tv2)              # gx2 = (Z * u²)³ * gx1
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------

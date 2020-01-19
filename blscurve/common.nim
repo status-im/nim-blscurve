@@ -82,6 +82,14 @@ proc add*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
   ## Returns ``x + y``.
   FP2_BLS381_add(addr result, unsafeAddr x, unsafeAddr y)
 
+proc sub*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+  ## Set ``dst`` to ``x - y``.
+  FP2_BLS381_sub(addr dst, unsafeAddr x, unsafeAddr y)
+
+proc sub*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns ``x - y``.
+  FP2_BLS381_sub(addr result, unsafeAddr x, unsafeAddr y)
+
 proc shiftr*(a: var BIG_384, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
   BIG_384_shr(a, cint(bits))
@@ -102,6 +110,16 @@ proc norm*(a: var FP2_BLS381) {.inline.} =
 proc sqr*(x: FP2_BLS381): FP2_BLS381 {.inline.} =
   ## Retruns ``x ^ 2``.
   FP2_BLS381_sqr(addr result, unsafeAddr x)
+
+proc sqrt*(a: var FP2_BLS381, b: FP2_BLS381): bool {.inline.} =
+  ## ``a ≡ sqrt(b) (mod q)``
+  ## Returns true if b is a quadratic residue
+  ## (i.e. congruent to a perfect square mod q)
+  return bool FP2_BLS381_sqrt(addr a, unsafeAddr b)
+
+proc pow*(a: FP2_BLS381, b: BIG_384): FP2_BLS381 {.inline.} =
+  ## Compute ``result = a^b (mod q)``
+  FP2_BLS381_pow(addr result, unsafeAddr a, b)
 
 proc nres*(a: BIG_384): FP_BLS381 {.inline.} =
   ## Convert big integer value to residue form mod Modulus.
@@ -240,6 +258,10 @@ proc mul*(a: var ECP2_BLS381, b: BIG_384) {.inline.} =
 proc mul*(a: var ECP_BLS381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
   ECP_BLS381_mul(addr a, b)
+
+proc div2*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns ``a div 2``
+  FP2_BLS381_div2(addr result, unsafeAddr a)
 
 proc get*(a: ECP2_BLS381, x, y: var FP2_BLS381): int {.inline.} =
   ## Get coordinates ``x`` and ``y`` from point ``a``.

@@ -248,13 +248,16 @@ proc FP2_BLS381_from_FPs*(w: ptr FP2_BLS381, x, y: FP_BLS381) {.milagro_func.}
 proc FP2_BLS381_copy*(w: ptr FP2_BLS381, x: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_reduce*(w: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_one*(w: ptr FP2_BLS381) {.milagro_func.}
-proc FP2_BLS381_sqrt*(w: ptr FP2_BLS381, u: ptr FP2_BLS381): cint {.
-     milagro_func.}
 proc FP2_BLS381_add*(w: ptr FP2_BLS381, x: ptr FP2_BLS381, y: ptr FP2_BLS381) {.
+     milagro_func.}
+proc FP2_BLS381_sub*(w: ptr FP2_BLS381, x: ptr FP2_BLS381, y: ptr FP2_BLS381) {.
      milagro_func.}
 proc FP2_BLS381_mul*(x: ptr FP2_BLS381, y: ptr FP2_BLS381, z: ptr FP2_BLS381) {.
      milagro_func.}
-proc FP2_BLS381_sqr*(w: ptr FP2_BLS381, x: ptr FP2_BLS381) {. milagro_func.}
+proc FP2_BLS381_div2*(x: ptr FP2_BLS381, y: ptr FP2_BLS381){.milagro_func.}
+proc FP2_BLS381_sqr*(w: ptr FP2_BLS381, x: ptr FP2_BLS381){.milagro_func.}
+proc FP2_BLS381_sqrt*(x: ptr FP2_BLS381, y: ptr FP2_BLS381): cint {.milagro_func.}
+proc FP2_BLS381_pow*(x: ptr FP2_BLS381, y: ptr FP2_BLS381, b: BIG_384){.milagro_func.}
 proc FP2_BLS381_equals*(x: ptr FP2_BLS381, y: ptr FP2_BLS381): cint {.
      milagro_func.}
 proc FP12_BLS381_equals*(x: ptr FP12_BLS381, y: ptr FP12_BLS381): cint {.
