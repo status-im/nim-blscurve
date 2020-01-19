@@ -24,7 +24,7 @@
 
 import
   # Status libraries
-  nimcrypto/hmac,
+  nimcrypto/hmac, stew/endians2,
   # Internal
   ./milagro, ./hkdf, ./common
 
@@ -99,11 +99,45 @@ func hashToBaseFP2[T](
     # debugecho "t: ", t.toHex()
     discard fromBytes(ei, t)
     # TODO: is field element normalization needed?
+    #       internally fromBigs calls
+    #       FP_BLS381_nres to convert
+    #       to "residue form mod Modulus"
 
   loopIter(e1, 1)
   loopIter(e2, 2)
 
   result.fromBigs(e1, e2)
+
+proc toFP2(x, y: uint64): FP2_BLS381 =
+  ## Convert a complex tuple x + iy to FP2
+  # TODO: the result does not seem to need zero-initialization
+  var xBig, yBig: BIG_384
+
+  discard xBig.fromBytes(x.toBytesBE())
+  discard yBig.fromBytes(y.toBytesBE())
+
+  result.fromBigs(xBig, yBig)
+
+func mapToCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
+  ## Implementation of map_to_curve_simple_swu
+  ## for the G2 curve of BLS12-381 curve.
+  ##
+  ## SWU stands for Shallue-van de Woestijne-Ulas mapping
+  ## described in https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-04#section-6.5.2
+  ##
+  ## Input:
+  ## - u, an element of FP2
+  ##
+  ## Output:
+  ## - (x, y), a point on G2
+
+  {.noSideEffect.}:
+    let # Constants, See 8.9.2. BLS12-381 G2 suite
+      A {.global.} = toFP2(   0,  240)   # A' = 240 * I
+      B {.global.} = toFP2(1012, 1012)   # B' = 1012 * (1+I)
+      Z {.global.} = neg toFP2(2, 1)     # Z  = -(2+I)
+      c1 {.global.} = neg mul(B, inv(A)) # -B/A
+      c2 {.global.} = neg inv(Z)         # -1/Z
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
@@ -148,3 +182,5 @@ when isMainModule:
         "0x3852c6c62ecd4e04360c24e8ddeac03661b07575a60d6fb7b0a90ce0bb7c7667624fbeea77777e52099dd43356e03192b3d4d27264fd09d0afadda24f48b6f2c",
         "0x099695b4dc8d5dbebc73a9856cc859a3e5317e9a9e0459ee8fc03646bdcfe30125aa434dda228311f25d8c227d5eee289dd6a50897c08397565bc826c5c4113d"
       ]
+
+      # TODO: doAssert the FP2
