@@ -117,6 +117,10 @@ proc sqrt*(a: var FP2_BLS381, b: FP2_BLS381): bool {.inline.} =
   ## (i.e. congruent to a perfect square mod q)
   return bool FP2_BLS381_sqrt(addr a, unsafeAddr b)
 
+proc sqrt*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## ``result ≡ sqrt(a) (mod q)``
+  discard FP2_BLS381_sqrt(addr result, unsafeAddr a)
+
 proc pow*(a: FP2_BLS381, b: BIG_384): FP2_BLS381 {.inline.} =
   ## Compute ``result = a^b (mod q)``
   FP2_BLS381_pow(addr result, unsafeAddr a, b)
@@ -201,6 +205,14 @@ proc cmov*(a: var FP2_BLS381, b: FP2_BLS381, c: bool) {.inline.} =
   ## if not c: a is unchanged
   ## This is a constant time operation
   FP2_BLS381_cmove(addr a, unsafeAddr b, cint(c))
+
+proc cmov*(a: FP2_BLS381, b: FP2_BLS381, c: bool): FP2_BLS381 {.inline.} =
+  ## Conditional copy of FP2 element (without branching)
+  ## if c: result = b
+  ## if not c: result = a
+  ## This is a constant time operation
+  result = a
+  FP2_BLS381_cmove(addr result, unsafeAddr b, cint(c))
 
 proc parity*(a: FP2_BLS381): int {.inline.} =
   ## Returns parity for ``a``.
