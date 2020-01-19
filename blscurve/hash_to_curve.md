@@ -237,7 +237,7 @@ Steps:
 
 3-isogeny map for BLS12-381 G2
 ----------------------------------------------------------------------
-Appendix C.2
+Appendix C.3
 
 The 3-isogeny map from (x', y') on E' to (x, y) on E is given by the following rational functions:
 
