@@ -154,7 +154,7 @@ proc isNeg(a: FP2_BLS381): bool =
   let neg = neg(a)
   result = cmp(a, neg) < 0
 
-func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
+func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
   ## Implementation of map_to_curve_simple_swu
   ## to map an element of FP2 to a curve isogenous
   ## to the G2 curve of BLS12-381 curve.
@@ -196,7 +196,7 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
     var gx1 = sqr(x1)
     gx1.add(gx1, A)
     gx1.mul(gx1, x1)
-    gx1.add(gx1, B)                      # gx1 = g(x1) = x1^3 + A * x1 + B
+    gx1.add(gx1, B)                      # gx1 = g(x1) = x1³ + A * x1 + B
     let x2 = mul(tv1, x1)                # x2 = Z * u² * x1
     tv2.mul(tv1, tv2)
     let gx2 = mul(gx1, tv2)              # gx2 = (Z * u²)³ * gx1
@@ -207,10 +207,10 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
     let e3 = u.isNeg() == y.isNeg()      # Fix sign of y
     y = cmov(neg y, y, e3)
 
-  let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
-  assert onCurve
+  result.x = x
+  result.y = y
 
-proc isogeny_map_G2(isoPoint: ECP2_BLS381): ECP2_BLS381 =
+proc isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
   ## 3-isogeny map from a point P' (x', y') on G'2
   ## to a point P(x, y) on G2 curve of BLS12-381.
   ##
@@ -273,6 +273,56 @@ proc isogeny_map_G2(isoPoint: ECP2_BLS381): ECP2_BLS381 =
       "0x12",
       "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaa99"
     )
+
+  let xp2 = sqr(xp)
+  let xp3 = mul(xp, xp2)
+  {.noSideEffect.}: # TODO overload `+` and `*` for readability
+    # xNum = k(1,3) * x'³ + k(1,2) * x'² + k(1,1) * x' + k(1,0)
+    let xNum = (
+                 k13.mul(xp3)
+               ).add(
+                 k12.mul(xp2)
+               ).add(
+                 k11.mul(xp)
+               ).add(
+                 k10
+               )
+    # xDen = x'² + k(2,1) * x' + k(2,0)
+    let xDen = (
+                 xp2
+               ).add(
+                 k21.mul(xp)
+               ).add(
+                 k20
+               )
+
+    # yNum = k(3,3) * x'³ + k(3,2) * x'² + k(3,1) * x' + k(3,0)
+    let yNum = (
+                 k33.mul(xp3)
+               ).add(
+                 k32.mul(xp2)
+               ).add(
+                 k31.mul(xp)
+               ).add(
+                 k30
+               )
+    # yDen = x'³ + k(4,2) * x'2 + k(4,1) * x' + k(4,0)
+    let yDen = (
+                 xp3
+               ).add(
+                 k42.mul(xp2)
+               ).add(
+                 k41.mul(xp)
+               ).add(
+                 k40
+               )
+
+  # TODO - can we divide by multiplying by the inverse
+  let x = xNum.mul inv(xDen)
+  let y = yp.mul yNum.mul inv(yDen)
+
+  let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
+  assert onCurve
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
