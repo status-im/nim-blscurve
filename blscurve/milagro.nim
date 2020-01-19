@@ -240,6 +240,7 @@ proc FP_BLS381_equals*(x: ptr FP_BLS381, y: ptr FP_BLS381): cint {.
 
 proc FP2_BLS381_inv*(x: ptr FP2_BLS381, y: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_iszilch*(x: ptr FP2_BLS381): cint {.milagro_func.}
+proc FP2_BLS381_cmove*(x, y: ptr FP2_BLS381, s: cint) {.milagro_func.}
 proc FP2_BLS381_norm*(x: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_neg*(r: ptr FP2_BLS381, a: ptr FP2_BLS381) {.milagro_func.}
 proc FP2_BLS381_from_BIGs*(w: ptr FP2_BLS381, x, y: BIG_384) {.milagro_func.}
