@@ -164,6 +164,11 @@ proc isinf*(a: ECP2_BLS381): bool {.inline.} =
   var tmp = a
   result = (ECP2_BLS381_isinf(addr tmp) != 0)
 
+proc inv*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns the reciprocal copy of ``a``
+  ## ``result = 1/a``
+  FP2_BLS381_inv(addr result, unsafeAddr a)
+
 proc rhs*(x: FP2_BLS381): FP2_BLS381 {.inline.} =
   ## Returns ``x ^ 3 + b``.
   ECP2_BLS381_rhs(addr result, unsafeAddr x)
@@ -212,6 +217,14 @@ proc double*(a: var ECP2_BLS381) {.inline.} =
 proc add*(a: var ECP_BLS381, b: ECP_BLS381) {.inline.} =
   ## Add point ``b`` to point ``a``.
   ECP_BLS381_add(addr a, unsafeAddr b)
+
+proc mul*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+  ## Set ``dst`` to ``x * y``.
+  FP2_BLS381_mul(addr dst, unsafeAddr x, unsafeAddr y)
+
+proc mul*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns ``x * y``.
+  FP2_BLS381_mul(addr result, unsafeAddr x, unsafeAddr y)
 
 proc mul*(a: var ECP2_BLS381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
