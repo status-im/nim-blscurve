@@ -132,8 +132,17 @@ proc isSquare(a: FP2_BLS381): bool =
   #
   # For now, we use Milagro built-in sqrt which returns true if
   # a is a quadratic residue (congruent to a perfect square mod q)
+  # https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-4
   var tmp: FP2_BLS381
   result = sqrt(tmp, a)
+
+proc isNeg(a: FP2_BLS381): bool =
+  ## Returns the "negative sign" (mod q) of a value
+  ## a is negative when a (mod q) > -a (mod q)
+  ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-4.1.1
+
+  let neg = neg(a)
+  result = cmp(a, neg) < 0
 
 func mapToCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
   ## Implementation of map_to_curve_simple_swu
@@ -180,6 +189,15 @@ func mapToCurveSimpleSWU_G2(u: FP2_BLS381): ECP2_BLS381 =
     let x2 = mul(tv1, x1)                # x2 = Z * u² * x1
     tv2.mul(tv1, tv2)
     let gx2 = mul(gx1, tv2)              # gx2 = (Z * u²)³ * gx1
+    let e2 = gx1.isSquare()
+    let x = cmov(x2, x1, e2)             # If is_square(gx1), x = x1, else x = x2
+    let y2 = cmov(gx2, gx1, e2)          # If is_square(gx1), y2 = gx1, else y2 = gx2
+    var y = sqrt(y2)
+    let e3 = u.isNeg() == y.isNeg()      # Fix sign of y
+    y = cmov(neg y, y, e3)
+
+  let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
+  assert onCurve
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
