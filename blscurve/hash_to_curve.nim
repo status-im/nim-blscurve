@@ -346,7 +346,7 @@ func clearCofactor(P: ECP2_BLS381): ECP2_BLS381 =
   ##
   ## Described in https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-7
   #
-  # Implementations, multiple implementations are possible in decreasing order of speed:
+  # Implementations, multiple implementations are possible in increasing order of speed:
   #
   # - The default, canonical, implementation is h_eff * P
   # - Scott et al, "Fast Hashing to G2 on Pairing-Friendly Curves", https://doi.org/10.1007/978-3-642-03298-1_8
