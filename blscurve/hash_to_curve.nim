@@ -108,7 +108,7 @@ func hashToBaseFP2[T](
 
   result.fromBigs(e1, e2)
 
-proc toFP2(x, y: uint64): FP2_BLS381 =
+func toFP2(x, y: uint64): FP2_BLS381 =
   ## Convert a complex tuple x + iy to FP2
   # TODO: the result does not seem to need zero-initialization
   var xBig, yBig: BIG_384
@@ -118,7 +118,7 @@ proc toFP2(x, y: uint64): FP2_BLS381 =
 
   result.fromBigs(xBig, yBig)
 
-proc hexToFP2(x, y: string): FP2_BLS381 =
+func hexToFP2(x, y: string): FP2_BLS381 =
   ## Convert a complex tuple x + iy to FP2
   # TODO: the result does not seem to need zero-initialization
   var xBig, yBig: BIG_384
@@ -128,7 +128,7 @@ proc hexToFP2(x, y: string): FP2_BLS381 =
 
   result.fromBigs(xBig, yBig)
 
-proc isSquare(a: FP2_BLS381): bool =
+func isSquare(a: FP2_BLS381): bool =
   ## Returns true if ``a`` is a square in the FP2 field
   ## This is NOT a constant-time operation (Milagro has branches)
 
@@ -146,7 +146,7 @@ proc isSquare(a: FP2_BLS381): bool =
   var tmp: FP2_BLS381
   result = sqrt(tmp, a)
 
-proc isNeg(a: FP2_BLS381): bool =
+func isNeg(a: FP2_BLS381): bool =
   ## Returns the "negative sign" (mod q) of a value
   ## a is negative when a (mod q) > -a (mod q)
   ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-4.1.1
@@ -210,7 +210,7 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
   result.x = x
   result.y = y
 
-proc isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
+func isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
   ## 3-isogeny map from a point P' (x', y') on G'2
   ## to a point P(x, y) on G2 curve of BLS12-381.
   ##
@@ -219,28 +219,28 @@ proc isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
   {.noSideEffect.}: # Globals to ensure they are computed only once
     # Constants to compute x_numerator
     let k10 {.global.} = hexToFP2(
-      "0x5c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6",
-      "0x5c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6"
+      "0x05c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6",
+      "0x05c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6"
     )
     let k11 {.global.} = hexToFP2(
-      "0x0",
+      "0x00",
       "0x11560bf17baa99bc32126fced787c88f984f87adf7ae0c7f9a208c6b4f20a4181472aaa9cb8d555526a9ffffffffc71a"
     )
     let k12 {.global.} = hexToFP2( # The last nibble "e" is not a typo
       "0x11560bf17baa99bc32126fced787c88f984f87adf7ae0c7f9a208c6b4f20a4181472aaa9cb8d555526a9ffffffffc71e",
-      "0x8ab05f8bdd54cde190937e76bc3e447cc27c3d6fbd7063fcd104635a790520c0a395554e5c6aaaa9354ffffffffe38d"
+      "0x08ab05f8bdd54cde190937e76bc3e447cc27c3d6fbd7063fcd104635a790520c0a395554e5c6aaaa9354ffffffffe38d"
     )
     let k13 {.global.} = hexToFP2(
       "0x171d6541fa38ccfaed6dea691f5fb614cb14b4e7f4e810aa22d6108f142b85757098e38d0f671c7188e2aaaaaaaa5ed1",
-      "0x0"
+      "0x00"
     )
     # Constants to compute x_denominator
     let k20 {.global.} = hexToFP2(
-      "0x0",
+      "0x00",
       "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaa63"
     )
     let k21 {.global.} = hexToFP2( # the last byte "9f" is not a typo
-      "0xc",
+      "0x0c",
       "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaa9f"
     )
     # Constants to compute y_numerator
@@ -249,16 +249,16 @@ proc isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
       "0x1530477c7ab4113b59a4c18b076d11930f7da5d4a07f649bf54439d87d27e500fc8c25ebf8c92f6812cfc71c71c6d706"
     )
     let k31 {.global.} = hexToFP2(
-      "0x0",
-      "0x5c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97be"
+      "0x00",
+      "0x05c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97be"
     )
     let k32 {.global.} = hexToFP2(
       "0x11560bf17baa99bc32126fced787c88f984f87adf7ae0c7f9a208c6b4f20a4181472aaa9cb8d555526a9ffffffffc71c",
-      "0x8ab05f8bdd54cde190937e76bc3e447cc27c3d6fbd7063fcd104635a790520c0a395554e5c6aaaa9354ffffffffe38f"
+      "0x08ab05f8bdd54cde190937e76bc3e447cc27c3d6fbd7063fcd104635a790520c0a395554e5c6aaaa9354ffffffffe38f"
     )
     let k33 {.global.} = hexToFP2(
       "0x124c9ad43b6cf79bfbf7043de3811ad0761b0f37a1e26286b0e977c69aa274524e79097a56dc4bd9e1b371c71c718b10",
-      "0x0"
+      "0x00"
     )
     # Constants to compute y_denominator
     let k40 = hexToFP2(
@@ -266,7 +266,7 @@ proc isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
       "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa8fb"
     )
     let k41 = hexToFP2(
-      "0x0",
+      "0x00",
       "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa9d3"
     )
     let k42 = hexToFP2(
@@ -324,6 +324,61 @@ proc isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
   let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
   assert onCurve
 
+func mapToCurveG2(u: FP2_BLS381): ECP2_BLS381 =
+  ## Map a field element FP2 to the G2 curve of BLS12-381
+  ## using the simplified SWU method for pairing-friendly curves
+  ##
+  ## SWU stands for Shallue-van de Woestijne-Ulas
+  ## Described in https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-04#section-6.9.2
+  ## And
+  ## Wahby, R. and D. Boneh,
+  ## "Fast and simple constant-time hashing to the BLS12-381 elliptic curve"
+  ## https://eprint.iacr.org/2019/403
+
+  # Hash to a curve isogenous to G2 BLS12-381
+  let pointPrime = mapToIsoCurveSimpleSWU_G2(u)
+  # 3-isogeny map P'(x', y') to G2 with coordinate P(x, y)
+  result = isogeny_map_G2(pointPrime.x, pointPrime.y)
+
+func clearCofactor(P: ECP2_BLS381): ECP2_BLS381 =
+  ## From any point on the elliptic curve of G2 of BLS12-381
+  ## Obtain a point in the G2 subgroup
+  ##
+  ## Described in https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-7
+  #
+  # Implementations, multiple implementations are possible in decreasing order of speed:
+  #
+  # - The default, canonical, implementation is h_eff * P
+  # - Scott et al, "Fast Hashing to G2 on Pairing-Friendly Curves", https://doi.org/10.1007/978-3-642-03298-1_8
+  # - Fuentes-Castaneda et al, "Fast Hashing to G2 on Pairing-Friendly Curves", https://doi.org/10.1007/978-3-642-28496-0_25
+  # - Budroni et al, "Hashing to G2 on BLS pairing-friendly curves", https://doi.org/10.1145/3313880.3313884
+  # - Wahby et al "Fast and simple constant-time hashing to the BLS12-381 elliptic curve", https://eprint.iacr.org/2019/403
+  mulCoFactor(P)
+
+func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
+  ## Hash an arbitrary message to the G2 curve of BLS12-381
+  ## The message should have an extra null byte
+  # TODO: an API for strings (which are null-terminated)
+  #       and an API for raw bytes which needs extra allocation
+  # TODO: API should use ptr+len to bytes
+  # TODO: handle empty messages in constant-time
+  var ctx: HMAC[sha256]
+  let
+    pmsg = cast[ptr byte](message[0].unsafeAddr)
+    msgLen = message.len.uint
+    pdst = cast[ptr byte](domainSepTag[0].unsafeAddr)
+    dstLen = domainSepTag.len.uint
+
+    u0 = hashToBaseFP2(ctx, pmsg, msgLen, ctr = 0, pdst, dstLen)
+    u1 = hashToBaseFP2(ctx, pmsg, msgLen, ctr = 1, pdst, dstLen)
+    Q0 = mapToCurveG2(u0)
+    Q1 = mapToCurveG2(u1)
+
+  var R = Q0
+  R.add(Q1)
+
+  result = clearCofactor(R)
+
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
 
@@ -369,3 +424,39 @@ when isMainModule:
       ]
 
       # TODO: doAssert the FP2
+
+  # Test vectors for hashToG2
+  # ----------------------------------------------------------------------
+  # TODO, move to tests/ folder
+
+  template testHashToG2(id, constants: untyped) =
+    # https://github.com/mratsim/py_ecc/pull/1
+    proc `test _ id`() =
+      # We create a proc to avoid allocating too much globals.
+      constants
+
+      let pointG2 = hashToG2(msg, dst)
+      echo "In projective coordinate (x, y, z)"
+      echo pointG2
+      echo "In Affine coordinate (x, y)"
+      var x, y: FP2_BLS381
+      discard ECP2_BLS381_get(x.addr, y.addr, pointG2.unsafeAddr)
+      echo "(", $x, ", ", $y, ")"
+
+    `test _ id`()
+
+  block: # hashToBaseFP2
+    testHashToG2 1:
+      let
+        msg = "msg"
+        dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+
+      # Expected output
+      let point = (
+        # x
+        ["0x7896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
+         "0xbd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0"],
+        # y
+        ["0x1bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
+         "18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"]
+      )

@@ -273,3 +273,52 @@ The constants used to compute y\_den are as follows:
 - k\_(4,0) = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa8fb + 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa8fb * I
 - k\_(4,1) = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffa9d3 * I
 - k\_(4,2) = 0x12 + 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaa99 * I
+
+Clear cofactor
+----------------------------------------------------------------------
+Section 7
+
+The mappings of Section 6 always output a point on the elliptic
+curve, i.e., a point in a group of order h * r (Section 2.1).
+Obtaining a point in G may require a final operation commonly called
+"clearing the cofactor," which takes as input any point on the curve.
+
+The cofactor can always be cleared via scalar multiplication by h.
+For elliptic curves where h = 1, i.e., the curves with a prime number
+of points, no operation is required.  This applies, for example, to
+the NIST curves P-256, P-384, and P-521 \[FIPS186-4\].
+
+In some cases, it is possible to clear the cofactor via a faster
+method than scalar multiplication by h.  These methods are equivalent
+to (but usually faster than) multiplication by some scalar h_eff
+whose value is determined by the method and the curve.  Examples of
+fast cofactor clearing methods include the following:
+
+o  For certain pairing-friendly curves having subgroup G2 over an
+  extension field, Scott et al.  \[SBCDK09\] describe a method for
+  fast cofactor clearing that exploits an efficiently-computable
+  endomorphism.  Fuentes-Castaneda et al.  \[FKR11\] propose an
+  alternative method that is sometimes more efficient.  Budroni and
+  Pintore \[BP18\] give concrete instantiations of these methods for
+  Barreto-Lynn-Scott pairing-friendly curves \[BLS03\].
+
+o  Wahby and Boneh (\[WB19\], Section 5) describe a trick due to Scott
+  for fast cofactor clearing on any elliptic curve for which the
+  prime factorization of h and the structure of the elliptic curve
+  group meet certain conditions.
+
+The clear_cofactor function is parameterized by a scalar h_eff.
+Specifically,
+
+clear_cofactor(P) := h_eff * P
+
+where * represents scalar multiplication.  When a curve does not
+support a fast cofactor clearing method, h_eff = h and the cofactor
+MUST be cleared via scalar multiplication.
+
+When a curve admits a fast cofactor clearing method, clear_cofactor
+MAY be evaluated either via that method or via scalar multiplication
+by the equivalent h_eff; these two methods give the same result.
+Note that in this case scalar multiplication by the cofactor h does
+not generally give the same result as the fast method, and SHOULD NOT
+be used.
