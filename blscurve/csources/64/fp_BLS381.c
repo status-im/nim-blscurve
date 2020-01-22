@@ -175,15 +175,15 @@ void FP_BLS381_nres(FP_BLS381 *y,BIG_384_58 x)
     DBIG_384_58 d;
     BIG_384_58 r;
     BIG_384_58_rcopy(r,R2modp_BLS381);
-    printf("r: ");
-    BIG_384_58_output(r);
-    printf("\nd: ");
+    // printf("r: ");
+    // BIG_384_58_output(r);
+    // printf("\nd: ");
     BIG_384_58_mul(d,x,r);
-    BIG_384_58_doutput(d);
-    printf("\nmod d: ");
+    // BIG_384_58_doutput(d);
+    // printf("\nmod d: ");
     FP_BLS381_mod(y->g,d);
-    BIG_384_58_output(y->g);
-    printf("\n");
+    // BIG_384_58_output(y->g);
+    // printf("\n");
     y->XES=2;
 }
 
@@ -204,16 +204,16 @@ void FP_BLS381_mod(BIG_384_58 a,DBIG_384_58 d)
 {
     BIG_384_58 mdls;
     BIG_384_58_rcopy(mdls,Modulus_BLS381);
-    printf("\nstart mod, result: ");
-    BIG_384_58_output(a);
-    printf("\nstart mod, d: ");
-    BIG_384_58_doutput(d);
-    printf("\nstart mod, modulus: ");
-    BIG_384_58_output(mdls);
+    // printf("\nstart mod, result: ");
+    // BIG_384_58_output(a);
+    // printf("\nstart mod, d: ");
+    // BIG_384_58_doutput(d);
+    // printf("\nstart mod, modulus: ");
+    // BIG_384_58_output(mdls);
     BIG_384_58_monty(a,mdls,MConst_BLS381,d);
-    printf("\nend mod, monty: ");
-    BIG_384_58_output(a);
-    printf("\n");
+    // printf("\nend mod, monty: ");
+    // BIG_384_58_output(a);
+    // printf("\n");
 }
 
 #endif
