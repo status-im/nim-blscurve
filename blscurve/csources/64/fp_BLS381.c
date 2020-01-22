@@ -204,7 +204,16 @@ void FP_BLS381_mod(BIG_384_58 a,DBIG_384_58 d)
 {
     BIG_384_58 mdls;
     BIG_384_58_rcopy(mdls,Modulus_BLS381);
+    printf("\nstart mod, result: ");
+    BIG_384_58_output(a);
+    printf("\nstart mod, d: ");
+    BIG_384_58_doutput(d);
+    printf("\nstart mod, modulus: ");
+    BIG_384_58_output(mdls);
     BIG_384_58_monty(a,mdls,MConst_BLS381,d);
+    printf("\nend mod, monty: ");
+    BIG_384_58_output(a);
+    printf("\n");
 }
 
 #endif
