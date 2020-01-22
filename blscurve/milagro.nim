@@ -263,3 +263,6 @@ proc FP2_BLS381_equals*(x: ptr FP2_BLS381, y: ptr FP2_BLS381): cint {.
 proc FP12_BLS381_equals*(x: ptr FP12_BLS381, y: ptr FP12_BLS381): cint {.
      milagro_func.}
 proc FP12_BLS381_isunity*(x: ptr FP12_BLS381): cint {.milagro_func.}
+
+# Debug
+proc FP2_BLS381_output*(x: ptr FP2_BLS381) {.sideeffect, milagro_func.}
