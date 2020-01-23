@@ -322,3 +322,42 @@ by the equivalent h_eff; these two methods give the same result.
 Note that in this case scalar multiplication by the cofactor h does
 not generally give the same result as the fast method, and SHOULD NOT
 be used.
+
+BLS 12-381 suite
+----------------------------------------------------------------------
+Section 8.9.2
+
+Group G2 of BLS12-381 is defined over a field F = GF(p^m) defined as:
+
+- p: 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+- m: 2
+- (1, I) is the basis for F, where I^2 + 1 == 0 in F
+
+The suites BLS12381G2-SHA256-SSWU-RO- and BLS12381G2-SHA256-SSWU-NU-
+share the following parameters, in addition to the common parameters below.
+
+- f: Simplified SWU for AB == 0, {{simple-swu-AB0}}
+- Z: -(2 + I)
+- E': y'^2 = x'^3 + A' * x' + B', where
+  - A' = 240 * I
+  - B' = 1012 * (1 + I)
+- iso\_map: the isogeny map from E' to E given in {{appx-iso-bls12381-g2}}
+
+The suites BLS12381G2-SHA256-SVDW-RO- and BLS12381G2-SHA256-SVDW-NU-
+share the following parameters, in addition to the common parameters below.
+
+- f: Shallue-van de Woestijne method, {{svdw}}
+- Z: I
+
+The common parameters for the above suites are:
+
+- E: y^2 = x^3 + 4 * (1 + I)
+- p, m, F: defined above
+- sgn0: sgn0\_be (sgn0-be)
+- H: SHA-256
+- L: 64
+- h\_eff: 0xbc69f08f2ee75b3584c6a0ea91b352888e2a8e9145ad7689986ff031508ffe1329c2f178731db956d82bf015d1212b02ec0ec69d7477c1ae954cbc06689f6a359894c0adebbf6b4e8020005aaa95551
+
+Note that this h\_eff value is chosen for compatibility
+with the fast cofactor clearing method described by
+Budroni and Pintore (BP18, Section 4.1).

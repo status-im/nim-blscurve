@@ -353,7 +353,29 @@ func clearCofactor(P: ECP2_BLS381): ECP2_BLS381 =
   # - Fuentes-Castaneda et al, "Fast Hashing to G2 on Pairing-Friendly Curves", https://doi.org/10.1007/978-3-642-28496-0_25
   # - Budroni et al, "Hashing to G2 on BLS pairing-friendly curves", https://doi.org/10.1145/3313880.3313884
   # - Wahby et al "Fast and simple constant-time hashing to the BLS12-381 elliptic curve", https://eprint.iacr.org/2019/403
-  mulCoFactor(P)
+
+  # TODO: The method described in Wahby et al is implemented by Riad Wahby
+  #       in C at: https://github.com/kwantam/bls12-381_hash/blob/23c1930039f58606138459557677668fabc8ce39/src/curve2/ops2.c#L106-L204
+  # following Budroni et al, "Efficient hash maps to G2 on BLS curves"
+  # https://eprint.iacr.org/2017/419
+  #
+  # While complex (100 LOC), the speed difference over elliptic multiplication is apparently significant.
+  # Explanation for future reference:
+  # - Psi (ψ) - untwist-Froebenius-Twist function
+  # - Addition-chain: https://en.wikipedia.org/wiki/Addition_chain / https://en.wikipedia.org/wiki/Addition-chain_exponentiation
+
+  # Simple implementation
+  # TODO: need test vectors.
+  {.noSideEffect.}:
+    let hEff {.global.} = block:
+      # Effective cofactor - global to compute only once
+      var hEff: BIG_384
+      discard hEff.fromHex("0x0bc69f08f2ee75b3584c6a0ea91b352888e2a8e9145ad7689986ff031508ffe1329c2f178731db956d82bf015d1212b02ec0ec69d7477c1ae954cbc06689f6a359894c0adebbf6b4e8020005aaa95551")
+      hEff
+
+  result = P
+  {.noSideEffect.}:
+    result.mul(hEff)
 
 func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
@@ -387,6 +409,14 @@ when isMainModule:
 
   proc hexToBytes(s: string): seq[byte] =
     if s.len != 0: return hexToSeqByte(s)
+
+  proc displayECP2Coord(point: ECP2_BLS381) =
+    echo "In jacobian projective coordinate (x, y, z)"
+    echo point
+    echo "In affine coordinate (x, y)"
+    var x, y: FP2_BLS381
+    discard ECP2_BLS381_get(x.addr, y.addr, point.unsafeAddr)
+    echo "(", $x, ", ", $y, ")"
 
   # Test vectors for hashToBaseFP2
   # ----------------------------------------------------------------------
@@ -442,11 +472,7 @@ when isMainModule:
 
       echo "-----------------------------------"
       echo "u0: ", u0
-      FP2_BLS381_output(u0.unsafeAddr)
-      echo "\nu1: ", u1
-      FP2_BLS381_output(u1.unsafeAddr)
-      echo ""
-
+      echo "u1: ", u1
 
       let q0 = mapToCurveG2(u0)
       let q1 = mapToCurveG2(u1)
@@ -454,6 +480,18 @@ when isMainModule:
       echo "-----------------------------------"
       echo "q0: ", q0
       echo "q1: ", q1
+
+      var R = q0
+      R.add(q1)
+      echo "-----------------------------------"
+      echo "R: "
+      displayECP2Coord(R)
+
+      let P = clearCofactor(R)
+      echo "-----------------------------------"
+      echo "P: "
+      displayECP2Coord(P)
+
 
     `test _ id`()
 
