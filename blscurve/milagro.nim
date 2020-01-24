@@ -214,6 +214,12 @@ proc ECP2_BLS381_neg*(p: ptr ECP2_BLS381) {.milagro_func.}
 proc ECP2_BLS381_mul*(p: ptr ECP2_BLS381, e: BIG_384) {.milagro_func.}
 proc ECP2_BLS381_add*(p: ptr ECP2_BLS381, q: ptr ECP2_BLS381): cint {.
      milagro_func.}
+proc ECP2_BLS381_sub*(p: ptr ECP2_BLS381, q: ptr ECP2_BLS381): cint {.
+     milagro_func.}
+proc ECP2_BLS381_dbl*(p: ptr ECP2_BLS381): cint {.
+     milagro_func.}
+proc ECP2_BLS381_frob*(p: ptr ECP2_BLS381, frobConst: ptr FP2_BLS381): cint {.
+     milagro_func.}
 proc ECP2_BLS381_generator*(g: ptr ECP2_BLS381) {.milagro_func.}
 proc ECP2_BLS381_get*(x: ptr FP2_BLS381, y: ptr FP2_BLS381,
                       p: ptr ECP2_BLS381): cint {.milagro_func.}
@@ -226,7 +232,6 @@ proc ECP2_BLS381_set*(p: ptr ECP2_BLS381, x: ptr FP2_BLS381,
                       y: ptr FP2_BLS381): cint {.milagro_func.}
 proc ECP2_BLS381_rhs*(r: ptr FP2_BLS381, x: ptr FP2_BLS381) {.
      milagro_func.}
-proc ECP2_BLS381_dbl*(p: ptr ECP2_BLS381): cint {.milagro_func.}
 
 proc FP_BLS381_redc*(x: BIG_384, y: ptr FP_BLS381) {.milagro_func.}
 proc FP_BLS381_nres*(y: ptr FP_BLS381, x: BIG_384) {.milagro_func.}

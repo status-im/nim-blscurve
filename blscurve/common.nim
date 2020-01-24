@@ -12,6 +12,17 @@ import milagro
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
+var FrobeniusReal {.importc: "Fra_BLS381".}: BIG_384
+var FrobeniusIm {.importc: "Frb_BLS381".}: BIG_384
+let FrobeniusConst = block:
+  var result: FP2_BLS381
+  FP2_BLS381_from_BIGs(addr result, FrobeniusReal, FrobeniusIm)
+  # SEXTIC_TWIST_BLS381 = MType
+  FP2_BLS381_inv(addr result, addr result)
+  FP2_BLS381_norm(addr result)
+  result
+var CurveNegX* {.importc: "CURVE_Bnx_BLS381".}: BIG_384
+  ## Curve parameter, it is negative i.e. -x
 
 const
   AteBitsCount* = 65 ## ATE_BITS_BLS381 value
@@ -162,15 +173,29 @@ proc neg*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
   result = a
   FP2_BLS381_neg(addr result, unsafeAddr a)
 
-proc neg*(a: ECP2_BLS381): ECP2_BLS381 {.inline.} =
+proc neg*(a: var ECP2_BLS381) {.inline.} =
   ## Negates point ``a``. On exit a = -a.
+  ECP2_BLS381_neg(addr a)
+
+proc neg*(a: ECP2_BLS381): ECP2_BLS381 {.inline.} =
+  ## Negates point ``a``. On exit result = -a.
   result = a
   ECP2_BLS381_neg(addr result)
+
+proc sub*(P: var ECP2_BLS381, Q: ECP2_BLS381) {.inline.} =
+  ## In-place substract a point Q from P
+  discard ECP2_BLS381_sub(addr P, unsafeAddr Q)
 
 proc neg*(a: ECP_BLS381): ECP_BLS381 {.inline.} =
   ## Negates point ``a``. On exit a = -a.
   result = a
   ECP_BLS381_neg(addr result)
+
+func psi*(P: var ECP2_BLS381) {.inline.} =
+  ## Multiply a elliptic curve point by the frobenius constant
+  ## This is the "Psi: untwist-Frobenius-twist" operation
+  {.noSideEffect.}:
+    discard ECP2_BLS381_frob(addr P, unsafeAddr FrobeniusConst)
 
 proc inf*(a: var ECP_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.

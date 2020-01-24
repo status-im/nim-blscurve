@@ -340,7 +340,7 @@ func mapToCurveG2(u: FP2_BLS381): ECP2_BLS381 =
   # 3-isogeny map P'(x', y') to G2 with coordinate P(x, y)
   result = isogeny_map_G2(pointPrime.x, pointPrime.y)
 
-func clearCofactor(P: ECP2_BLS381): ECP2_BLS381 =
+func clearCofactor(P: var ECP2_BLS381) =
   ## From any point on the elliptic curve of G2 of BLS12-381
   ## Obtain a point in the G2 subgroup
   ##
@@ -353,29 +353,52 @@ func clearCofactor(P: ECP2_BLS381): ECP2_BLS381 =
   # - Fuentes-Castaneda et al, "Fast Hashing to G2 on Pairing-Friendly Curves", https://doi.org/10.1007/978-3-642-28496-0_25
   # - Budroni et al, "Hashing to G2 on BLS pairing-friendly curves", https://doi.org/10.1145/3313880.3313884
   # - Wahby et al "Fast and simple constant-time hashing to the BLS12-381 elliptic curve", https://eprint.iacr.org/2019/403
+  #
+  # In summary, the elliptic curve point multiplication is very expensive,
+  # the fast methods uses bigint operations instead.
 
-  # TODO: The method described in Wahby et al is implemented by Riad Wahby
-  #       in C at: https://github.com/kwantam/bls12-381_hash/blob/23c1930039f58606138459557677668fabc8ce39/src/curve2/ops2.c#L106-L204
+  # The method described in Wahby et al is implemented by Riad Wahby
+  # in C at: https://github.com/kwantam/bls12-381_hash/blob/23c1930039f58606138459557677668fabc8ce39/src/curve2/ops2.c#L106-L204
   # following Budroni et al, "Efficient hash maps to G2 on BLS curves"
   # https://eprint.iacr.org/2017/419
-  #
-  # While complex (100 LOC), the speed difference over elliptic multiplication is apparently significant.
-  # Explanation for future reference:
-  # - Psi (ψ) - untwist-Froebenius-Twist function
+  # Explanations for reference:
+  # - Psi (ψ) - untwist-Frobenius-Twist function
   # - Addition-chain: https://en.wikipedia.org/wiki/Addition_chain / https://en.wikipedia.org/wiki/Addition-chain_exponentiation
-
-  # Simple implementation
-  # TODO: need test vectors.
+  #
+  # Budroni's paper mention an implementation in Milagro of BLS G2 hashmaps.
+  # We reuse the relevant clearCofactor routines from ``ECP2_BLS381_mapit``
+  # In Milagro terms: "Q -> x2Q -xQ -Q +F(xQ -Q) +F(F(2Q))"
+  #
+  # We use the notation from Riad Wahby
+  # "P -> (x^2 - x - 1) P + (x - 1) psi(P) + psi(psi(2P))"
+  #
+  # with:
+  # - P     (Wahby), Q   (Milagro) being the input point
+  # - psi() (Wahby), F() (Milagro) being the untwist-Frobenius-twist mapping
+  #
+  # Note: CurveNegX = -x
   {.noSideEffect.}:
-    let hEff {.global.} = block:
-      # Effective cofactor - global to compute only once
-      var hEff: BIG_384
-      discard hEff.fromHex("0x0bc69f08f2ee75b3584c6a0ea91b352888e2a8e9145ad7689986ff031508ffe1329c2f178731db956d82bf015d1212b02ec0ec69d7477c1ae954cbc06689f6a359894c0adebbf6b4e8020005aaa95551")
-      hEff
+    var xP = P         # xP = P
+    xP.mul(CurveNegX)  # xP = -x P
+    var x2P = xP       # x2P = -x P
+    x2P.mul(CurveNegX) # x2P = x²P
 
-  result = P
-  {.noSideEffect.}:
-    result.mul(hEff)
+    neg(xP)            # xP = x P
+
+    x2P.sub(xP)        # x2P = (x² - x) P
+    x2P.sub(P)         # x2P = (x² - x - 1) P
+
+    xP.sub(P)          # xP = (x - 1) P
+    xP.psi()           # xP = (x - 1) psi(P)
+
+    P.double()         # P = 2 P
+    P.psi()            # P = psi(2P)
+    P.psi()            # P = psi(psi(2P))
+
+    P.add(x2P)         # P = (x² - x - 1) P + psi(psi(2P))
+    P.add(xP)          # P = (x² - x - 1) P + (x - 1) psi(P) + psi(psi(2P))
+
+  P.affine()           # Convert from Jacobian coordinate (x, y, z) to affine (x, y, 1)
 
 func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
@@ -393,13 +416,12 @@ func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
 
     u0 = hashToBaseFP2(ctx, pmsg, msgLen, ctr = 0, pdst, dstLen)
     u1 = hashToBaseFP2(ctx, pmsg, msgLen, ctr = 1, pdst, dstLen)
-    Q0 = mapToCurveG2(u0)
-    Q1 = mapToCurveG2(u1)
 
-  var R = Q0
-  R.add(Q1)
+  result = mapToCurveG2(u0)
+  let Q1 = mapToCurveG2(u1)
 
-  result = clearCofactor(R)
+  result.add(Q1)
+  result.clearCofactor()
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
@@ -487,10 +509,10 @@ when isMainModule:
       echo "R: "
       displayECP2Coord(R)
 
-      let P = clearCofactor(R)
+      clearCofactor(R)
       echo "-----------------------------------"
       echo "P: "
-      displayECP2Coord(P)
+      displayECP2Coord(R)
 
 
     `test _ id`()
