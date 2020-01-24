@@ -176,7 +176,7 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
       A {.global.} = toFP2(   0,  240)   # A' = 240 * I
       B {.global.} = toFP2(1012, 1012)   # B' = 1012 * (1+I)
       Z {.global.} = neg toFP2(2, 1)     # Z  = -(2+I)
-      c1 {.global.} = neg mul(B, inv(A)) # -B/A -- TODO: can we compute that as -(B * 1/A)
+      c1 {.global.} = neg mul(B, inv(A)) # -B/A
       c2 {.global.} = neg inv(Z)         # -1/Z
 
     var one {.global.} = block:
@@ -308,7 +308,7 @@ func isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
                ).add(
                  k30
                )
-    # yDen = x'³ + k(4,2) * x'2 + k(4,1) * x' + k(4,0)
+    # yDen = x'³ + k(4,2) * x'² + k(4,1) * x' + k(4,0)
     let yDen = (
                  xp3
                ).add(
