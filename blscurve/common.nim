@@ -576,6 +576,18 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
     res[0] = res[0] + cast[Chunk](a[i])
   result = true
 
+proc fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
+  ## Unserialize double big integer from ``a`` to ``res``.
+  ## Length of ``a`` must be at least ``2*MODBYTES_384_29``.
+
+  # TODO: there is no length check in Milagro BIG_384_29_dfromBytesLen
+  #       is that normal?
+
+  for rawByte in a:
+    BIG_384_dshl(res, 8)
+    res[0] = res[0] + cast[Chunk](rawByte)
+  result = true
+
 proc fromHex*(res: var BIG_384, a: string): bool {.inline.} =
   ## Unserialize big integer from hexadecimal string ``a`` to ``res``.
   ##

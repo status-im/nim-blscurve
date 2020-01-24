@@ -28,8 +28,6 @@ import
   # Internal
   ./milagro, ./hkdf, ./common
 
-import stew/byteutils # Only for toHex debugging
-
 func hashToBaseFP2[T](
                    ctx: var HMAC[T],
                    msg: ptr byte, msgLen: uint,
@@ -93,19 +91,24 @@ func hashToBaseFP2[T](
   info[2] = ord'C'
   info[3] = byte(ctr)
 
+
   template loopIter(ei: untyped, i: range[1..m]): untyped {.dirty.} =
     ## for i in 1 .. m
     ## with m = 2 (extension degree of FP2)
     info[4] = byte(i)
     hkdfExpand(ctx, mprime, info[0].addr, info.len.uint, t[0].addr, t.len.uint)
-    debugecho "t: ", t.toHex()
-    discard fromBytes(ei, t)
+
+    block: # HKDF output is greater than 384-bit (64 bytes = 512-bit)
+           # and need to be stored and reduced in a DBIG
+      var d_ei: DBIG_384
+      discard d_ei.fromBytes(t)
+      {.noSideEffect.}:
+        BIG_384_dmod(ei, d_ei, FIELD_Modulus)
 
   loopIter(e1, 1)
   loopIter(e2, 2)
 
-  result.fromBigs(e1, e2) # TODO this step is buggy.
-  debugecho "hashToBaseFP2: ", result
+  result.fromBigs(e1, e2)
 
 func toFP2(x, y: uint64): FP2_BLS381 =
   ## Convert a complex tuple x + iy to FP2
@@ -464,20 +467,20 @@ when isMainModule:
 
     `test _ id`()
 
-  # block: # hashToBaseFP2
-  #   testHashToBaseFP2 1:
-  #     let
-  #       msg = "msg"
-  #       ctr = 0'i8
-  #       dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+  block: # hashToBaseFP2
+    testHashToBaseFP2 1:
+      let
+        msg = "msg"
+        ctr = 0'i8
+        dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
-  #     # Expected output after hkdfExpand
-  #     let t = [
-  #       "0x3852c6c62ecd4e04360c24e8ddeac03661b07575a60d6fb7b0a90ce0bb7c7667624fbeea77777e52099dd43356e03192b3d4d27264fd09d0afadda24f48b6f2c",
-  #       "0x099695b4dc8d5dbebc73a9856cc859a3e5317e9a9e0459ee8fc03646bdcfe30125aa434dda228311f25d8c227d5eee289dd6a50897c08397565bc826c5c4113d"
-  #     ]
+      # Expected output after hkdfExpand
+      let t = [
+        "0x3852c6c62ecd4e04360c24e8ddeac03661b07575a60d6fb7b0a90ce0bb7c7667624fbeea77777e52099dd43356e03192b3d4d27264fd09d0afadda24f48b6f2c",
+        "0x099695b4dc8d5dbebc73a9856cc859a3e5317e9a9e0459ee8fc03646bdcfe30125aa434dda228311f25d8c227d5eee289dd6a50897c08397565bc826c5c4113d"
+      ]
 
-  #     # TODO: doAssert the FP2
+      # TODO: doAssert the FP2
 
   # Test vectors for mapToCurveG2
   # ----------------------------------------------------------------------
@@ -557,18 +560,18 @@ when isMainModule:
 
     `test _ id`()
 
-  # block: # hashToBaseFP2
-  #   testHashToG2 1:
-  #     let
-  #       msg = "msg"
-  #       dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+  block: # hashToBaseFP2
+    testHashToG2 1:
+      let
+        msg = "msg"
+        dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
-  #     # Expected output
-  #     let point = (
-  #       # x
-  #       ["0x7896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
-  #        "0xbd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0"],
-  #       # y
-  #       ["0x1bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
-  #        "18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"]
-  #     )
+      # Expected output
+      let point = (
+        # x
+        ["0x7896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
+         "0xbd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0"],
+        # y
+        ["0x1bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
+         "18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"]
+      )
