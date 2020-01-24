@@ -28,6 +28,8 @@ import
   # Internal
   ./milagro, ./hkdf, ./common
 
+import stew/byteutils # Only for toHex debugging
+
 func hashToBaseFP2[T](
                    ctx: var HMAC[T],
                    msg: ptr byte, msgLen: uint,
@@ -96,17 +98,14 @@ func hashToBaseFP2[T](
     ## with m = 2 (extension degree of FP2)
     info[4] = byte(i)
     hkdfExpand(ctx, mprime, info[0].addr, info.len.uint, t[0].addr, t.len.uint)
-    # debugecho "t: ", t.toHex()
+    debugecho "t: ", t.toHex()
     discard fromBytes(ei, t)
-    # TODO: is field element normalization needed?
-    #       internally fromBigs calls
-    #       FP_BLS381_nres to convert
-    #       to "residue form mod Modulus"
 
   loopIter(e1, 1)
   loopIter(e2, 2)
 
-  result.fromBigs(e1, e2)
+  result.fromBigs(e1, e2) # TODO this step is buggy.
+  debugecho "hashToBaseFP2: ", result
 
 func toFP2(x, y: uint64): FP2_BLS381 =
   ## Convert a complex tuple x + iy to FP2
@@ -317,7 +316,6 @@ func isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
                  k40
                )
 
-  # TODO - can we divide by multiplying by the inverse
   let x = xNum.mul inv(xDen)
   let y = yp.mul yNum.mul inv(yDen)
 
@@ -389,7 +387,7 @@ func clearCofactor(P: var ECP2_BLS381) =
     x2P.sub(P)         # x2P = (x² - x - 1) P
 
     xP.sub(P)          # xP = (x - 1) P
-    xP.psi()           # xP = (x - 1) psi(P)
+    xP.psi()           # xP = (x - 1) psi(P) <=> psi(xP - P)
 
     P.double()         # P = 2 P
     P.psi()            # P = psi(2P)
@@ -398,7 +396,7 @@ func clearCofactor(P: var ECP2_BLS381) =
     P.add(x2P)         # P = (x² - x - 1) P + psi(psi(2P))
     P.add(xP)          # P = (x² - x - 1) P + (x - 1) psi(P) + psi(psi(2P))
 
-  P.affine()           # Convert from Jacobian coordinate (x, y, z) to affine (x, y, 1)
+  P.affine()           # Convert from Jacobian coordinates (x', y', z') to affine (x, y, 1); (x is not the curve parameter here)
 
 func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
@@ -432,8 +430,10 @@ when isMainModule:
   proc hexToBytes(s: string): seq[byte] =
     if s.len != 0: return hexToSeqByte(s)
 
-  proc displayECP2Coord(point: ECP2_BLS381) =
-    echo "In jacobian projective coordinate (x, y, z)"
+  proc displayECP2Coord(name: string, point: ECP2_BLS381) =
+    echo "-------------------------------------------"
+    echo "Point ", name, ':'
+    echo "In jacobian projective coordinates (x, y, z)"
     echo point
     echo "In affine coordinate (x, y)"
     var x, y: FP2_BLS381
@@ -492,33 +492,20 @@ when isMainModule:
       let u0 = hexToFP2(u0x, u0y)
       let u1 = hexToFP2(u1x, u1y)
 
-      echo "-----------------------------------"
-      echo "u0: ", u0
-      echo "u1: ", u1
-
       let q0 = mapToCurveG2(u0)
       let q1 = mapToCurveG2(u1)
 
-      echo "-----------------------------------"
-      echo "q0: ", q0
-      echo "q1: ", q1
+      var P = q0
+      P.add(q1)
 
-      var R = q0
-      R.add(q1)
-      echo "-----------------------------------"
-      echo "R: "
-      displayECP2Coord(R)
-
-      clearCofactor(R)
-      echo "-----------------------------------"
-      echo "P: "
-      displayECP2Coord(R)
+      P.clearCofactor()
+      displayECP2Coord("P", P)
 
 
     `test _ id`()
 
   block: # hashToBaseFP2
-    testMapToCurveG2 1:
+    testMapToCurveG2 MilagroRust_1:
       let
         u0x = "0x004ad233c619209060e40059b81e4c1f92796b05aa1bc6358d65e53dc0d657dfbc713d4030b0b6d9234a6634fd1944e7"
         u0y = "0x0e2386c82713441bc3b06a460bd81850f4bf376ea89c80b18c0881e855c58dc8e83b2fd23af983f4786508e30c42af01"
@@ -537,6 +524,24 @@ when isMainModule:
 
       # TODO: doAssert the FP2
 
+    testMapToCurveG2 PyECC_1:
+      # from hash_to_base_FP2("msg")
+      let
+        u0x = "0x18df4dc51885b18ca0082a4966b0def46287930b8f1c0b673b11ac48d19c8899bc150d83fd3a7a1430b0de541742c1d4"
+        u0y = "0x14eef8ca34b82d065d187a3904cb313dbb44558917cc5091574d9999b5ecfdd5af2fa3aea6e02fb253bf4ae670e72d55"
+        u1x = "0x14c81e3d32a930af141ff28f337e375bd7f2b35d006b2f6ba9a4c9eed7937e2b20d8b251fef776b0d497859510c9fad7"
+        u1y = "0x05764cf5fe69554b971c5fe77eb3f3f9b89534547335b84ff02cd3d613bcd5e3037005b9226011a61a70b5bd0f0db570"
+
+      # Expected ECP2 (x, y: FP2) affine coordinates
+      let ecp = [
+        # x
+        "0x7896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
+        "0xbd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0",
+        # y
+        "0x1bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
+        "0x18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"
+      ]
+
   # Test vectors for hashToG2
   # ----------------------------------------------------------------------
   # TODO, move to tests/ folder
@@ -548,12 +553,7 @@ when isMainModule:
       constants
 
       let pointG2 = hashToG2(msg, dst)
-      echo "In projective coordinate (x, y, z)"
-      echo pointG2
-      echo "In Affine coordinate (x, y)"
-      var x, y: FP2_BLS381
-      discard ECP2_BLS381_get(x.addr, y.addr, pointG2.unsafeAddr)
-      echo "(", $x, ", ", $y, ")"
+      displayECP2Coord("PointG2", pointG2)
 
     `test _ id`()
 
