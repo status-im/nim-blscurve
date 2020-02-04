@@ -17,8 +17,5 @@ proc test(path: string, lang = "c") =
 
 ### tasks
 task test, "Run all tests":
-  # Private prerequisites/primitives
-  test "blscurve/hkdf.nim"
-
   # Public BLS API
   test "tests/all_tests.nim"

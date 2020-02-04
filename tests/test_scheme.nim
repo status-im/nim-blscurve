@@ -20,7 +20,7 @@ const messages = [
 const
   domain = 0'u64
 
-suite "BLS381-12 test suite (public interface)":
+suite "[Before IETF standard] BLS381-12 test suite (public interface)":
 
   test "Simple successful sign/verification tests":
     var kp = KeyPair.random()

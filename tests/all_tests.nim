@@ -6,4 +6,7 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import test_scheme, test_vectors
+import
+  test_scheme,  # Before IETF standardization
+  test_vectors, # Eth2 v0.9.x API
+  ietf_hash_to_curve

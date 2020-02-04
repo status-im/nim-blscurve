@@ -200,7 +200,7 @@ proc readCase07Vector(file: File, vector: var Case07Vector): bool =
   vector.apublickey = align(fromHex(m[3]), MODBYTES_384)
   result = true
 
-suite "Ethereum2 specification BLS381-12 test vectors suite":
+suite "[v0.9.x] Ethereum2 specification BLS381-12 test vectors suite":
 
   test "case01_message_hash_G2_uncompressed":
     var f = openVectorFile("case01_message_hash_G2_uncompressed.dat")

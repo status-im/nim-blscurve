@@ -83,7 +83,7 @@ func hashToBaseFP2[T](
   # it REQUIRES allocation in a buffer
   # with an extra null-byte beyond the declared length.
   assert not msg.isNil
-  assert cast[ptr UncheckedArray[byte]](msg)[msgLen+1] == 0x00
+  assert cast[ptr UncheckedArray[byte]](msg)[msgLen] == 0x00, "Expected message terminated by nul-byte but found " & $cast[ptr UncheckedArray[byte]](msg)[msgLen] & " (decimal value)"
   hkdfExtract(ctx, mprime, domainSepTag, domainSepTagLen, msg, msgLen+1)
 
   info[0] = ord'H'
