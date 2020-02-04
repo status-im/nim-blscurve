@@ -118,6 +118,7 @@ steps:
       echo "PATH=${PATH}"
       gcc -v
       echo "UCPU=${UCPU}"
+      export ucpu=${UCPU}
 
       if [ "${CHANNEL}" = stable ]; then
         BRANCH="v$(curl https://nim-lang.org/channels/stable)"
@@ -132,7 +133,7 @@ steps:
         git clone --depth 1 https://github.com/nim-lang/csources csources/
         pushd csources
 
-        make -j $ncpu ucpu=${UCPU} CC=gcc
+        make -j $ncpu CC=gcc
         popd
         rm -rf csources
         bin/nim c koch
