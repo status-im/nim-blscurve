@@ -82,23 +82,22 @@ suite "IETF Hash-to-Curve G2 BLS12-381":
         )
       )
 
-  # TODO: empty strings hashing
-  # test "Py-ECC #3 ''":
-  #   testHashToG2:
-  #     let msg = ""
-  #
-  #     let ecp = toECP2(
-  #       x = hexToFP2(
-  #         # x = x' + iy'
-  #         x = "0x0c38e18c9ca92ad387cbfa0e9bd62e53e4f938006097a092d5e9f2c6f3963d78969e7631bf8d6a8a9aad36bc82d763c1",
-  #         y = "0x023ebc431b239ee7606aad7cd4eee60bb70df3e5072ede86946ffaddb0584e1fcfcee9484869f41e09ab4d64b9e4a72a"
-  #       ),
-  #       y = hexToFP2(
-  #         # y = x'' + iy''
-  #         x = "0x0735ae5ca4a2320d820e15501ee79c42ff58a6f40e8549eada554e07c94b34b6634b6034f8735a7e4ac01db81b00f58e",
-  #         y = "0x1687b6a2fb9e542426d508d4a58846c0e3496ede2e12f57f3358110874ba0011e2107e0742eeb6707682d5ddf319b6f6"
-  #       )
-  #     )
+  test "Py-ECC #3 ''":
+    testHashToG2:
+      let msg = ""
+
+      let ecp = toECP2(
+        x = hexToFP2(
+          # x = x' + iy'
+          x = "0x0c38e18c9ca92ad387cbfa0e9bd62e53e4f938006097a092d5e9f2c6f3963d78969e7631bf8d6a8a9aad36bc82d763c1",
+          y = "0x023ebc431b239ee7606aad7cd4eee60bb70df3e5072ede86946ffaddb0584e1fcfcee9484869f41e09ab4d64b9e4a72a"
+        ),
+        y = hexToFP2(
+          # y = x'' + iy''
+          x = "0x0735ae5ca4a2320d820e15501ee79c42ff58a6f40e8549eada554e07c94b34b6634b6034f8735a7e4ac01db81b00f58e",
+          y = "0x1687b6a2fb9e542426d508d4a58846c0e3496ede2e12f57f3358110874ba0011e2107e0742eeb6707682d5ddf319b6f6"
+        )
+      )
 
   test "Py-ECC #4 b'abcdefghijklmnopqrstuvwxyz'":
     testHashToG2:
