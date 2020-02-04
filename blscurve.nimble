@@ -17,5 +17,9 @@ proc test(path: string, lang = "c") =
 
 ### tasks
 task test, "Run all tests":
+  # Debug - test intermediate computations
+  exec "nim c -r --hints:off --warnings:off --outdir:build blscurve/hkdf.nim"
+  exec "nim c -r --hints:off --warnings:off --outdir:build blscurve/hash_to_curve.nim"
+
   # Public BLS API
   test "tests/all_tests.nim"
