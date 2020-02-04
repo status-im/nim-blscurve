@@ -10,13 +10,11 @@ requires "nim >= 0.19.6",
          "stew"
 
 ### Helper functions
-proc test(name: string, defaultLang = "c") =
+proc test(path: string, lang = "c") =
   if not dirExists "build":
     mkDir "build"
-  --run
-  switch("out", ("./build/" & name))
-  setCommand defaultLang, "tests/" & name & ".nim"
+  exec "nim " & lang & " --outdir:build -r " & path
 
 ### tasks
 task test, "Run all tests":
-  test "all_tests"
+  test "tests/all_tests.nim"
