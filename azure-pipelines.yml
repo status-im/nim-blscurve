@@ -87,6 +87,10 @@ steps:
       mkdir -p /c/custom
       mv "$MINGW_DIR" /c/custom/
       popd
+      # Workaround https://developercommunity.visualstudio.com/content/problem/891929/windows-2019-cygheap-base-mismatch-detected-git-ba.html
+      echo "##vso[task.prependpath]/usr/bin"
+      echo "##vso[task.prependpath]/mingw64/bin"
+      # export custom mingw PATH to other tasks
       echo "##vso[task.prependpath]/c/custom/${MINGW_DIR}/bin"
     displayName: 'Install dependencies (Windows)'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
