@@ -116,6 +116,8 @@ steps:
 
   - bash: |
       echo "PATH=${PATH}"
+      gcc -v
+
       if [ "${CHANNEL}" = stable ]; then
         BRANCH="v$(curl https://nim-lang.org/channels/stable)"
       else
@@ -129,7 +131,7 @@ steps:
         git clone --depth 1 https://github.com/nim-lang/csources csources/
         pushd csources
 
-        make -j $ncpu CC=gcc
+        make -j $ncpu ucpu=${ucpu} CC=gcc
         popd
         rm -rf csources
         bin/nim c koch
