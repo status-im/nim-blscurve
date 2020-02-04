@@ -4,7 +4,7 @@ This document extracts part of the draft standard for hash-to-G2 implementation
 for the BLS12-381 pairing-friendly elliptic curve.
 
 Hash to Elliptic curve implementation for BLS12-381.
-- IETF Standard Draft: https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-04
+- IETF Standard Draft: https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
   - Formatted HTML version: https://cfrg.github.io/draft-irtf-cfrg-hash-to-curve/draft-irtf-cfrg-hash-to-curve.html
 - IETF Implementation: https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve
   - The following can be used as a test vector generator:

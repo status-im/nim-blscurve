@@ -8,7 +8,7 @@
 # those terms.
 
 # Hash to Elliptic curve implementation for BLS12-381.
-# - IETF Standard Draft: https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-04
+# - IETF Standard Draft: https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
 #   - Algorithm description in section 8.7
 #   - This includes a specific appendix for BLS12-381 (Appendix C)
 # - IETF Implementation: https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve
@@ -572,34 +572,3 @@ when isMainModule:
           y = "0x18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"
         )
       )
-
-  # # Test vectors for hashToG2
-  # # ----------------------------------------------------------------------
-  # # TODO, move to tests/ folder
-
-  # template testHashToG2(id, constants: untyped) =
-  #   # https://github.com/mratsim/py_ecc/pull/1
-  #   proc `test _ id`() =
-  #     # We create a proc to avoid allocating too much globals.
-  #     constants
-
-  #     let pointG2 = hashToG2(msg, dst)
-  #     displayECP2Coord("PointG2", pointG2)
-
-  #   `test _ id`()
-
-  # block: # hashToBaseFP2
-  #   testHashToG2 1:
-  #     let
-  #       msg = "msg"
-  #       dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-
-  #     # Expected output
-  #     let point = (
-  #       # x
-  #       ["0x7896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
-  #        "0xbd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0"],
-  #       # y
-  #       ["0x1bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
-  #        "18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"]
-  #     )
