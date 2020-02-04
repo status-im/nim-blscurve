@@ -117,6 +117,7 @@ steps:
   - bash: |
       echo "PATH=${PATH}"
       gcc -v
+      echo "ucpu: $ucpu"
 
       if [ "${CHANNEL}" = stable ]; then
         BRANCH="v$(curl https://nim-lang.org/channels/stable)"
