@@ -132,7 +132,7 @@ steps:
         git clone --depth 1 https://github.com/nim-lang/csources csources/
         pushd csources
 
-        make -j $ncpu UCPU=${UCPU} CC=gcc
+        make -j $ncpu ucpu=${UCPU} CC=gcc
         popd
         rm -rf csources
         bin/nim c koch
