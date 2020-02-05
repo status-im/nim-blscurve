@@ -545,8 +545,9 @@ when isMainModule:
       var P = q0
       P.add(q1)
 
+      displayECP2Coord("P (before clearCofactor)", P)
       P.clearCofactor()
-      # displayECP2Coord("P", P)
+      displayECP2Coord("P (after clearCofactor)", P)
 
       doAssert P == ecp
       echo "Success mapToCurveG2 ", astToStr(id)
