@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/status-im/nim-blscurve.svg?branch=master)](https://travis-ci.org/status-im/nim-blscurve)
 [![Build status](https://ci.appveyor.com/api/projects/status/6l1il60ljfbtxw3g/branch/master?svg=true)](https://ci.appveyor.com/project/nimbus/nim-blscurve/branch/master)
-[![Build Status: Azure](https://img.shields.io/azure-devops/build/nimbus-dev/0c305144-232d-4f3e-ba77-93e4e81182da/4/master?label=Azure%20%28Linux%2032-bit%2F64-bit%2C%20Windows%2032-bit%2F64-bit%2C%20MacOS%2064-bit%29)](https://dev.azure.com/nimbus-dev/nim-blscurve/_build?definitionId=4&branchName=master)
+[![Build Status: Azure](https://img.shields.io/azure-devops/build/nimbus-dev/0c305144-232d-4f3e-ba77-93e4e81182da/4/master?label=Azure%20%28Linux%2064-bit%2C%20Windows%2032-bit%2F64-bit%2C%20MacOS%2064-bit%29)](https://dev.azure.com/nimbus-dev/nim-blscurve/_build?definitionId=4&branchName=master)
 
 
 This library uses sources from [AMCL](https://github.com/apache/incubator-milagro-crypto-c).
