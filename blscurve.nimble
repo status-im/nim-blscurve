@@ -5,7 +5,7 @@ description   = "BLS381-12 Curve implementation"
 license       = "Apache License 2.0"
 
 ### Dependencies
-requires "nim >= 0.19.6",
+requires "nim >= 1.0.4",
          "nimcrypto",
          "stew"
 
@@ -13,8 +13,13 @@ requires "nim >= 0.19.6",
 proc test(path: string, lang = "c") =
   if not dirExists "build":
     mkDir "build"
-  exec "nim " & lang & " --outdir:build -r " & path
+  exec "nim " & lang & " --outdir:build -r --hints:off --warnings:off " & path
 
 ### tasks
 task test, "Run all tests":
+  # Debug - test intermediate computations
+  test "blscurve/hkdf.nim"
+  test "blscurve/hash_to_curve.nim"
+
+  # Public BLS API
   test "tests/all_tests.nim"

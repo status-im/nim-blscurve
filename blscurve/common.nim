@@ -12,6 +12,17 @@ import milagro
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
+var FrobeniusReal {.importc: "Fra_BLS381".}: BIG_384
+var FrobeniusIm {.importc: "Frb_BLS381".}: BIG_384
+let FrobeniusConst = block:
+  var result: FP2_BLS381
+  FP2_BLS381_from_BIGs(addr result, FrobeniusReal, FrobeniusIm)
+  # SEXTIC_TWIST_BLS381 = MType
+  FP2_BLS381_inv(addr result, addr result)
+  FP2_BLS381_norm(addr result)
+  result
+var CurveNegX* {.importc: "CURVE_Bnx_BLS381".}: BIG_384
+  ## Curve parameter, it is negative i.e. -x
 
 const
   AteBitsCount* = 65 ## ATE_BITS_BLS381 value
@@ -82,6 +93,14 @@ proc add*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
   ## Returns ``x + y``.
   FP2_BLS381_add(addr result, unsafeAddr x, unsafeAddr y)
 
+proc sub*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+  ## Set ``dst`` to ``x - y``.
+  FP2_BLS381_sub(addr dst, unsafeAddr x, unsafeAddr y)
+
+proc sub*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns ``x - y``.
+  FP2_BLS381_sub(addr result, unsafeAddr x, unsafeAddr y)
+
 proc shiftr*(a: var BIG_384, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
   BIG_384_shr(a, cint(bits))
@@ -102,6 +121,20 @@ proc norm*(a: var FP2_BLS381) {.inline.} =
 proc sqr*(x: FP2_BLS381): FP2_BLS381 {.inline.} =
   ## Retruns ``x ^ 2``.
   FP2_BLS381_sqr(addr result, unsafeAddr x)
+
+proc sqrt*(a: var FP2_BLS381, b: FP2_BLS381): bool {.inline.} =
+  ## ``a ≡ sqrt(b) (mod q)``
+  ## Returns true if b is a quadratic residue
+  ## (i.e. congruent to a perfect square mod q)
+  return bool FP2_BLS381_sqrt(addr a, unsafeAddr b)
+
+proc sqrt*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## ``result ≡ sqrt(a) (mod q)``
+  discard FP2_BLS381_sqrt(addr result, unsafeAddr a)
+
+proc pow*(a: FP2_BLS381, b: BIG_384): FP2_BLS381 {.inline.} =
+  ## Compute ``result = a^b (mod q)``
+  FP2_BLS381_pow(addr result, unsafeAddr a, b)
 
 proc nres*(a: BIG_384): FP_BLS381 {.inline.} =
   ## Convert big integer value to residue form mod Modulus.
@@ -140,15 +173,29 @@ proc neg*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
   result = a
   FP2_BLS381_neg(addr result, unsafeAddr a)
 
-proc neg*(a: ECP2_BLS381): ECP2_BLS381 {.inline.} =
+proc neg*(a: var ECP2_BLS381) {.inline.} =
   ## Negates point ``a``. On exit a = -a.
+  ECP2_BLS381_neg(addr a)
+
+proc neg*(a: ECP2_BLS381): ECP2_BLS381 {.inline.} =
+  ## Negates point ``a``. On exit result = -a.
   result = a
   ECP2_BLS381_neg(addr result)
+
+proc sub*(P: var ECP2_BLS381, Q: ECP2_BLS381) {.inline.} =
+  ## In-place substract a point Q from P
+  discard ECP2_BLS381_sub(addr P, unsafeAddr Q)
 
 proc neg*(a: ECP_BLS381): ECP_BLS381 {.inline.} =
   ## Negates point ``a``. On exit a = -a.
   result = a
   ECP_BLS381_neg(addr result)
+
+func psi*(P: var ECP2_BLS381) {.inline.} =
+  ## Multiply a elliptic curve point by the frobenius constant
+  ## This is the "Psi: untwist-Frobenius-twist" operation
+  {.noSideEffect.}:
+    discard ECP2_BLS381_frob(addr P, unsafeAddr FrobeniusConst)
 
 proc inf*(a: var ECP_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.
@@ -164,6 +211,11 @@ proc isinf*(a: ECP2_BLS381): bool {.inline.} =
   var tmp = a
   result = (ECP2_BLS381_isinf(addr tmp) != 0)
 
+proc inv*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns the reciprocal copy of ``a``
+  ## ``result = 1/a``
+  FP2_BLS381_inv(addr result, unsafeAddr a)
+
 proc rhs*(x: FP2_BLS381): FP2_BLS381 {.inline.} =
   ## Returns ``x ^ 3 + b``.
   ECP2_BLS381_rhs(addr result, unsafeAddr x)
@@ -171,6 +223,21 @@ proc rhs*(x: FP2_BLS381): FP2_BLS381 {.inline.} =
 proc iszilch*(a: FP2_BLS381): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
   result = (FP2_BLS381_iszilch(unsafeAddr a) == 1)
+
+proc cmov*(a: var FP2_BLS381, b: FP2_BLS381, c: bool) {.inline.} =
+  ## Conditional copy of FP2 element (without branching)
+  ## if c: a = b
+  ## if not c: a is unchanged
+  ## This is a constant time operation
+  FP2_BLS381_cmove(addr a, unsafeAddr b, cint(c))
+
+proc cmov*(a: FP2_BLS381, b: FP2_BLS381, c: bool): FP2_BLS381 {.inline.} =
+  ## Conditional copy of FP2 element (without branching)
+  ## if c: result = b
+  ## if not c: result = a
+  ## This is a constant time operation
+  result = a
+  FP2_BLS381_cmove(addr result, unsafeAddr b, cint(c))
 
 proc parity*(a: FP2_BLS381): int {.inline.} =
   ## Returns parity for ``a``.
@@ -213,6 +280,14 @@ proc add*(a: var ECP_BLS381, b: ECP_BLS381) {.inline.} =
   ## Add point ``b`` to point ``a``.
   ECP_BLS381_add(addr a, unsafeAddr b)
 
+proc mul*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+  ## Set ``dst`` to ``x * y``.
+  FP2_BLS381_mul(addr dst, unsafeAddr x, unsafeAddr y)
+
+proc mul*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns ``x * y``.
+  FP2_BLS381_mul(addr result, unsafeAddr x, unsafeAddr y)
+
 proc mul*(a: var ECP2_BLS381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
   ECP2_BLS381_mul(addr a, b)
@@ -220,6 +295,10 @@ proc mul*(a: var ECP2_BLS381, b: BIG_384) {.inline.} =
 proc mul*(a: var ECP_BLS381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
   ECP_BLS381_mul(addr a, b)
+
+proc div2*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+  ## Returns ``a div 2``
+  FP2_BLS381_div2(addr result, unsafeAddr a)
 
 proc get*(a: ECP2_BLS381, x, y: var FP2_BLS381): int {.inline.} =
   ## Get coordinates ``x`` and ``y`` from point ``a``.
@@ -495,6 +574,18 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
   for i in 0..<length:
     discard BIG_384_fshl(res, 8)
     res[0] = res[0] + cast[Chunk](a[i])
+  result = true
+
+proc fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
+  ## Unserialize double big integer from ``a`` to ``res``.
+  ## Length of ``a`` must be at least ``2*MODBYTES_384_29``.
+
+  # TODO: there is no length check in Milagro BIG_384_29_dfromBytesLen
+  #       is that normal?
+
+  for rawByte in a:
+    BIG_384_dshl(res, 8)
+    res[0] = res[0] + cast[Chunk](rawByte)
   result = true
 
 proc fromHex*(res: var BIG_384, a: string): bool {.inline.} =
