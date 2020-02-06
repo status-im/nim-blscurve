@@ -276,48 +276,51 @@ func isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
       "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaa99"
     )
 
-  let xp2 = sqr(xp)
-  let xp3 = mul(xp, xp2)
+  var xp2 = sqr(xp)
+  norm(xp2)
+  var xp3 = mul(xp, xp2)
+  norm(xp3)
+
   {.noSideEffect.}: # TODO overload `+` and `*` for readability
     # xNum = k(1,3) * x'³ + k(1,2) * x'² + k(1,1) * x' + k(1,0)
-    let xNum = (
-                 k13.mul(xp3)
-               ).add(
-                 k12.mul(xp2)
-               ).add(
-                 k11.mul(xp)
-               ).add(
-                 k10
-               )
+    let xNum = block:
+      var xNum = k13.mul(xp3)
+      norm(xNum)
+      xNum.add xNum, k12.mul(xp2)
+      norm(xNum)
+      xNum.add xNum, k11.mul(xp)
+      norm(xNum)
+      xNum.add xNum, k10
+      xNum
+
     # xDen = x'² + k(2,1) * x' + k(2,0)
-    let xDen = (
-                 xp2
-               ).add(
-                 k21.mul(xp)
-               ).add(
-                 k20
-               )
+    let xDen = block:
+      var xDen = xp2
+      xDen.add xDen, k21.mul(xp)
+      norm(xDen)
+      xDen.add xDen, k20
+      xDen
 
     # yNum = k(3,3) * x'³ + k(3,2) * x'² + k(3,1) * x' + k(3,0)
-    let yNum = (
-                 k33.mul(xp3)
-               ).add(
-                 k32.mul(xp2)
-               ).add(
-                 k31.mul(xp)
-               ).add(
-                 k30
-               )
+    let yNum = block:
+      var yNum = k33.mul(xp3)
+      norm(yNum)
+      yNum.add yNum, k32.mul(xp2)
+      norm(yNum)
+      yNum.add yNum, k31.mul(xp)
+      norm(yNum)
+      yNum.add yNum, k30
+      yNum
+
     # yDen = x'³ + k(4,2) * x'² + k(4,1) * x' + k(4,0)
-    let yDen = (
-                 xp3
-               ).add(
-                 k42.mul(xp2)
-               ).add(
-                 k41.mul(xp)
-               ).add(
-                 k40
-               )
+    let yDen = block:
+      var yDen = xp3
+      yDen.add yDen, k42.mul(xp2)
+      norm(yDen)
+      yDen.add yDen, k41.mul(xp)
+      norm(yDen)
+      yDen.add yDen, k40
+      yDen
 
   let x = xNum.mul inv(xDen)
   let y = yp.mul yNum.mul inv(yDen)
