@@ -8,6 +8,8 @@ This library implements:
 - The BLS signature scheme (Boneh-Lynn-Shacham)
 - over the BLS12-381 (Barreto-Lynn-Scott) pairing-friendly curve
 
+Cipher suite ID: BLS_SIG_BLS12381G2-SHA256-SSWU-RO-\_NUL\_
+
 ## Installation
 
 You can install the developement version of the library through nimble with the following command
