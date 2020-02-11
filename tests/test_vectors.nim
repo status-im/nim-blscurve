@@ -9,7 +9,7 @@
 import strutils except fromHex
 import os, unittest
 import nimcrypto/[sysrand, hash, sha2, utils]
-import ../blscurve/milagro, ../blscurve/bls, ../blscurve/common
+import ../blscurve/milagro, ../blscurve/bls_old_spec, ../blscurve/common
 
 type
   Case01Vector = object

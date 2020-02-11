@@ -6,5 +6,11 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import blscurve/[common, bls]
-export common, bls
+
+const BLS_USE_IETF_API {.booldefine.} = false
+
+when BLS_USE_IETF_API:
+  {.error: "IETF API is not implemented".}
+else:
+  import blscurve/bls_old_spec
+  export bls_old_spec
