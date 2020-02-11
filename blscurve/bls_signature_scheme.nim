@@ -26,7 +26,7 @@ import
   # third-party
   nimcrypto/[hmac, sha2],
   # internal
-  ./milagro, ./common, ./hkdf
+  ./milagro, ./common, ./hkdf, ./hash_to_curve
 
 # Public Types
 # ----------------------------------------------------------------------
@@ -59,6 +59,89 @@ type
   Signature* = object
     ## A digital signature of a message using the BLS (Boneh-Lynn-Shacham) signature scheme.
     point: GroupG2
+
+# Primitives
+# ----------------------------------------------------------------------
+func subgroupCheck(P: GroupG1 or GroupG2): bool =
+  ## Checks that a point `P`
+  ## is actually in the subgroup G1/G2 of the BLS Curve
+  var rP = P
+  rP.mul(CURVE_Order)
+  result = rP.isInf()
+
+# Core operations
+# ----------------------------------------------------------------------
+# Note: unlike the IETF standard, we stay in the curve domain
+#       instead of serializing/deserializing public keys and signatures
+#       from octet strings/byte arrays to/from G1 or G2 point repeatedly
+# Note: functions have the additional DomainSeparationTag defined
+#       in https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
+
+func coreSign[T: byte|char](
+       secretKey: SecretKey,
+       message: openarray[T],
+       domainSepTag: string): Signature =
+  # Spec
+  # 1. Q = hash_to_point(message)
+  # 2. R = SK * Q
+  # 3. signature = point_to_signature(R)
+  # 4. return signature
+  let Q = hashToG2(message, domainSepTag)
+  result.point = secretKey.point.mul(Q)
+
+func coreVerify[T: byte|char](
+       publicKey: PublicKey,
+       message: openarray[T],
+       signature: Signature,
+       domainSepTag: string): bool =
+  # Spec
+  # 1. R = signature_to_point(signature)
+  # 2. If R is INVALID, return INVALID
+  # 3. If signature_subgroup_check(R) is INVALID, return INVALID
+  # 4. xP = pubkey_to_point(PK)
+  # 5. Q = hash_to_point(message)
+  # 6. C1 = pairing(Q, xP)
+  # 7. C2 = pairing(R, P)
+  # 8. If C1 == C2, return VALID, else return INVALID
+  #
+  # Note for G2 (minimal-pubkey-size)
+  # pairing(U, V) := e(V, U)
+  # with e the optimal Ate pairing
+  #
+  # P is the generator for G1 or G2
+  # in this case G1 since e(G1, G2) -> GT
+  # and pairing(R, P) := e(P, R)
+
+  if not subgroupCheck(signature):
+    return false
+  let Q = hashToG2(message, domainSepTag)
+
+  # pairing(Q, xP) == pairing(R, P)
+  return multiPairing(
+           Q, publicKey,
+           signature, generator1()
+         )
+
+# Aggregate
+# ----------------------------------------------------------------------
+
+proc aggregate*(sig1: var Signature, sig2: Signature) =
+  ## Aggregates signature ``sig2`` into ``sig1``.
+  sig1.point.add(sig2.point)
+
+proc aggregate*(sig: var Signature, sigs: openarray[Signature]) =
+  ## Aggregates an array of signatures `sigs` into a signature `sig`
+  for s in sigs:
+    sig.point.add(s.point)
+
+proc aggregate*(sigs: openarray[Signature]): Signature =
+  ## Aggregates array of signatures ``sigs``
+  ## and return aggregated signature.
+  ##
+  ## Array ``sigs`` must not be empty!
+  doAssert(len(sigs) > 0)
+  result = sigs[0]
+  result.add sigs.toOpenArray(1, sigs.high)
 
 # Public API
 # ----------------------------------------------------------------------
