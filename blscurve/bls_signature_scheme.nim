@@ -64,6 +64,10 @@ type
     ## A separate public key in the Proof-of-Possession BLS signature variant scheme
     point: GroupG2
 
+func `==`*(a, b: SecretKey): bool {.error: "Comparing secret keys is not allowed".}
+  ## Disallow comparing secret keys. It would require constant-time comparison,
+  ## and it doesn't make sense anyway.
+
 # Primitives
 # ----------------------------------------------------------------------
 func subgroupCheck(P: GroupG1 or GroupG2): bool =
