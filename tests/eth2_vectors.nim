@@ -43,7 +43,10 @@ proc testSign() =
 
     var expectedSig: Signature
     doAssert expectedSig.fromHex(test["output"].getStr), "Couldn't parse the expected signature"
-    doAssert libSig == expectedSig, "Signature differs from expected"
+    doAssert libSig == expectedSig, block:
+      "\nSignature differs from expected \n" &
+      "   computed: " & libSig.toHex() & "\n" &
+      "   expected: " & expectedSig.toHex()
   doAssert count > 0, "Empty test folder"
 
 suite "ETH 2.0 v0.10.1 test vectors":

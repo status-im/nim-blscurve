@@ -561,7 +561,7 @@ proc toHex*(a: BIG_384): string {.inline.} =
   ## representation, if serialization failed empty string will be returned.
   var buffer: array[MODBYTES_384, byte]
   if toBytes(a, buffer):
-    result = toHex(buffer)
+    result = toHex(buffer, lowercase = true)
 
 proc getBytes*(a: BIG_384): array[MODBYTES_384, byte] =
   ## Serialize big integer ``a`` and return array of bytes.
@@ -627,7 +627,7 @@ proc toHex*(point: ECP2_BLS381): string =
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   var buffer: array[MODBYTES_384 * 2, byte]
   if toBytes(point, buffer):
-    result = toHex(buffer)
+    result = toHex(buffer, lowercase = true)
 
 proc getBytes*(point: ECP2_BLS381): array[MODBYTES_384 * 2, byte] =
   ## Serialize ECP2(G2) point ``point`` and return array of bytes.
@@ -701,7 +701,7 @@ proc toHex*(point: ECP_BLS381): string =
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   var buffer: array[MODBYTES_384, byte]
   if toBytes(point, buffer):
-    result = toHex(buffer)
+    result = toHex(buffer, lowercase = true)
 
 proc getBytes*(point: ECP_BLS381): array[MODBYTES_384, byte] =
   ## Serialize ECP(G1) point ``point`` and return array of bytes.

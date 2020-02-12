@@ -38,3 +38,11 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
     result = obj.intVal.fromBytes(hexStr)
   else:
     result = obj.point.fromBytes(hexStr)
+
+func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string =
+  ## Return the hex representation of a BLS signature scheme object
+  ## Signature and Proof-of-posessions are serialized in compressed form
+  when obj is SecretKey:
+    result = obj.intVal.toHex()
+  else:
+    result = obj.point.toHex()
