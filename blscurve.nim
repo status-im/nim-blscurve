@@ -13,6 +13,7 @@ when BLS_USE_IETF_API:
   import ./blscurve/bls_signature_scheme
   export
     SecretKey, PublicKey, Signature, ProofOfPossession,
+    `==`,
     aggregate,
     sign, verify, aggregateVerify, fastAggregateVerify,
     keyGen,

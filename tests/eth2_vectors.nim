@@ -33,7 +33,7 @@ proc testSign() =
   var count = 0 # Need to fail if walkDir doesn't return anything
   const signDir = ETH2_DIR / "sign"
   for file in walkDirRec(signDir, relative = true):
-    echo "sign test: ", file
+    echo "       sign test: ", file
     let test = parseTest(ETH2_DIR / "sign" / file)
     var privKey: SecretKey
     doAssert privKey.fromHex(test["input"]["privkey"].getStr), "Couldn't parse the private key"
@@ -43,10 +43,15 @@ proc testSign() =
 
     var expectedSig: Signature
     doAssert expectedSig.fromHex(test["output"].getStr), "Couldn't parse the expected signature"
+    let bLibSig = cast[array[sizeof(Signature), byte]](libSig)
+    let bExpectedSig = cast[array[sizeof(Signature), byte]](expectedSig)
+
     doAssert libSig == expectedSig, block:
       "\nSignature differs from expected \n" &
       "   computed: " & libSig.toHex() & "\n" &
       "   expected: " & expectedSig.toHex()
+
+    inc count
   doAssert count > 0, "Empty test folder"
 
 suite "ETH 2.0 v0.10.1 test vectors":

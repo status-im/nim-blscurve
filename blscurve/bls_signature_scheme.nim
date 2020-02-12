@@ -68,6 +68,10 @@ func `==`*(a, b: SecretKey): bool {.error: "Comparing secret keys is not allowed
   ## Disallow comparing secret keys. It would require constant-time comparison,
   ## and it doesn't make sense anyway.
 
+func `==`*(a, b: PublicKey or Signature or ProofOfPossession): bool {.inline.} =
+  ## Check if 2 BLS signature scheme objects are equal
+  return a.point == b.point
+
 # IO
 # ----------------------------------------------------------------------
 # Serialization / Deserialization
