@@ -302,9 +302,23 @@ func verify*[T: byte|char](
   ## returns `true` if the signature is valid, `false` otherwise.
   ##
   ## Compared to the IETF spec API, it is modified to
-  ## enforce proper usage of the proof-of-posession
+  ## enforce proper usage of the proof-of-possession
   if not publicKey.popVerify(proof):
     return false
+  return publicKey.coreVerify(message, signature, DST)
+
+func verify*[T: byte|char](
+       publicKey: PublicKey,
+       proof: ProofOfPossession,
+       message: openarray[T],
+       signature: Signature) : bool =
+  ## Check that a signature is valid for a message
+  ## under the provided public key.
+  ## returns `true` if the signature is valid, `false` otherwise.
+  ##
+  ## The proof-of-possession MUST be verified before calling this function.
+  ## It is recommended to use the overload that accepts a proof-of-possession
+  ## to enforce correct usage.
   return publicKey.coreVerify(message, signature, DST)
 
 func aggregateVerify[T: byte|char](
@@ -316,7 +330,7 @@ func aggregateVerify[T: byte|char](
   ## returns `true` if the signature is valid, `false` otherwise.
   ##
   ## Compared to the IETF spec API, it is modified to
-  ## enforce proper usage of the proof-of-posessions
+  ## enforce proper usage of the proof-of-possessions
   # Perf note: this first loops over public keys to verify proofs-of-possession
   #            then loops once again for pairing. The loops can be fused
   #            if this proc becomes used (instead of fastAggregateVerify)
@@ -325,6 +339,22 @@ func aggregateVerify[T: byte|char](
   for i in 0 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
       return false
+  return coreAggregateVerify(
+           publicKeys, messages,
+           signature, DST
+         )
+
+func aggregateVerify[T: byte|char](
+        publicKeys: openarray[PublicKey],
+        proofs: openarray[ProofOfPossession],
+        messages: openarray[openarray[T]],
+        signature: Signature): bool =
+  ## Check that an aggregated signature over several (publickey, message) pairs
+  ## returns `true` if the signature is valid, `false` otherwise.
+  ##
+  ## The proof-of-possession MUST be verified before calling this function.
+  ## It is recommended to use the overload that accepts a proof-of-possession
+  ## to enforce correct usage.
   return coreAggregateVerify(
            publicKeys, messages,
            signature, DST
@@ -354,6 +384,30 @@ func fastAggregateVerify*[T: byte|char](
   for i in 1 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
       return false
+    aggregate.point.add(publicKeys[i].point)
+  return coreVerify(aggregate, message, signature, DST)
+
+func fastAggregateVerify*[T: byte|char](
+        publicKeys: openarray[PublicKey],
+        message: openarray[T],
+        signature: Signature
+      ): bool =
+  ## Verify the aggregate of multiple signatures on the same message
+  ## This function is faster than AggregateVerify
+  ##
+  ## The proof-of-possession MUST be verified before calling this function.
+  ## It is recommended to use the overload that accepts a proof-of-possession
+  ## to enforce correct usage.
+  # 1. aggregate = pubkey_to_point(PK_1)
+  # 2. for i in 2, ..., n:
+  # 3.     next = pubkey_to_point(PK_i)
+  # 4.     aggregate = aggregate + next
+  # 5. PK = point_to_pubkey(aggregate)
+  # 6. return CoreVerify(PK, message, signature)
+  if publicKeys.len == 0:
+    return false
+  var aggregate = publicKeys[0]
+  for i in 1 ..< publicKeys.len:
     aggregate.point.add(publicKeys[i].point)
   return coreVerify(aggregate, message, signature, DST)
 
