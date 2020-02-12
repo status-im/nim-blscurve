@@ -69,6 +69,27 @@ func subgroupCheck(P: GroupG1 or GroupG2): bool =
   rP.mul(CURVE_Order)
   result = rP.isInf()
 
+# Aggregate
+# ----------------------------------------------------------------------
+
+proc aggregate*(sig1: var Signature, sig2: Signature) =
+  ## Aggregates signature ``sig2`` into ``sig1``.
+  sig1.point.add(sig2.point)
+
+proc aggregate*(sig: var Signature, sigs: openarray[Signature]) =
+  ## Aggregates an array of signatures `sigs` into a signature `sig`
+  for s in sigs:
+    sig.point.add(s.point)
+
+proc aggregate*(sigs: openarray[Signature]): Signature =
+  ## Aggregates array of signatures ``sigs``
+  ## and return aggregated signature.
+  ##
+  ## Array ``sigs`` must not be empty!
+  doAssert(len(sigs) > 0)
+  result = sigs[0]
+  result.add sigs.toOpenArray(1, sigs.high)
+
 # Core operations
 # ----------------------------------------------------------------------
 # Note: unlike the IETF standard, we stay in the curve domain
@@ -81,6 +102,7 @@ func coreSign[T: byte|char](
        secretKey: SecretKey,
        message: openarray[T],
        domainSepTag: string): Signature =
+  ## Computes a signature from a secret key and a message
   # Spec
   # 1. Q = hash_to_point(message)
   # 2. R = SK * Q
@@ -94,6 +116,8 @@ func coreVerify[T: byte|char](
        message: openarray[T],
        signature: Signature,
        domainSepTag: string): bool =
+  ## Check that a signature is valid for a message
+  ## under the provided public key
   # Spec
   # 1. R = signature_to_point(signature)
   # 2. If R is INVALID, return INVALID
@@ -122,26 +146,69 @@ func coreVerify[T: byte|char](
            signature, generator1()
          )
 
-# Aggregate
-# ----------------------------------------------------------------------
+func coreAggregateVerify[T: byte|char](
+        publicKeys: openarray[PublicKey],
+        messages: openarray[openarray[T]],
+        signature: Signature,
+        domainSepTag: string): bool =
+  ## Check an aggregated signature over several (publickey, message) pairs
+  # Spec
+  # 1. R = signature_to_point(signature)
+  # 2. If R is INVALID, return INVALID
+  # 3. If signature_subgroup_check(R) is INVALID, return INVALID
+  # 4. C1 = 1 (the identity element in GT)
+  # 5. for i in 1, ..., n:
+  # 6.     xP = pubkey_to_point(PK_i)
+  # 7.     Q = hash_to_point(message_i)
+  # 8.     C1 = C1 * pairing(Q, xP)
+  # 9. C2 = pairing(R, P)
+  # 10. If C1 == C2, return VALID, else return INVALID
 
-proc aggregate*(sig1: var Signature, sig2: Signature) =
-  ## Aggregates signature ``sig2`` into ``sig1``.
-  sig1.point.add(sig2.point)
+  if publicKeys.len != messages.len:
+    return false
 
-proc aggregate*(sig: var Signature, sigs: openarray[Signature]) =
-  ## Aggregates an array of signatures `sigs` into a signature `sig`
-  for s in sigs:
-    sig.point.add(s.point)
+  if not subgroupCheck(signature):
+    return false
 
-proc aggregate*(sigs: openarray[Signature]): Signature =
-  ## Aggregates array of signatures ``sigs``
-  ## and return aggregated signature.
-  ##
-  ## Array ``sigs`` must not be empty!
-  doAssert(len(sigs) > 0)
-  result = sigs[0]
-  result.add sigs.toOpenArray(1, sigs.high)
+  # Implementation strategy
+  # -----------------------
+  # We are checking that
+  # e(pubkey1, msg1) e(pubkey2, msg2) ... e(pubkeyN, msgN) == e(P1, sig)
+  # with P1 the generator point for G1
+  # For x' = (q^12 - 1)/r
+  # - q the BLS12-381 field modulus: 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+  # - r the BLS12-381 subgroup size: 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+  #
+  # constructed from x = -0xd201000000010000
+  # - q = (x - 1)² ((x⁴ - x² + 1) / 3) + x
+  # - r = (x⁴ - x² + 1)
+  #
+  # we have the following equivalence by removing the final exponentiation
+  # in the optimal ate pairing, and denoting e'(_, _) the pairing without final exponentiation
+  # (e'(pubkey1, msg1) e'(pubkey2, msg2) ... e'(pubkeyN, msgN))^x == e'(P1, sig)^x
+  #
+  # We multiply by the inverse in group GT (e(G1, G2) -> GT)
+  # to get the equivalent check that is more efficient to implement
+  # (e'(pubkey1, msg1) e'(pubkey2, msg2) ... e'(pubkeyN, msgN) e'(-P1, sig))^x == 1
+  # The generator P1 is on G1 which is cheaper to negate than the signature
+  template `&`(point: untyped): untyped = unsafeAddr(point) # ALias
+
+  var C1: array[AteBitsCount, FP12_BLS381]
+  PAIR_BLS381_initmp(addr C1[0])                              # C1 = 1 (identity element)
+  for i in 0 ..< n:
+    let Q = hashToG2(messages[i])                             # Q = hash_to_point(message_i)
+    PAIR_BLS381_another(addr C1[0], &Q, &publicKeys[i].point) # C1 = C1 * pairing(Q, xP)
+  # Accumulate the multiplicative inverse of C2 into C1
+  let nP1 = neg(generator1())
+  PAIR_BLS381_another(addr C1[0], &signature.point, &nP1)
+  # Optimal Ate Pairing
+  var v: FP12_BLS381
+  PAIR_BLS381_miller(addr v, addr C1[0])
+  PAIR_BLS381_fexp(addr v)
+
+  if FP12_BLS381_isunity(addr v) == 1:
+    return true
+  return false
 
 # Public API
 # ----------------------------------------------------------------------
