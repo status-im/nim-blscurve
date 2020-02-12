@@ -357,9 +357,7 @@ func fastAggregateVerify*[T: byte|char](
     aggregate.point.add(publicKeys[i].point)
   return coreVerify(aggregate, message, signature, DST)
 
-func keyGen(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey): bool =
-  ## TODO: this is WIP
-  ##
+func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey): bool =
   ## Generate a (public key, secret key) pair
   ## from the input keying material `ikm`
   ##
@@ -415,26 +413,37 @@ func keyGen(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secre
   #  6. PK = point_to_pubkey(xP)
   #  7. return (PK, SK)
 
-  if ikm.len < 32: return false
+  if ikm.len < 32:
+    return false
 
   # TODO: change HKDF to openarray API so we can use const string
   let salt = "BLS-SIG-KEYGEN-SALT-"
   var ctx: HMAC[sha256]
   var prk: MDigest[sha256.bits]
 
+  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
   ctx.hkdfExtract(
     prk,
     cast[ptr byte](salt[0].unsafeAddr), salt.len.uint,
     ikm[0].unsafeAddr, ikm.len.uint
   )
 
-  # prime order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-  # const L = ceil((1.5 * ceil(log2(r))) / 8)
+  # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+  # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
+  # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
 
-  # var okm: array[L, byte]
-  # ctx.hkdfExpand(prk, "", 0, okm[0].addr, L)
-  # var dOKM: DBIG_384
-  # discard dOKM.fromBytes(OKM)
-  var x: BIG_384
-  # {.noSideEffect.}:
-  #   BIG_384_dmod(x, dOKM, FIELD_Modulus) # is FIELD_Modulus correct or should we use `r`
+  #  2. OKM = HKDF-Expand(PRK, "", L)
+  const L = 48
+  var okm: array[L, byte]
+  ctx.hkdfExpand(prk, "", 0, okm[0].addr, L)
+
+  #  3. x = OS2IP(OKM) mod r
+  #  5. SK = x
+  secretKey.intVal.fromBytes(okm)
+  BIG_384_mod(secretKey.intVal, CURVE_Order)
+
+  #  4. xP = x * P
+  #  6. PK = point_to_pubkey(xP)
+  publicKey = privToPub(secretKey)
+
+  return true
