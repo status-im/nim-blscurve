@@ -9,7 +9,7 @@
 import strutils except fromHex
 import os, unittest
 import nimcrypto/[sysrand, hash, sha2, utils]
-import ../blscurve/milagro, ../blscurve/bls_old_spec, ../blscurve/common
+import ../../blscurve/[milagro, bls_old_spec, common]
 
 type
   Case01Vector = object
@@ -75,8 +75,8 @@ proc openVectorFile(name: string): File =
   var filename = ""
   if existsFile(name):
     filename = name
-  elif existsFile("tests" / name):
-    filename = "tests" / name
+  elif existsFile("tests" / "old_spec" / name):
+    filename = "tests" / "old_spec" / name
   else:
     raise newException(ValueError, "File " & name & " not found!")
   result = open(filename)

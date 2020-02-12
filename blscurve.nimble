@@ -23,8 +23,11 @@ task test, "Run all tests":
   test "", "blscurve/hash_to_curve.nim"
 
   # Internal+Public BLS API - pre Ethereum2.0 v0.10
-  test "-d:BLS_USE_IETF_API=false", "tests/old_spec/test_scheme.nim"
-  test "-d:BLS_USE_IETF_API=false", "tests/old_spec/test_vectors.nim"
+  # Those directly import the old API and internals
+  # and do not need the "-d:BLS_USE_IETF_API=false" flag
+  test "", "tests/old_spec/test_scheme.nim"
+  test "", "tests/old_spec/test_vectors.nim"
 
   # Internal BLS API - IETF standard / post Ethereum2.0 v0.10
-  test "", "tests/ietf_hash_to_curve.nim"
+  test "", "tests/hash_to_curve.nim"
+
