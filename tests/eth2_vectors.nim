@@ -12,12 +12,40 @@
 
 import
   # Standard library
-
+  json, strutils, os, streams, unittest,
   # Third party
   yaml,
+  # Status libraries
+  stew/byteutils,
   # Public API
   ../blscurve
 
+const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v0.10.1_vectors"
 
 doAssert BLS_USE_IETF_API, "Testing against the IETF standard requires using that standard."
 
+proc parseTest(file: string): JsonNode =
+  var yamlStream = openFileStream(file)
+  defer: yamlStream.close()
+  result = yamlStream.loadToJson()[0]
+
+proc testSign() =
+  var count = 0 # Need to fail if walkDir doesn't return anything
+  const signDir = ETH2_DIR / "sign"
+  for file in walkDirRec(signDir, relative = true):
+    echo "sign test: ", file
+    let test = parseTest(ETH2_DIR / "sign" / file)
+    var privKey: SecretKey
+    doAssert privKey.fromHex(test["input"]["privkey"].getStr), "Couldn't parse the private key"
+    let message = hexToSeqByte(test["input"]["message"].getStr)
+
+    let libSig = privKey.sign(message)
+
+    var expectedSig: Signature
+    doAssert expectedSig.fromHex(test["output"].getStr), "Couldn't parse the expected signature"
+    doAssert libSig == expectedSig, "Signature differs from expected"
+  doAssert count > 0, "Empty test folder"
+
+suite "ETH 2.0 v0.10.1 test vectors":
+  test "sign(SecretKey, message) -> Signature":
+    testSign()
