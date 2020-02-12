@@ -68,6 +68,15 @@ func `==`*(a, b: SecretKey): bool {.error: "Comparing secret keys is not allowed
   ## Disallow comparing secret keys. It would require constant-time comparison,
   ## and it doesn't make sense anyway.
 
+# IO
+# ----------------------------------------------------------------------
+# Serialization / Deserialization
+# As I/O routines are not part of the specifications, they are implemented
+# in a separate file. The file is included instead of imported to
+# access private fields
+
+include ./bls_sig_io
+
 # Primitives
 # ----------------------------------------------------------------------
 func subgroupCheck(P: GroupG1 or GroupG2): bool =

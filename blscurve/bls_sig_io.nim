@@ -12,11 +12,11 @@
 # - https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-00#section-5.5
 # - https://github.com/cfrg/draft-irtf-cfrg-bls-signature
 
-import
-  ./bls_signature_scheme, ./common
+# This file should be included to have access to private fields
+# It is kept separated as it does not fall under the IETF BLS specification
 
-func fromHex*(
-       obj: var SecretKey|PublicKey|Signature|ProofOfPossession,
+func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
+       obj: var T,
        hexStr: string
      ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
@@ -27,8 +27,8 @@ func fromHex*(
   else:
     result = obj.point.fromHex(hexStr)
 
-func fromBytes*(
-       obj: var SecretKey|PublicKey|Signature|ProofOfPossession,
+func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
+       obj: var T,
        raw: openarray[byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from

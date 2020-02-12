@@ -15,7 +15,8 @@ when BLS_USE_IETF_API:
     SecretKey, PublicKey, Signature, ProofOfPossession,
     aggregate,
     sign, verify, aggregateVerify, fastAggregateVerify,
-    keyGen
+    keyGen,
+    fromHex, fromBytes
 else:
   import ./blscurve/bls_old_spec
   export bls_old_spec
