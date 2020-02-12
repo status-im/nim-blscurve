@@ -74,7 +74,8 @@ func subgroupCheck(P: GroupG1 or GroupG2): bool =
   ## Checks that a point `P`
   ## is actually in the subgroup G1/G2 of the BLS Curve
   var rP = P
-  rP.mul(CURVE_Order)
+  {.noSideEffect.}:
+    rP.mul(CURVE_Order)
   result = rP.isInf()
 
 func privToPub(secretKey: SecretKey): PublicKey =
@@ -101,7 +102,7 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
   ## Array ``sigs`` must not be empty!
   doAssert(len(sigs) > 0)
   result = sigs[0]
-  result.add sigs.toOpenArray(1, sigs.high)
+  result.aggregate(sigs.toOpenArray(1, sigs.high))
 
 # Core operations
 # ----------------------------------------------------------------------
@@ -122,16 +123,16 @@ func coreSign[T: byte|char](
   # 2. R = SK * Q
   # 3. signature = point_to_signature(R)
   # 4. return signature
-  let Q = hashToG2(message, domainSepTag)
-  result = secretKey.point.mul(Q)
+  result = hashToG2(message, domainSepTag)
+  result.mul(secretKey.intVal)
 
 func coreVerify[T: byte|char](
        publicKey: PublicKey,
        message: openarray[T],
-       signature: Signature,
+       sig_or_proof: Signature or ProofOfPossession,
        domainSepTag: string): bool =
-  ## Check that a signature is valid for a message
-  ## under the provided public key
+  ## Check that a signature (or proof-of-possession) is valid
+  ## for a message (or serialized publickey) under the provided public key
   # Spec
   # 1. R = signature_to_point(signature)
   # 2. If R is INVALID, return INVALID
@@ -152,16 +153,16 @@ func coreVerify[T: byte|char](
 
   # Precondition:
   # The public key PK must satisfy KeyValidate(PK) == VALID
-  if not subgroupCheck(publicKey):
+  if not subgroupCheck(publicKey.point):
       return false
-  if not subgroupCheck(signature):
+  if not subgroupCheck(sig_or_proof.point):
     return false
   let Q = hashToG2(message, domainSepTag)
 
   # pairing(Q, xP) == pairing(R, P)
   return multiPairing(
-           Q, publicKey,
-           signature, generator1()
+           Q, publicKey.point,
+           sig_or_proof.point, generator1()
          )
 
 func coreAggregateVerify[T: byte|char](
@@ -217,7 +218,7 @@ func coreAggregateVerify[T: byte|char](
 
   var C1: array[AteBitsCount, FP12_BLS381]
   PAIR_BLS381_initmp(addr C1[0])                              # C1 = 1 (identity element)
-  for i in 0 ..< n:
+  for i in 0 ..< publicKeys.len:
     let Q = hashToG2(messages[i])                             # Q = hash_to_point(message_i)
     PAIR_BLS381_another(addr C1[0], &Q, &publicKeys[i].point) # C1 = C1 * pairing(Q, xP)
   # Accumulate the multiplicative inverse of C2 into C1
@@ -275,7 +276,7 @@ func popProve*(secretKey: SecretKey): ProofOfPossession =
   # 5. proof = point_to_signature(R)
   # 6. return proof
   let pubkey = privToPub(secretKey)
-  result = popProve(pubkey, secretKey)
+  result = popProve(secretKey, pubkey)
 
 func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
   ## Verify if the proof-of-possession is valid for the public key
@@ -289,7 +290,7 @@ func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
   # 7. C1 = pairing(Q, xP)
   # 8. C2 = pairing(R, P)
   # 9. If C1 == C2, return VALID, else return INVALID
-  result = coreVerify(publicKey, publicKey.point.getBytes(), DST_POP)
+  result = coreVerify(publicKey, publicKey.point.getBytes(), proof, DST_POP)
 
 func sign*[T: byte|char](secretKey: SecretKey, message: openarray[T]): Signature =
   ## Computes a signature
@@ -313,7 +314,6 @@ func verify*[T: byte|char](
 
 func verify*[T: byte|char](
        publicKey: PublicKey,
-       proof: ProofOfPossession,
        message: openarray[T],
        signature: Signature) : bool =
   ## Check that a signature is valid for a message
@@ -325,7 +325,7 @@ func verify*[T: byte|char](
   ## to enforce correct usage.
   return publicKey.coreVerify(message, signature, DST)
 
-func aggregateVerify[T: byte|char](
+func aggregateVerify*[T: byte|char](
         publicKeys: openarray[PublicKey],
         proofs: openarray[ProofOfPossession],
         messages: openarray[openarray[T]],
@@ -348,9 +348,8 @@ func aggregateVerify[T: byte|char](
            signature, DST
          )
 
-func aggregateVerify[T: byte|char](
+func aggregateVerify*[T: byte|char](
         publicKeys: openarray[PublicKey],
-        proofs: openarray[ProofOfPossession],
         messages: openarray[openarray[T]],
         signature: Signature): bool =
   ## Check that an aggregated signature over several (publickey, message) pairs
@@ -493,12 +492,14 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   #  2. OKM = HKDF-Expand(PRK, "", L)
   const L = 48
   var okm: array[L, byte]
-  ctx.hkdfExpand(prk, "", 0, okm[0].addr, L)
+  ctx.hkdfExpand(prk, nil, 0, okm[0].addr, L)
 
   #  3. x = OS2IP(OKM) mod r
   #  5. SK = x
-  secretKey.intVal.fromBytes(okm)
-  BIG_384_mod(secretKey.intVal, CURVE_Order)
+  if not secretKey.intVal.fromBytes(okm):
+    return false
+  {.noSideEffect.}:
+    BIG_384_mod(secretKey.intVal, CURVE_Order)
 
   #  4. xP = x * P
   #  6. PK = point_to_pubkey(xP)

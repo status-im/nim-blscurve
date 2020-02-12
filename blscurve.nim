@@ -7,7 +7,7 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-const BLS_USE_IETF_API {.booldefine.} = true
+const BLS_USE_IETF_API* {.booldefine.} = true
 
 when BLS_USE_IETF_API:
   import ./blscurve/bls_signature_scheme
