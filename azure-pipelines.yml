@@ -1,65 +1,51 @@
 strategy:
   maxParallel: 10
   matrix:
-    # Nim requires enforcing ARCH="x86" and UCPU
-    # for 32-bit targets as it seems like Azure machines are 64-bit
     # TEST_LANG env variable support TODO
-    Windows_stable_32bit:
+    Windows_32bit:
       VM: 'windows-latest'
-      ARCH: x86
-      UCPU: i686
       PLATFORM: x86
-      CHANNEL: stable
       TEST_LANG: c
-    Windows_stable_64bit:
+    Windows_64bit:
       VM: 'windows-latest'
-      UCPU: amd64
       PLATFORM: x64
-      CHANNEL: stable
       TEST_LANG: c
-    # Windows_cpp_stable_64bit:
+    # Windows_cpp_64bit:
     #   VM: 'windows-latest'
-    #   UCPU: amd64
     #   PLATFORM: x64
-    #   CHANNEL: stable
     #   TEST_LANG: cpp
-    Linux_stable_64bit:
+    Linux_64bit:
       VM: 'ubuntu-16.04'
-      UCPU: amd64
       PLATFORM: x64
-      CHANNEL: stable
       TEST_LANG: c
-    # Linux_cpp_stable_64bit:
+    # Linux_cpp_64bit:
     #   VM: 'ubuntu-16.04'
-    #   UCPU: amd64
     #   PLATFORM: x64
-    #   CHANNEL: stable
-    #   WEAVE_TEST_LANG: cpp
+    #   TEST_LANG: cpp
 
     # TODO this requires gcc -m32 as the Ubuntu image is 64-bit
-    # Linux_stable_32bit:
+    # Linux_32bit:
     #   VM: 'ubuntu-16.04'
     #   ARCH: x86
     #   PLATFORM: x86
-    #   UCPU: i686
-    #   CHANNEL: stable
     #   TEST_LANG: c
 
-    MacOS_stable_64bit:
+    MacOS_64bit:
       VM: 'macOS-10.14'
-      UCPU: amd64
       PLATFORM: x64
-      CHANNEL: stable
-      WEAVE_TEST_LANG: c
+      TEST_LANG: c
 
 pool:
   vmImage: $(VM)
+
+variables:
+  V: 0 # Scripts verbosity, 1 for debugging build scripts
 
 steps:
   - task: CacheBeta@1
     displayName: 'cache Nim binaries'
     inputs:
-      key: NimBinaries | $(Agent.OS) | $(CHANNEL) | $(PLATFORM)
+      key: NimBinaries | $(Agent.OS) | $(PLATFORM)
       path: NimBinaries
 
   - task: CacheBeta@1
@@ -99,11 +85,14 @@ steps:
       # Workaround https://developercommunity.visualstudio.com/content/problem/891929/windows-2019-cygheap-base-mismatch-detected-git-ba.html
       echo "##vso[task.prependpath]/usr/bin"
       echo "##vso[task.prependpath]/mingw64/bin"
-      # export custom mingw PATH to other tasks
-      echo "##vso[task.prependpath]/c/custom/${MINGW_DIR}/bin"
+      echo "##vso[task.setvariable variable=MINGW_DIR;]$MINGW_DIR"
     displayName: 'Install dependencies (Windows)'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
-
+  - powershell: |
+      # export custom mingw PATH to other tasks
+      echo "##vso[task.prependpath]c:\custom\$(MINGW_DIR)\bin"
+    displayName: 'Mingw PATH (Windows)'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
   - bash: |
       echo "PATH=${PATH}"
       export ncpu=
@@ -122,53 +111,47 @@ steps:
       echo "Found ${ncpu} cores"
       echo "##vso[task.setvariable variable=ncpu;]$ncpu"
     displayName: 'Detecting number of cores'
-
   - bash: |
       echo "PATH=${PATH}"
-      gcc -v
-      echo "UCPU=${UCPU}"
-
-      if [ "${CHANNEL}" = stable ]; then
-        BRANCH="v$(curl https://nim-lang.org/channels/stable)"
-      else
-        BRANCH="${CHANNEL}"
-      fi
-      mkdir -p NimBinaries
-      pushd NimBinaries
-      if [ ! -x "nim-${CHANNEL}/bin/nim" ]; then
-        git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"
-        pushd "nim-${CHANNEL}"
-        git clone --depth 1 https://github.com/nim-lang/csources csources/
-        pushd csources
-
-        make -j $ncpu ucpu=${UCPU} CC=gcc
-        popd
-        rm -rf csources
-        bin/nim c koch
-        ./koch boot -d:release
-        ./koch tools
-      else
-        pushd "nim-${CHANNEL}"
-        git fetch origin "${BRANCH}"
-        if [[ $(git merge FETCH_HEAD | grep -c "Already up to date.") -ne 1 ]]; then
-          bin/nim c koch
-          ./koch boot -d:release
-          ./koch tools
-        fi
-      fi
-      popd # exit nim-CHANNEL
-      popd # exit NimBinaries
-      echo "##vso[task.prependpath]$PWD/NimBinaries/nim-${CHANNEL}/bin"
-    displayName: 'Building Nim'
-
+      # build nim from our own branch - this to avoid the day-to-day churn and
+      # regressions of the fast-paced Nim development while maintaining the
+      # flexibility to apply patches
+      curl -O -L -s -S https://raw.githubusercontent.com/status-im/nimbus-build-system/master/scripts/build_nim.sh
+      env MAKE="mingw32-make -j${ncpu}" ARCH_OVERRIDE=$(PLATFORM) bash build_nim.sh Nim csources dist/nimble NimBinaries
+    displayName: 'Building Nim (Windows)'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+  - powershell: |
+      echo "##vso[task.prependpath]$pwd\Nim\bin"
+    displayName: 'Set env variable (Windows)'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+  - bash: |
+      echo "PATH=${PATH}"
+      # build nim from our own branch - this to avoid the day-to-day churn and
+      # regressions of the fast-paced Nim development while maintaining the
+      # flexibility to apply patches
+      curl -O -L -s -S https://raw.githubusercontent.com/status-im/nimbus-build-system/master/scripts/build_nim.sh
+      env MAKE="make -j${ncpu}" ARCH_OVERRIDE=$(PLATFORM) bash build_nim.sh Nim csources dist/nimble NimBinaries
+    displayName: 'Building Nim (POSIX)'
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
+  - bash: |
+      echo "##vso[task.prependpath]$PWD/Nim/bin"
+    displayName: 'Set env variable (Posix)'
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
   - bash: |
       echo "PATH=${PATH}"
       nimble refresh
-      nimble install nimcrypto stew
-    displayName: 'Building the package dependencies'
-
+      nimble install -y --depsOnly
+    displayName: 'Building dependencies (Posix)'
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
+  - powershell: |
+      echo "PATH=$Env:Path"
+      nimble refresh
+      nimble install -y --depsOnly
+    displayName: 'Building dependencies (Windows)'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
   - bash: |
       echo "PATH=${PATH}"
-      export ucpu=${UCPU}
+      which gcc
+      gcc -v
       nimble test
     displayName: 'Testing the package'
