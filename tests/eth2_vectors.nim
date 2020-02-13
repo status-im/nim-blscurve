@@ -51,13 +51,25 @@ type InOut = enum
   Input
   Output
 
-proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string = ""): T =
+proc getFrom(T: typedesc, test: JsonNode, inout: static InOut): T =
   when inout == Output:
     when T is bool:
       result = test["output"].getBool()
     else:
       doAssert result.fromHex(test["output"].getStr()),
         "Couldn't parse output " & $T & ": " & test["output"].getStr()
+  else:
+    when T is seq[Signature]:
+      for sigHex in test["input"]:
+        result.setLen(result.len + 1)
+        doAssert result[^1].fromHex(sigHex.getStr()),
+          "Couldn't parse input Signature: " & sigHex.getStr()
+    else:
+      {.error: "Unreachable".}
+
+proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string): T =
+  when inout == Output:
+    {.error: "Unreachable".}
   else:
     when T is seq[byte]:
       result = hexToSeqByte(test["input"][name].getStr)
@@ -104,8 +116,21 @@ testGen(verify, test):
     "   computed: " & $libValid & "\n" &
     "   expected: " & $expected
 
+testGen(aggregate, test):
+  let sigs = seq[Signature].getFrom(test, Input)
+  let expectedAgg = Signature.getFrom(test, Output)
+
+  let libAggSig = aggregate(sigs)
+
+  doAssert libAggSig == expectedAgg, block:
+    "\nSignature aggregation differs from expected \n" &
+    "   computed: " & libAggSig.toHex() & "\n" &
+    "   expected: " & expectedAgg.toHex()
+
 suite "ETH 2.0 v0.10.1 test vectors":
   test "sign(SecretKey, message) -> Signature":
     test_sign()
   test "verify(PublicKey, message, Signature) -> bool":
     test_verify()
+  test "aggregate(openarray[Signature]) -> Signature":
+    test_aggregate()
