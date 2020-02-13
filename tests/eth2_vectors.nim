@@ -81,12 +81,21 @@ testGen(sign, test):
     "   expected: " & expectedSig.toHex()
 
 testGen(verify, test):
-  let
+  let expected = bool.getFrom(test, Output)
+  var
+    pubkey: PublicKey
+    message: seq[byte]
+    signature: Signature
+  try:
     pubKey = PublicKey.getFrom(test, Input, "pubkey")
     message = seq[byte].getFrom(test, Input, "message")
     signature = Signature.getFrom(test, Input, "signature")
-
-    expected = bool.getFrom(test, Output)
+  except:
+    let emsg = getCurrentExceptionMsg()
+    if expected:
+      doAssert false, "Verification was not supposed to fail, but one of the inputs was invalid." & emsg
+    else:
+      echo "[INFO] Expected verification failure at parsing stage: " & emsg
 
   let libValid = pubKey.verify(message, signature)
 
