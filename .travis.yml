@@ -23,5 +23,6 @@ install:
 
 script:
   - nimble install -y
-  - nimble install yaml # testing only
+  # testing only
+  - nimble install yaml # Cannot clone upstream https://github.com/flyx/NimYAML/issues/77
   - nimble test

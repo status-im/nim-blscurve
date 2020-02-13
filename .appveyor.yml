@@ -33,7 +33,8 @@ install:
 build_script:
   - cd C:\projects\%APPVEYOR_PROJECT_SLUG%
   - nimble install -y
-  - nimble install yaml # Testing only
+  # testing only
+  - nimble install yaml # Cannot clone upstream https://github.com/flyx/NimYAML/issues/77
 
 test_script:
   - nimble test
