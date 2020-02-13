@@ -29,31 +29,74 @@ proc parseTest(file: string): JsonNode =
   defer: yamlStream.close()
   result = yamlStream.loadToJson()[0]
 
-proc testSign() =
-  var count = 0 # Need to fail if walkDir doesn't return anything
-  const signDir = ETH2_DIR / "sign"
-  for file in walkDirRec(signDir, relative = true):
-    echo "       sign test: ", file
-    let test = parseTest(ETH2_DIR / "sign" / file)
-    var privKey: SecretKey
-    doAssert privKey.fromHex(test["input"]["privkey"].getStr), "Couldn't parse the private key"
-    let message = hexToSeqByte(test["input"]["message"].getStr)
+template testGen(name, testJson, body: untyped): untyped =
+  ## Generates a test proc
+  ## with identifier "test_name"
+  ## The test file is availaible as JsonNode under the
+  ## the variable passed as `testJson`
+  proc `test _ name`() =
+    var count = 0 # Need to fail if walkDir doesn't return anything
+    const testDir = ETH2_DIR / astToStr(name)
+    for file in walkDirRec(testDir, relative = true):
+      echo "       ", astToStr(name), " test: ", file
+      let testJson = parseTest(testDir / file)
 
-    let libSig = privKey.sign(message)
+      body
 
-    var expectedSig: Signature
-    doAssert expectedSig.fromHex(test["output"].getStr), "Couldn't parse the expected signature"
-    let bLibSig = cast[array[sizeof(Signature), byte]](libSig)
-    let bExpectedSig = cast[array[sizeof(Signature), byte]](expectedSig)
+      inc count
 
-    doAssert libSig == expectedSig, block:
-      "\nSignature differs from expected \n" &
-      "   computed: " & libSig.toHex() & "\n" &
-      "   expected: " & expectedSig.toHex()
+    doAssert count > 0, "Empty or inexisting test folder: " & astToStr(name)
 
-    inc count
-  doAssert count > 0, "Empty test folder"
+type InOut = enum
+  Input
+  Output
+
+proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string = ""): T =
+  when inout == Output:
+    when T is bool:
+      result = test["output"].getBool()
+    else:
+      doAssert result.fromHex(test["output"].getStr()),
+        "Couldn't parse output " & $T & ": " & test["output"].getStr()
+  else:
+    when T is seq[byte]:
+      result = hexToSeqByte(test["input"][name].getStr)
+    else:
+      doAssert result.fromHex(test["input"][name].getStr()),
+          "Couldn't parse input '" & name & "' (" & $T &
+          "): " & test["input"][name].getStr()
+
+testGen(sign, test):
+  let
+    privKey = SecretKey.getFrom(test, Input, "privkey")
+    message = seq[byte].getFrom(test, Input, "message")
+
+    expectedSig = Signature.getFrom(test, Output)
+
+  let libSig = privKey.sign(message)
+
+  doAssert libSig == expectedSig, block:
+    "\nSignature differs from expected \n" &
+    "   computed: " & libSig.toHex() & "\n" &
+    "   expected: " & expectedSig.toHex()
+
+testGen(verify, test):
+  let
+    pubKey = PublicKey.getFrom(test, Input, "pubkey")
+    message = seq[byte].getFrom(test, Input, "message")
+    signature = Signature.getFrom(test, Input, "signature")
+
+    expected = bool.getFrom(test, Output)
+
+  let libValid = pubKey.verify(message, signature)
+
+  doAssert libValid == expected, block:
+    "\nVerification differs from expected \n" &
+    "   computed: " & $libValid & "\n" &
+    "   expected: " & $expected
 
 suite "ETH 2.0 v0.10.1 test vectors":
   test "sign(SecretKey, message) -> Signature":
-    testSign()
+    test_sign()
+  test "verify(PublicKey, message, Signature) -> bool":
+    test_verify()

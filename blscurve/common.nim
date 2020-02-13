@@ -255,7 +255,7 @@ proc parity*(a: BIG_384): int {.inline.} =
   ## Returns parity for ``a``.
   result = int(BIG_384_parity(a))
 
-proc inf*(a: var ECP2_BLS381) {.inline.} =
+func inf*(a: var ECP2_BLS381) {.inline.} =
   ## Makes point ``a`` infinite.
   ECP2_BLS381_inf(addr a)
 
@@ -414,7 +414,7 @@ proc `$`*(p: ECP2_BLS381): string =
     result.add($p.z)
     result.add(")")
 
-proc setx*(p: var ECP2_BLS381, x: FP2_BLS381, greatest: bool): int =
+func setx*(p: var ECP2_BLS381, x: FP2_BLS381, greatest: bool): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
@@ -435,7 +435,7 @@ proc setx*(p: var ECP2_BLS381, x: FP2_BLS381, greatest: bool): int =
     FP2_BLS381_one(addr p.z)
     result = 1
 
-proc setx*(p: var ECP2_BLS381, x: FP2_BLS381, parity: int): int =
+func setx*(p: var ECP2_BLS381, x: FP2_BLS381, parity: int): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
@@ -457,14 +457,15 @@ proc setx*(p: var ECP2_BLS381, x: FP2_BLS381, parity: int): int =
     FP2_BLS381_one(addr p.z)
     result = 1
 
-proc setx*(p: var ECP_BLS381, x: BIG_384, greatest: bool): int =
+func setx*(p: var ECP_BLS381, x: BIG_384, greatest: bool): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## rust's library https://github.com/zkcrypto/pairing.
   var rhs, negy: FP_BLS381
   var t, m: BIG_384
-  BIG_384_rcopy(m, FIELD_Modulus)
+  {.noSideEffect.}:
+    BIG_384_rcopy(m, FIELD_Modulus)
   FP_BLS381_nres(addr rhs, x)
   ECP_BLS381_rhs(addr rhs, addr rhs)
   FP_BLS381_redc(t, addr rhs)
@@ -483,14 +484,15 @@ proc setx*(p: var ECP_BLS381, x: BIG_384, greatest: bool): int =
     FP_BLS381_one(addr p.z)
     result = 1
 
-proc setx*(p: var ECP_BLS381, x: BIG_384, parity: int): int =
+func setx*(p: var ECP_BLS381, x: BIG_384, parity: int): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``parity``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## python's version.
   var rhs, negy: FP_BLS381
   var t, m: BIG_384
-  BIG_384_rcopy(m, FIELD_Modulus)
+  {.noSideEffect.}:
+    BIG_384_rcopy(m, FIELD_Modulus)
   FP_BLS381_nres(addr rhs, x)
   ECP_BLS381_rhs(addr rhs, addr rhs)
   FP_BLS381_redc(t, addr rhs)
@@ -567,7 +569,7 @@ proc getBytes*(a: BIG_384): array[MODBYTES_384, byte] =
   ## Serialize big integer ``a`` and return array of bytes.
   discard toBytes(a, result)
 
-proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
+func fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
   ## Unserialize big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``MODBYTES_384_29``.
   let length = if len(a) > MODBYTES_384: MODBYTES_384 else: len(a)
@@ -576,7 +578,7 @@ proc fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
     res[0] = res[0] + cast[Chunk](a[i])
   result = true
 
-proc fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
+func fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
   ## Unserialize double big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``2*MODBYTES_384_29``.
 
@@ -588,7 +590,7 @@ proc fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
     res[0] = res[0] + cast[Chunk](rawByte)
   result = true
 
-proc fromHex*(res: var BIG_384, a: string): bool {.inline.} =
+func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
   ## Unserialize big integer from hexadecimal string ``a`` to ``res``.
   ##
   ## Returns ``true`` if conversion was successfull.
@@ -635,7 +637,7 @@ proc getBytes*(point: ECP2_BLS381): array[MODBYTES_384 * 2, byte] =
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   discard toBytes(point, result)
 
-proc fromBytes*(res: var ECP2_BLS381, data: openarray[byte]): bool =
+func fromBytes*(res: var ECP2_BLS381, data: openarray[byte]): bool =
   ## Unserialize ECP2(G2) point from array of bytes ``data``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -661,7 +663,7 @@ proc fromBytes*(res: var ECP2_BLS381, data: openarray[byte]): bool =
             if res.setx(x, greatest) == 1:
               result = true
 
-proc fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
+func fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
   ## Unserialize ECP2(G2) point from hexadecimal string ``a`` to ``res``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -709,7 +711,7 @@ proc getBytes*(point: ECP_BLS381): array[MODBYTES_384, byte] =
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   discard toBytes(point, result)
 
-proc fromBytes*(res: var ECP_BLS381, data: openarray[byte]): bool =
+func fromBytes*(res: var ECP_BLS381, data: openarray[byte]): bool =
   ## Unserialize ECP point from array of bytes ``data``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -731,7 +733,7 @@ proc fromBytes*(res: var ECP_BLS381, data: openarray[byte]): bool =
           if res.setx(x, greatest) == 1:
             result = true
 
-proc fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
+func fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
   ## Unserialize ECP point from hexadecimal string ``a`` to ``res``.
   ##
   ## This procedure supports only compressed form of serialization.
