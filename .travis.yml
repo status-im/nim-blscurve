@@ -23,5 +23,5 @@ install:
 
 script:
   - nimble install -y
+  - nimble install yaml # testing only
   - nimble test
-
