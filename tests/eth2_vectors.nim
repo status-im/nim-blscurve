@@ -72,7 +72,7 @@ proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string): T 
     {.error: "Unreachable".}
   else:
     when T is seq[byte]:
-      result = hexToSeqByte(test["input"][name].getStr)
+      result = test["input"][name].getStr().hexToSeqByte()
     elif T is seq[PublicKey]:
       for pubKeyHex in test["input"][name]:
         result.setLen(result.len + 1)
@@ -82,6 +82,25 @@ proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string): T 
       doAssert result.fromHex(test["input"][name].getStr()),
           "Couldn't parse input '" & name & "' (" & $T &
           "): " & test["input"][name].getStr()
+
+proc aggFrom(T: typedesc, test: JsonNode): T =
+  when T is seq[(PublicKey, seq[byte])]:
+    for pair in test["input"]["pairs"]:
+      result.setLen(result.len + 1)
+      doAssert result[^1][0].fromHex(pair["pubkey"].getStr()),
+          "Couldn't parse input PublicKey: " & pair["pubkey"].getStr()
+      result[^1][1] = pair["message"].getStr().hexToSeqByte()
+  elif T is seq[PublicKey]:
+    for pair in test["input"]["pairs"]:
+      result.setLen(result.len + 1)
+      doAssert result[^1].fromHex(pair["pubkey"].getStr()),
+          "Couldn't parse input PublicKey: " & pair["pubkey"].getStr()
+  elif T is seq[seq[byte]]:
+    for pair in test["input"]["pairs"]:
+      result.setLen(result.len + 1)
+      result[^1] = pair["message"].getStr().hexToSeqByte()
+  else:
+    {.error: "Unreachable".}
 
 testGen(sign, test):
   let
@@ -156,6 +175,39 @@ testGen(fast_aggregate_verify, test):
     "   computed: " & $libValid & "\n" &
     "   expected: " & $expected
 
+testGen(aggregate_verify, test):
+  let expected = bool.getFrom(test, Output)
+  var
+    # We test both the SoA and AoS API
+    pubkey_msg_pairs: seq[(PublicKey, seq[byte])]
+    pubkeys: seq[PublicKey]
+    msgs: seq[seq[byte]]
+    signature: Signature
+  try:
+    pubkey_msg_pairs = seq[(PublicKey, seq[byte])].aggFrom(test)
+    pubkeys = seq[PublicKey].aggFrom(test)
+    msgs = seq[seq[byte]].aggFrom(test)
+    signature = Signature.getFrom(test, Input, "signature")
+  except:
+    let emsg = getCurrentExceptionMsg()
+    if expected:
+      doAssert false, "Verification was not supposed to fail, but one of the inputs was invalid." & emsg
+    else:
+      echo "[INFO] Expected verification failure at parsing stage: " & emsg
+
+  let libAoSValid = aggregateVerify(pubkey_msg_pairs, signature)
+  let libSoAValid = aggregateVerify(pubkeys, msgs, signature)
+
+  doAssert libAoSValid == expected, block:
+    "\nAggregate Verification differs from expected \n" &
+    "   computed: " & $libAoSValid & "\n" &
+    "   expected: " & $expected
+
+  doAssert libSoAValid == expected, block:
+    "\nAggregate Verification differs from expected \n" &
+    "   computed: " & $libSoAValid & "\n" &
+    "   expected: " & $expected
+
 suite "ETH 2.0 v0.10.1 test vectors":
   test "sign(SecretKey, message) -> Signature":
     test_sign()
@@ -165,3 +217,5 @@ suite "ETH 2.0 v0.10.1 test vectors":
     test_aggregate()
   test "fastAggregateVerify(openarray[PublicKey], message, Signature) -> bool":
     test_fast_aggregate_verify()
+  test "AggregateVerify(openarray[PublicKey, message], Signature) -> bool":
+    test_aggregate_verify()

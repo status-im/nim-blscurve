@@ -124,6 +124,7 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
 #       from octet strings/byte arrays to/from G1 or G2 point repeatedly
 # Note: functions have the additional DomainSeparationTag defined
 #       in https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
+#
 # For coreAggregateVerify, we introduce an internal streaming API that
 # can handle both
 # - publicKeys: openarray[PublicKey], messages: openarray[openarray[T]]
@@ -203,11 +204,13 @@ type
 
 func init*(ctx: var ContextCoreAggregateVerify) =
   ## initialize an aggregate verification context
-  PAIR_BLS381_initmp(addr C1[0])                                # C1 = 1 (identity element)
+  PAIR_BLS381_initmp(addr ctx.C1[0])                                # C1 = 1 (identity element)
+
+template `&`(point: GroupG1 or GroupG2): untyped = unsafeAddr point
 
 func update*[T: char|byte](ctx: var ContextCoreAggregateVerify, publicKey: PublicKey, message: openarray[T], domainSepTag: string) =
-  let Q = hashToG2(messages[i], domainSepTag)                   # Q = hash_to_point(message_i)
-  PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKeys[i].point) # C1 = C1 * pairing(Q, xP)
+  let Q = hashToG2(message, domainSepTag)                   # Q = hash_to_point(message_i)
+  PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKey.point) # C1 = C1 * pairing(Q, xP)
 
 func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
   # Implementation strategy
@@ -234,10 +237,10 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
 
   # Accumulate the multiplicative inverse of C2 into C1
   let nP1 = neg(generator1())
-  PAIR_BLS381_another(addr C1[0], &signature.point, &nP1)
+  PAIR_BLS381_another(addr ctx.C1[0], &signature.point, &nP1)
   # Optimal Ate Pairing
   var v: FP12_BLS381
-  PAIR_BLS381_miller(addr v, addr C1[0])
+  PAIR_BLS381_miller(addr v, addr ctx.C1[0])
   PAIR_BLS381_fexp(addr v)
 
   if FP12_BLS381_isunity(addr v) == 1:
@@ -369,7 +372,7 @@ func aggregateVerify*(
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
   # Note: we can't have openarray of openarrays until openarrays are first-class value types
-  if publicKeys != messages.len:
+  if publicKeys.len != messages.len:
     return false
 
   var ctx: ContextCoreAggregateVerify
@@ -378,8 +381,8 @@ func aggregateVerify*(
     ctx.update(publicKeys[i], messages[i], DST)
   return ctx.finish(signature)
 
-func aggregateVerify*(
-        publicKey_msg_pairs: openarray[tuple[publicKey: PublicKey, message: string or seq[byte]]],
+func aggregateVerify*[T: string or seq[byte]](
+        publicKey_msg_pairs: openarray[tuple[publicKey: PublicKey, message: T]],
         signature: Signature): bool =
   ## Check that an aggregated signature over several (publickey, message) pairs
   ## returns `true` if the signature is valid, `false` otherwise.
@@ -390,8 +393,8 @@ func aggregateVerify*(
   # Note: we can't have tuple of openarrays until openarrays are first-class value types
   var ctx: ContextCoreAggregateVerify
   ctx.init()
-  for i in 0 ..< publicKeys.len:
-    ctx.update(publicKey_msg_pairs.publicKey[i], publicKey_msg_pairs.message[i], DST)
+  for i in 0 ..< publicKey_msg_pairs.len:
+    ctx.update(publicKey_msg_pairs[i].publicKey, publicKey_msg_pairs[i].message, DST)
   return ctx.finish(signature)
 
 func fastAggregateVerify*[T: byte|char](
