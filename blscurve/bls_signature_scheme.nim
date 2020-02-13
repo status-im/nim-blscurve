@@ -124,6 +124,13 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
 #       from octet strings/byte arrays to/from G1 or G2 point repeatedly
 # Note: functions have the additional DomainSeparationTag defined
 #       in https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
+# For coreAggregateVerify, we introduce an internal streaming API that
+# can handle both
+# - publicKeys: openarray[PublicKey], messages: openarray[openarray[T]]
+# - pairs: openarray[tuple[publicKeys: seq[PublicKey], message: seq[byte or string]]]
+# efficiently for the high-level API
+#
+# This also allows efficient interleaving of Proof-Of-Possession checks in the high-level API
 
 func coreSign[T: byte|char](
        secretKey: SecretKey,
@@ -178,34 +185,31 @@ func coreVerify[T: byte|char](
            sig_or_proof.point, generator1()
          )
 
-func coreAggregateVerify[T: byte|char](
-        publicKeys: openarray[PublicKey],
-        messages: openarray[openarray[T]],
-        signature: Signature,
-        domainSepTag: string): bool =
-  ## Check an aggregated signature over several (publickey, message) pairs
-  #
-  # TODO: if the need arises, we could do proof-of-possession verification inside this procedure
-  #       instead of before calling it.
-  #
-  # Spec
-  # 1. R = signature_to_point(signature)
-  # 2. If R is INVALID, return INVALID
-  # 3. If signature_subgroup_check(R) is INVALID, return INVALID
-  # 4. C1 = 1 (the identity element in GT)
-  # 5. for i in 1, ..., n:
-  # 6.     xP = pubkey_to_point(PK_i)
-  # 7.     Q = hash_to_point(message_i)
-  # 8.     C1 = C1 * pairing(Q, xP)
-  # 9. C2 = pairing(R, P)
-  # 10. If C1 == C2, return VALID, else return INVALID
+type
+  ContextCoreAggregateVerify = object
+    # Streaming API for Aggregate verification to handle both SoA and AoS data layout
+    # Spec
+    # 1. R = signature_to_point(signature)
+    # 2. If R is INVALID, return INVALID
+    # 3. If signature_subgroup_check(R) is INVALID, return INVALID
+    # 4. C1 = 1 (the identity element in GT)
+    # 5. for i in 1, ..., n:
+    # 6.     xP = pubkey_to_point(PK_i)
+    # 7.     Q = hash_to_point(message_i)
+    # 8.     C1 = C1 * pairing(Q, xP)
+    # 9. C2 = pairing(R, P)
+    # 10. If C1 == C2, return VALID, else return INVALID
+    C1: array[AteBitsCount, FP12_BLS381]
 
-  if publicKeys.len != messages.len:
-    return false
+func init*(ctx: var ContextCoreAggregateVerify) =
+  ## initialize an aggregate verification context
+  PAIR_BLS381_initmp(addr C1[0])                                # C1 = 1 (identity element)
 
-  if not subgroupCheck(signature):
-    return false
+func update*[T: char|byte](ctx: var ContextCoreAggregateVerify, publicKey: PublicKey, message: openarray[T], domainSepTag: string) =
+  let Q = hashToG2(messages[i], domainSepTag)                   # Q = hash_to_point(message_i)
+  PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKeys[i].point) # C1 = C1 * pairing(Q, xP)
 
+func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
   # Implementation strategy
   # -----------------------
   # We are checking that
@@ -227,13 +231,7 @@ func coreAggregateVerify[T: byte|char](
   # to get the equivalent check that is more efficient to implement
   # (e'(pubkey1, msg1) e'(pubkey2, msg2) ... e'(pubkeyN, msgN) e'(-P1, sig))^x == 1
   # The generator P1 is on G1 which is cheaper to negate than the signature
-  template `&`(point: untyped): untyped = unsafeAddr(point) # ALias
 
-  var C1: array[AteBitsCount, FP12_BLS381]
-  PAIR_BLS381_initmp(addr C1[0])                              # C1 = 1 (identity element)
-  for i in 0 ..< publicKeys.len:
-    let Q = hashToG2(messages[i])                             # Q = hash_to_point(message_i)
-    PAIR_BLS381_another(addr C1[0], &Q, &publicKeys[i].point) # C1 = C1 * pairing(Q, xP)
   # Accumulate the multiplicative inverse of C2 into C1
   let nP1 = neg(generator1())
   PAIR_BLS381_another(addr C1[0], &signature.point, &nP1)
@@ -338,32 +336,31 @@ func verify*[T: byte|char](
   ## to enforce correct usage.
   return publicKey.coreVerify(message, signature, DST)
 
-func aggregateVerify*[T: byte|char](
+func aggregateVerify*(
         publicKeys: openarray[PublicKey],
         proofs: openarray[ProofOfPossession],
-        messages: openarray[openarray[T]],
+        messages: openarray[string or seq[byte]],
         signature: Signature): bool =
   ## Check that an aggregated signature over several (publickey, message) pairs
   ## returns `true` if the signature is valid, `false` otherwise.
   ##
   ## Compared to the IETF spec API, it is modified to
   ## enforce proper usage of the proof-of-possessions
-  # Perf note: this first loops over public keys to verify proofs-of-possession
-  #            then loops once again for pairing. The loops can be fused
-  #            if this proc becomes used (instead of fastAggregateVerify)
-  if publicKeys.len != proofs.len:
+  # Note: we can't have openarray of openarrays until openarrays are first-class value types
+  if publicKeys.len != proofs.len or publicKeys != messages.len:
     return false
+
+  var ctx: ContextCoreAggregateVerify
+  ctx.init()
   for i in 0 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
       return false
-  return coreAggregateVerify(
-           publicKeys, messages,
-           signature, DST
-         )
+    ctx.update(publicKeys[i], messages[i], DST)
+  return ctx.finish(signature)
 
-func aggregateVerify*[T: byte|char](
+func aggregateVerify*(
         publicKeys: openarray[PublicKey],
-        messages: openarray[openarray[T]],
+        messages: openarray[string or seq[byte]],
         signature: Signature): bool =
   ## Check that an aggregated signature over several (publickey, message) pairs
   ## returns `true` if the signature is valid, `false` otherwise.
@@ -371,10 +368,31 @@ func aggregateVerify*[T: byte|char](
   ## The proof-of-possession MUST be verified before calling this function.
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
-  return coreAggregateVerify(
-           publicKeys, messages,
-           signature, DST
-         )
+  # Note: we can't have openarray of openarrays until openarrays are first-class value types
+  if publicKeys != messages.len:
+    return false
+
+  var ctx: ContextCoreAggregateVerify
+  ctx.init()
+  for i in 0 ..< publicKeys.len:
+    ctx.update(publicKeys[i], messages[i], DST)
+  return ctx.finish(signature)
+
+func aggregateVerify*(
+        publicKey_msg_pairs: openarray[tuple[publicKey: PublicKey, message: string or seq[byte]]],
+        signature: Signature): bool =
+  ## Check that an aggregated signature over several (publickey, message) pairs
+  ## returns `true` if the signature is valid, `false` otherwise.
+  ##
+  ## The proof-of-possession MUST be verified before calling this function.
+  ## It is recommended to use the overload that accepts a proof-of-possession
+  ## to enforce correct usage.
+  # Note: we can't have tuple of openarrays until openarrays are first-class value types
+  var ctx: ContextCoreAggregateVerify
+  ctx.init()
+  for i in 0 ..< publicKeys.len:
+    ctx.update(publicKey_msg_pairs.publicKey[i], publicKey_msg_pairs.message[i], DST)
+  return ctx.finish(signature)
 
 func fastAggregateVerify*[T: byte|char](
         publicKeys: openarray[PublicKey],
