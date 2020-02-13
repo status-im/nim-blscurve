@@ -73,6 +73,11 @@ proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string): T 
   else:
     when T is seq[byte]:
       result = hexToSeqByte(test["input"][name].getStr)
+    elif T is seq[PublicKey]:
+      for pubKeyHex in test["input"][name]:
+        result.setLen(result.len + 1)
+        doAssert result[^1].fromHex(pubKeyHex.getStr()),
+          "Couldn't parse input PublicKey: " & pubKeyHex.getStr()
     else:
       doAssert result.fromHex(test["input"][name].getStr()),
           "Couldn't parse input '" & name & "' (" & $T &
@@ -127,6 +132,30 @@ testGen(aggregate, test):
     "   computed: " & libAggSig.toHex() & "\n" &
     "   expected: " & expectedAgg.toHex()
 
+testGen(fast_aggregate_verify, test):
+  let expected = bool.getFrom(test, Output)
+  var
+    pubkeys: seq[PublicKey]
+    message: seq[byte]
+    signature: Signature
+  try:
+    pubKeys = seq[PublicKey].getFrom(test, Input, "pubkeys")
+    message = seq[byte].getFrom(test, Input, "message")
+    signature = Signature.getFrom(test, Input, "signature")
+  except:
+    let emsg = getCurrentExceptionMsg()
+    if expected:
+      doAssert false, "Verification was not supposed to fail, but one of the inputs was invalid." & emsg
+    else:
+      echo "[INFO] Expected verification failure at parsing stage: " & emsg
+
+  let libValid = pubKeys.fastAggregateVerify(message, signature)
+
+  doAssert libValid == expected, block:
+    "\nFast Aggregate Verification differs from expected \n" &
+    "   computed: " & $libValid & "\n" &
+    "   expected: " & $expected
+
 suite "ETH 2.0 v0.10.1 test vectors":
   test "sign(SecretKey, message) -> Signature":
     test_sign()
@@ -134,3 +163,5 @@ suite "ETH 2.0 v0.10.1 test vectors":
     test_verify()
   test "aggregate(openarray[Signature]) -> Signature":
     test_aggregate()
+  test "fastAggregateVerify(openarray[PublicKey], message, Signature) -> bool":
+    test_fast_aggregate_verify()
