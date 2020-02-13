@@ -141,7 +141,7 @@ steps:
       echo "PATH=${PATH}"
       nimble refresh
       nimble install -y --depsOnly
-      nimble install https://github.com/status-im/NimYAML
+      nimble install https://github.com/status-im/NimYAML@#head
     displayName: 'Building dependencies (Posix)'
     condition: ne(variables['Agent.OS'], 'Windows_NT')
   - powershell: |
