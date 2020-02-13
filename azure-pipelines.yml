@@ -1,46 +1,38 @@
 strategy:
   maxParallel: 10
   matrix:
-    # Nim requires enforcing ARCH="x86" and UCPU
+    # Nim requires enforcing UCPU="i686" and UCPU
     # for 32-bit targets as it seems like Azure machines are 64-bit
     # TEST_LANG env variable support TODO
     Windows_stable_32bit:
       VM: 'windows-latest'
-      ARCH: x86
       UCPU: i686
-      PLATFORM: x86
       CHANNEL: stable
       TEST_LANG: c
     Windows_stable_64bit:
       VM: 'windows-latest'
       UCPU: amd64
-      PLATFORM: x64
       CHANNEL: stable
       TEST_LANG: c
     # Windows_cpp_stable_64bit:
     #   VM: 'windows-latest'
     #   UCPU: amd64
-    #   PLATFORM: x64
     #   CHANNEL: stable
     #   TEST_LANG: cpp
     Linux_stable_64bit:
       VM: 'ubuntu-16.04'
       UCPU: amd64
-      PLATFORM: x64
       CHANNEL: stable
       TEST_LANG: c
     # Linux_cpp_stable_64bit:
     #   VM: 'ubuntu-16.04'
     #   UCPU: amd64
-    #   PLATFORM: x64
     #   CHANNEL: stable
     #   WEAVE_TEST_LANG: cpp
 
     # TODO this requires gcc -m32 as the Ubuntu image is 64-bit
     # Linux_stable_32bit:
     #   VM: 'ubuntu-16.04'
-    #   ARCH: x86
-    #   PLATFORM: x86
     #   UCPU: i686
     #   CHANNEL: stable
     #   TEST_LANG: c
@@ -48,7 +40,6 @@ strategy:
     MacOS_stable_64bit:
       VM: 'macOS-10.14'
       UCPU: amd64
-      PLATFORM: x64
       CHANNEL: stable
       WEAVE_TEST_LANG: c
 
@@ -59,13 +50,13 @@ steps:
   - task: CacheBeta@1
     displayName: 'cache Nim binaries'
     inputs:
-      key: NimBinaries | $(Agent.OS) | $(CHANNEL) | $(PLATFORM)
+      key: NimBinaries | $(Agent.OS) | $(CHANNEL) | $(UCPU)
       path: NimBinaries
 
   - task: CacheBeta@1
     displayName: 'cache MinGW-w64'
     inputs:
-      key: mingwCache | 8_1_0 | $(PLATFORM)
+      key: mingwCache | 8_1_0 | $(UCPU)
       path: mingwCache
     condition: eq(variables['Agent.OS'], 'Windows_NT')
 
@@ -77,7 +68,7 @@ steps:
       echo "PATH=${PATH}"
       set -e
       echo "Installing MinGW-w64"
-      if [[ $PLATFORM == "x86" ]]; then
+      if [[ $UCPU == "i686" ]]; then
         MINGW_FILE="i686-8.1.0-release-posix-dwarf-rt_v6-rev0.7z"
         MINGW_URL="https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/8.1.0/threads-posix/dwarf/${MINGW_FILE}"
         MINGW_DIR="mingw32"
@@ -135,8 +126,8 @@ steps:
       fi
       mkdir -p NimBinaries
       pushd NimBinaries
-      if [ ! -x "nim-${CHANNEL}/bin/nim" ]; then
-        echo "Building Nim from source ..."
+      if [ ! -x "nim-${CHANNEL}/bin/nim" ] || [ ! -x "nim-${CHANNEL}/bin/nimble" ]; then
+        echo "Building Nim/Nimble from source ..."
         git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"
         pushd "nim-${CHANNEL}"
         git clone --depth 1 https://github.com/nim-lang/csources csources/
@@ -149,7 +140,7 @@ steps:
         ./koch boot -d:release
         ./koch tools
       else
-        echo "Found Nim binary, checking version ..."
+        echo "Found Nim/Nimble binaries, checking version ..."
         pushd "nim-${CHANNEL}"
         git fetch origin "${BRANCH}"
         if [[ $(git merge FETCH_HEAD | grep -c "Already up to date.") -ne 1 ]]; then
@@ -157,14 +148,6 @@ steps:
           bin/nim c koch
           ./koch boot -d:release
           ./koch tools
-        else
-          echo "Nim version up-to-date. Checking Nimble ..."
-          if [ ! -x "nim-${CHANNEL}/bin/nimble" ]; then
-            echo "For some reason Nimble does not exist"
-            ./koch tools
-          else:
-            echo "Nimble also exists. Exiting."
-          fi
         fi
       fi
       popd # exit nim-CHANNEL
@@ -188,6 +171,5 @@ steps:
 
   - bash: |
       echo "PATH=${PATH}"
-      export ucpu=${UCPU}
       nimble test
     displayName: 'Testing the package'
