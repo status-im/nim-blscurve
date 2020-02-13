@@ -202,13 +202,13 @@ type
     # 10. If C1 == C2, return VALID, else return INVALID
     C1: array[AteBitsCount, FP12_BLS381]
 
-func init*(ctx: var ContextCoreAggregateVerify) =
+func init(ctx: var ContextCoreAggregateVerify) =
   ## initialize an aggregate verification context
   PAIR_BLS381_initmp(addr ctx.C1[0])                                # C1 = 1 (identity element)
 
 template `&`(point: GroupG1 or GroupG2): untyped = unsafeAddr point
 
-func update*[T: char|byte](ctx: var ContextCoreAggregateVerify, publicKey: PublicKey, message: openarray[T], domainSepTag: string) =
+func update[T: char|byte](ctx: var ContextCoreAggregateVerify, publicKey: PublicKey, message: openarray[T], domainSepTag: string) =
   let Q = hashToG2(message, domainSepTag)                   # Q = hash_to_point(message_i)
   PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKey.point) # C1 = C1 * pairing(Q, xP)
 
