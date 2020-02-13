@@ -29,6 +29,12 @@ proc parseTest(file: string): JsonNode =
   defer: yamlStream.close()
   result = yamlStream.loadToJson()[0]
 
+const SkippedTests = [
+  "small"/"fast_aggregate_verify_e6922a0d196d9869"/"data.yaml", # Buggy upstream vector: https://github.com/ethereum/eth2.0-specs/issues/1618
+  "small"/"fast_aggregate_verify_62bca7cd61880e26"/"data.yaml",
+  "small"/"fast_aggregate_verify_3b2b0141e95125f0"/"data.yaml",
+]
+
 template testGen(name, testJson, body: untyped): untyped =
   ## Generates a test proc
   ## with identifier "test_name"
@@ -36,8 +42,13 @@ template testGen(name, testJson, body: untyped): untyped =
   ## the variable passed as `testJson`
   proc `test _ name`() =
     var count = 0 # Need to fail if walkDir doesn't return anything
+    var skipped = 0
     const testDir = ETH2_DIR / astToStr(name)
     for file in walkDirRec(testDir, relative = true):
+      if file in SkippedTests:
+        echo "[WARNING] Skipping - ", file
+        inc skipped
+        continue
       echo "       ", astToStr(name), " test: ", file
       let testJson = parseTest(testDir / file)
 
@@ -46,6 +57,8 @@ template testGen(name, testJson, body: untyped): untyped =
       inc count
 
     doAssert count > 0, "Empty or inexisting test folder: " & astToStr(name)
+    if skipped > 0:
+      echo "[Warning]: ", skipped, " tests skipped."
 
 type InOut = enum
   Input

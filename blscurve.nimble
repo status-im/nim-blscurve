@@ -19,8 +19,8 @@ proc test(env, path: string, lang = "c") =
 ### tasks
 task test, "Run all tests":
   # Debug - test intermediate computations
-  test "", "blscurve/hkdf.nim"
-  test "", "blscurve/hash_to_curve.nim"
+  # test "", "blscurve/hkdf.nim"
+  # test "", "blscurve/hash_to_curve.nim"
 
   # Internal+Public BLS API - pre Ethereum2.0 v0.10
   # Those directly import the old API and internals
@@ -29,5 +29,7 @@ task test, "Run all tests":
   test "", "tests/old_spec/test_vectors.nim"
 
   # Internal BLS API - IETF standard / post Ethereum2.0 v0.10
-  test "", "tests/hash_to_curve.nim"
+  # test "", "tests/hash_to_curve.nim"
 
+  # Public BLS API - IETF standard / post Ethereum2.0 v0.10
+  test "-d:BLS_USE_IETF_API=true", "tests/eth2_vectors.nim"
