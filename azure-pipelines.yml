@@ -173,7 +173,7 @@ steps:
       nimble refresh
       nimble install nimcrypto stew
     displayName: 'Building the package dependencies (Windows)'
-    condition: ne(variables['Agent.OS'], 'Windows_NT')
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
 
   - bash: |
       echo "PATH=${PATH}"
