@@ -136,6 +136,7 @@ steps:
       mkdir -p NimBinaries
       pushd NimBinaries
       if [ ! -x "nim-${CHANNEL}/bin/nim" ]; then
+        echo "Building Nim from source ..."
         git clone -b "${BRANCH}" https://github.com/nim-lang/nim "nim-${CHANNEL}/"
         pushd "nim-${CHANNEL}"
         git clone --depth 1 https://github.com/nim-lang/csources csources/
@@ -148,12 +149,22 @@ steps:
         ./koch boot -d:release
         ./koch tools
       else
+        echo "Found Nim binary, checking version ..."
         pushd "nim-${CHANNEL}"
         git fetch origin "${BRANCH}"
         if [[ $(git merge FETCH_HEAD | grep -c "Already up to date.") -ne 1 ]]; then
+          echo "Old version, rebuild"
           bin/nim c koch
           ./koch boot -d:release
           ./koch tools
+        else
+          echo "Nim version up-to-date. Checking Nimble ..."
+          if [ ! -x "nim-${CHANNEL}/bin/nimble" ]; then
+            echo "For some reason Nimble does not exist"
+            ./koch tools
+          else:
+            echo "Nimble also exists. Exiting."
+          fi
         fi
       fi
       popd # exit nim-CHANNEL
