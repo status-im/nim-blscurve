@@ -144,6 +144,8 @@ when (sizeof(int) == 4) or defined(use32):
        importc: "BIG_384_29_jacobi", cdecl.}
   proc BIG_384_rcopy*(b, a: BIG_384) {.
        importc: "BIG_384_29_rcopy", cdecl.}
+  proc BIG_384_mod*(x, n: BIG_384) {.
+       importc: "BIG_384_29_mod", cdecl.}
 elif sizeof(int) == 8:
   proc BIG_384_toBytes*(b: ptr char, a: BIG_384) {.
        importc: "BIG_384_58_toBytes", cdecl.}
@@ -175,6 +177,8 @@ elif sizeof(int) == 8:
        importc: "BIG_384_58_jacobi", cdecl.}
   proc BIG_384_rcopy*(b, a: BIG_384) {.
        importc: "BIG_384_58_rcopy", cdecl.}
+  proc BIG_384_mod*(x, n: BIG_384) {.
+       importc: "BIG_384_58_mod", cdecl.}
 
 proc PAIR_BLS381_ate*(res: ptr FP12_BLS381, p: ptr ECP2_BLS381,
                       q: ptr ECP_BLS381) {.milagro_func.}

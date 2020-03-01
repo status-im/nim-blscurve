@@ -1,18 +1,14 @@
-# Nim BLS12-381 Curve implementation
+# BLS Signature Scheme over BLS12-381 pairing-friendly curve
 
 [![Build Status](https://travis-ci.org/status-im/nim-blscurve.svg?branch=master)](https://travis-ci.org/status-im/nim-blscurve)
 [![Build status](https://ci.appveyor.com/api/projects/status/6l1il60ljfbtxw3g/branch/master?svg=true)](https://ci.appveyor.com/project/nimbus/nim-blscurve/branch/master)
 [![Build Status: Azure](https://img.shields.io/azure-devops/build/nimbus-dev/0c305144-232d-4f3e-ba77-93e4e81182da/4/master?label=Azure%20%28Linux%2064-bit%2C%20Windows%2032-bit%2F64-bit%2C%20MacOS%2064-bit%29)](https://dev.azure.com/nimbus-dev/nim-blscurve/_build?definitionId=4&branchName=master)
 
+This library implements:
+- The BLS signature scheme (Boneh-Lynn-Shacham)
+- over the BLS12-381 (Barreto-Lynn-Scott) pairing-friendly curve
 
-This library uses sources from [AMCL](https://github.com/apache/incubator-milagro-crypto-c).
-
-Current curve supported:
-
-  - BLS12-381 (ZK-SNARKS)
-
-For signature and verification purposes, raw messages are first hashed with SHA256 (SHA2)
-following Ethereum requirements 2.0
+Cipher suite ID: BLS_SIG_BLS12381G2-SHA256-SSWU-RO-\_POP\_
 
 ## Installation
 
@@ -21,21 +17,14 @@ You can install the developement version of the library through nimble with the 
 nimble install https://github.com/status-im/nim-blscurve
 ```
 
-## Keeping track of upstream
-
-To keep track of upstream:
-
-- Update the submodule.
-- Execute `nim e milagro.nims amcl blscurve/csources`
-- Test
-- Commit
-
 ## Implementation stability
 
 This repo follows Ethereum 2.0 requirements.
 
 Besides the standardization work described below, no changes are planned upstream
 for the foreseeable future.
+
+### Standardization
 
 Currently (Jun 2019) a cross-blockchain working group is working to standardize BLS signatures
 for the following blockchains:
@@ -46,12 +35,31 @@ for the following blockchains:
 - Filecoin
 - Zcash Sapling
 
-Standardization work is led by:
-- Dan Boneh, Professor at Stanford University and co-author of BLS
-- Sergey Gorbunov, Assistant Professor at the University of Waterloo and working at Algorand
+#### Signature scheme
 
-IETF draft submission: https://tools.ietf.org/html/draft-boneh-bls-signature-00
-Repo for collaboration on the draft: https://github.com/pairingwg/bls_standard
+- IETF draft submission: https://tools.ietf.org/html/draft-boneh-bls-signature-00
+- Repo for collaboration on the draft: https://github.com/cfrg/draft-irtf-cfrg-bls-signature
+
+#### Hashing to curve
+
+- https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
+
+#### Curve implementation
+
+- https://tools.ietf.org/html/draft-irtf-cfrg-pairing-friendly-curves-00
+
+## Backend
+
+This library uses sources from [AMCL (Apache Milagro Crypto)](https://github.com/apache/incubator-milagro-crypto-c).
+
+### Keeping track of upstream
+
+To keep track of upstream AMCL:
+
+- Update the submodule.
+- Execute `nim e milagro.nims amcl blscurve/csources`
+- Test
+- Commit
 
 ## License
 

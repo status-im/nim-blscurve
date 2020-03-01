@@ -8,7 +8,7 @@
 # those terms.
 import unittest, ospaths
 import nimcrypto/[sysrand, hash, sha2, utils]
-import ../blscurve/bls, ../blscurve/common
+import ../../blscurve/bls_old_spec, ../../blscurve/common
 
 const messages = [
   "Small msg", "121220888888822111212",

@@ -6,6 +6,12 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
+
+# Implementation of BLS signature scheme (Boneh-Lynn-Shacham)
+# pre-standardization. Target Ethereum 2.0 specification before v0.10.
+# To be removed other actors (testnet/interop, fuzzing)
+# switch to the IETF standard
+
 import nimcrypto/[sysrand, utils, hash, sha2]
 import stew/endians2
 import milagro, common

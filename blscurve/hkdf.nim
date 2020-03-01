@@ -8,8 +8,6 @@
 # those terms.
 
 # TODO: Move into nimcrypto
-# TODO: for use in BLS hash_to_curve (specifically hash_to_base subroutine)
-#       hkdf requires separate HKDF-Extract and HKDF-Expand.
 # Merge with: https://github.com/status-im/nim-eth/blob/b7ebf8ed/eth/p2p/discoveryv5/hkdf.nim
 
 # HMAC-based Extract-and-Expand Key Derivation Function (HKDF)
