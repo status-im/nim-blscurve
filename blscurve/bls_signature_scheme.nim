@@ -91,8 +91,8 @@ func subgroupCheck(P: GroupG1 or GroupG2): bool =
     rP.mul(CURVE_Order)
   result = rP.isInf()
 
-func privToPub(secretKey: SecretKey): PublicKey =
-  ## Generates a public key from a signature key
+func privToPub*(secretKey: SecretKey): PublicKey =
+  ## Generates a public key from a secret key
   result.point = generator1()
   result.point.mul(secretKey.intVal)
 

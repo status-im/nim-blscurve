@@ -35,14 +35,42 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
   when obj is SecretKey:
-    result = obj.intVal.fromBytes(hexStr)
+    result = obj.intVal.fromBytes(raw)
   else:
-    result = obj.point.fromBytes(hexStr)
+    result = obj.point.fromBytes(raw)
 
-func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string =
+func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string {.inline.} =
   ## Return the hex representation of a BLS signature scheme object
   ## Signature and Proof-of-posessions are serialized in compressed form
   when obj is SecretKey:
     result = obj.intVal.toHex()
   else:
     result = obj.point.toHex()
+
+func serialize*(
+       dst: var openarray[byte],
+       obj: SecretKey|PublicKey|Signature|ProofOfPossession): bool {.inline.} =
+  ## Serialize the input `obj` in raw binary form and write it
+  ## in `dst`.
+  ## Returns `true` if the export is succesful, `false` otherwise
+  when obj is SecretKey:
+    result = obj.intVal.toBytes(dst)
+  else:
+    result = obj.point.toBytes(dst)
+
+const
+  RawSecretKeySize = MODBYTES_384
+  RawPublicKeySize = MODBYTES_384
+  RawSignatureSize = MODBYTES_384 * 2
+
+func exportRaw*(secretKey: SecretKey): array[RawSecretKeySize, byte] {.inline.}=
+  ## Serialize a secret key into its raw binary representation
+  discard result.serialize(secretKey)
+
+func exportRaw*(publicKey: PublicKey): array[RawPublicKeySize, byte] {.inline.}=
+  ## Serialize a public key into its raw binary representation
+  discard result.serialize(publicKey)
+
+func exportRaw*(signature: Signature): array[RawSignatureSize, byte] {.inline.}=
+  ## Serialize a signature into its raw binary representation
+  discard result.serialize(signature)

@@ -16,8 +16,8 @@ when BLS_USE_IETF_API:
     `==`,
     aggregate,
     sign, verify, aggregateVerify, fastAggregateVerify,
-    keyGen,
-    fromHex, fromBytes, toHex
+    keyGen, privToPub,
+    fromHex, fromBytes, toHex, serialize, exportRaw
 else:
   import ./blscurve/bls_old_spec
   export bls_old_spec
