@@ -526,19 +526,14 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
 
   #  3. x = OS2IP(OKM) mod r
   #  5. SK = x
-  debugecho "keyGen:"
-  if not secretKey.intVal.fromBytes(okm):
+  var dseckey: DBIG_384
+  if not dseckey.fromBytes(okm):
     return false
-  {.noSideEffect.}:
-    debugecho "  CURVE_Order: ", CURVE_Order.toHex()
-    BIG_384_mod(secretKey.intVal, CURVE_Order)
 
-  debugecho "  seckey (mod): ", secretKey.toHex()
+  {.noSideEffect.}:
+    BIG_384_dmod(secretKey.intVal, dseckey, CURVE_Order)
 
   #  4. xP = x * P
   #  6. PK = point_to_pubkey(xP)
   publicKey = privToPub(secretKey)
-
-  debugecho "  seckey (exit): ", secretKey.toHex()
-
   return true
