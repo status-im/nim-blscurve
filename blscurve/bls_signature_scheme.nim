@@ -513,11 +513,7 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   var prk: MDigest[sha256.bits]
 
   # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
-  ctx.hkdfExtract(
-    prk,
-    cast[ptr byte](salt[0].unsafeAddr), salt.len.uint,
-    ikm[0].unsafeAddr, ikm.len.uint
-  )
+  ctx.hkdfExtract(prk, salt, ikm)
 
   # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
   # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
@@ -526,17 +522,18 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   #  2. OKM = HKDF-Expand(PRK, "", L)
   const L = 48
   var okm: array[L, byte]
-  ctx.hkdfExpand(prk, nil, 0, okm[0].addr, L)
+  ctx.hkdfExpand(prk, "", okm)
 
   #  3. x = OS2IP(OKM) mod r
   #  5. SK = x
-  if not secretKey.intVal.fromBytes(okm):
+  var dseckey: DBIG_384
+  if not dseckey.fromBytes(okm):
     return false
+
   {.noSideEffect.}:
-    BIG_384_mod(secretKey.intVal, CURVE_Order)
+    BIG_384_dmod(secretKey.intVal, dseckey, CURVE_Order)
 
   #  4. xP = x * P
   #  6. PK = point_to_pubkey(xP)
   publicKey = privToPub(secretKey)
-
   return true

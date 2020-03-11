@@ -80,10 +80,10 @@
 
 import nimcrypto/hmac
 
-func hkdfExtract*[T](ctx: var HMAC[T],
+func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
                      prk: var MDigest[T.bits],
-                     salt: ptr byte, saltLen: uint,
-                     ikm: ptr byte, ikmLen: uint
+                     salt: openArray[S],
+                     ikm: openArray[I]
                     ) =
   ## "Extract" step of HKDF.
   ## Extract a fixed size pseudom-random key
@@ -91,8 +91,8 @@ func hkdfExtract*[T](ctx: var HMAC[T],
   ## and a secret input keying material.
   ##
   ## Inputs:
-  ## - salt + saltLen: a buffer to an optional salt value (set to nil if unused)
-  ## - ikm + ikmLen: "input keying material", the secret value to hash.
+  ## - salt: a buffer to an optional salt value (set to nil if unused)
+  ## - ikm: "input keying material", the secret value to hash.
   ##
   ## Output:
   ## - prk: a pseudo random key of fixed size. The size is the same as the cryptographic hash chosen.
@@ -100,16 +100,16 @@ func hkdfExtract*[T](ctx: var HMAC[T],
   ## Temporary:
   ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].
   mixin init, update, finish
-  ctx.init(salt, saltLen)
-  ctx.update(ikm, ikmLen)
+  ctx.init(salt)
+  ctx.update(ikm)
   discard ctx.finish(prk.data)
 
   # ctx.clear() - TODO: very expensive
 
-func hkdfExpand*[T](ctx: var HMAC[T],
+func hkdfExpand*[T;I: char|byte](ctx: var HMAC[T],
                     prk: MDigest[T.bits],
-                    info: ptr byte, infoLen: uint,
-                    output: ptr byte, outLen: uint
+                    info: openArray[I],
+                    output: var openArray[byte]
                   ) =
   ## "Expand" step of HKDF
   ## Expand a fixed size pseudo random-key
@@ -117,12 +117,11 @@ func hkdfExpand*[T](ctx: var HMAC[T],
   ##
   ## Inputs:
   ## - prk: a pseudo random key (PRK) of fixed size. The size is the same as the cryptographic hash chosen.
-  ## - info + infolen: optional context and application specific information (set to nil if unused)
-  ## - outLen: The target length of the output
+  ## - info: optional context and application specific information (set to nil if unused)
   ##
   ## Output:
   ## - output: OKM (output keying material). The PRK is expanded to match
-  ##           outLen, the result is tored in output.
+  ##           the output length, the result is tored in output.
   ##
   ## Temporary:
   ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].
@@ -131,23 +130,23 @@ func hkdfExpand*[T](ctx: var HMAC[T],
   const HashLen = T.bits div 8
 
   static: doAssert T.bits >= 0
-  # assert outLen <= 255*HashLen
+  # assert output.len <= 255*HashLen
 
-  let N = outLen div HashLen
+  let N = output.len div HashLen
   var t: MDigest[T.bits]
   let oArray = cast[ptr UncheckedArray[byte]](output)
 
-  for i in 0'u .. N:
+  for i in 0 .. N:
     ctx.init(prk.data)
     # T(0) = empty string
     if i != 0:
       ctx.update(t.data)
-    ctx.update(info, infoLen)
+    ctx.update(info)
     ctx.update([uint8(i+1)])
     discard ctx.finish(t.data)
 
     let iStart = i * HashLen
-    let size = min(HashLen, int(outLen - iStart))
+    let size = min(HashLen, output.len - iStart)
     copyMem(oArray[iStart].addr, t.data.addr, size)
 
   # ctx.clear() - TODO: very expensive
@@ -178,15 +177,19 @@ when isMainModule:
       var ctx: HMAC[HashType]
       var prk: MDigest[HashType.bits]
 
-      let salt = if bsalt.len == 0: nil
-                 else: bsalt[0].unsafeAddr
-      let ikm = if bikm.len == 0: nil
-                else: bikm[0].unsafeAddr
-      let info = if binfo.len == 0: nil
-                 else: binfo[0].unsafeAddr
+      # let salt = if bsalt.len == 0: nil
+      #            else: bsalt[0].unsafeAddr
+      # let ikm = if bikm.len == 0: nil
+      #           else: bikm[0].unsafeAddr
+      # let info = if binfo.len == 0: nil
+      #            else: binfo[0].unsafeAddr
+      let
+        salt = bsalt
+        ikm = bikm
+        info = binfo
 
-      hkdfExtract(ctx, prk, salt, bsalt.len.uint, ikm, bikm.len.uint)
-      hkdfExpand(ctx, prk, info, binfo.len.uint, output[0].addr, output.len.uint)
+      hkdfExtract(ctx, prk, salt, ikm)
+      hkdfExpand(ctx, prk, info, output)
 
       doAssert @(prk.data) == bprk, "\nComputed     0x" & toHex(prk.data) &
                                     "\nbut expected " & PRK & '\n'
