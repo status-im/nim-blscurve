@@ -30,10 +30,9 @@ import
 
 func hashToBaseFP2[T](
                    ctx: var HMAC[T],
-                   msg: ptr byte, msgLen: uint,
+                   msg: ptr byte, msgLen: int,
                    ctr: range[0'i8 .. 2'i8],
-                   domainSepTag: ptr byte,
-                   domainSepTagLen: uint
+                   domainSepTag: string,
                   ): FP2_BLS381 =
   ## Implementation of hash_to_base for the G2 curve of BLS12-381
   ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-04#section-5.3
@@ -84,7 +83,10 @@ func hashToBaseFP2[T](
   # with an extra null-byte beyond the declared length.
   assert not msg.isNil
   assert cast[ptr UncheckedArray[byte]](msg)[msgLen] == 0x00, "Expected message terminated by nul-byte but found " & $cast[ptr UncheckedArray[byte]](msg)[msgLen] & " (decimal value)"
-  hkdfExtract(ctx, mprime, domainSepTag, domainSepTagLen, msg, msgLen+1)
+  hkdfExtract(
+    ctx, mprime, domainSepTag,
+    toOpenArray(cast[ptr UncheckedArray[byte]](msg), 0, msgLen) # msgLen inclusive
+  )
 
   info[0] = ord'H'
   info[1] = ord'2'
@@ -96,7 +98,7 @@ func hashToBaseFP2[T](
     ## for i in 1 .. m
     ## with m = 2 (extension degree of FP2)
     info[4] = byte(i)
-    hkdfExpand(ctx, mprime, info[0].addr, info.len.uint, t[0].addr, t.len.uint)
+    hkdfExpand(ctx, mprime, info, t)
 
     block: # HKDF output is greater than 384-bit (64 bytes = 512-bit)
            # and need to be stored and reduced in a DBIG
@@ -404,13 +406,13 @@ func clearCofactor(P: var ECP2_BLS381) =
 
   P.affine()           # Convert from Jacobian coordinates (x', y', z') to affine (x, y, 1); (x is not the curve parameter here)
 
-func hashToG2(msg: ptr byte, msgLen: uint, domainSepTag: ptr byte, domainSepTagLen: uint): ECP2_BLS381 =
+func hashToG2(msg: ptr byte, msgLen: int, domainSepTag: string): ECP2_BLS381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
   ## The message should have an extra null byte after its declared length
   var ctx: HMAC[sha256]
 
-  let u0 = hashToBaseFP2(ctx, msg, msgLen, ctr = 0, domainSepTag, domainSepTagLen)
-  let u1 = hashToBaseFP2(ctx, msg, msgLen, ctr = 1, domainSepTag, domainSepTagLen)
+  let u0 = hashToBaseFP2(ctx, msg, msgLen, ctr = 0, domainSepTag)
+  let u1 = hashToBaseFP2(ctx, msg, msgLen, ctr = 1, domainSepTag)
 
   result = mapToCurveG2(u0)
   let Q1 = mapToCurveG2(u1)
@@ -427,17 +429,13 @@ func hashToG2*(msg: openarray[byte], domainSepTag: string): ECP2_BLS381 =
   msgWithNul[0 ..< msg.len] = msg
   msgWithNul[msg.len] = 0x00
 
-  let
-    pmsg = cast[ptr byte](msgWithNul[0].unsafeAddr)
-    pdst = cast[ptr byte](domainSepTag[0].unsafeAddr)
+  let pmsg = cast[ptr byte](msgWithNul[0].unsafeAddr)
 
-  hashToG2(pmsg, msg.len.uint, pdst, domainSepTag.len.uint)
+  hashToG2(pmsg, msg.len, domainSepTag)
 
 func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
   ## The message should have an extra null byte
-
-  let pdst = cast[ptr byte](domainSepTag[0].unsafeAddr)
 
   if message.len == 0:
     # Special-casing empty strings (i.e. not constant-time)
@@ -445,13 +443,13 @@ func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
     # to timing attacks.
     var empty = [byte 0x00]
     let pmsg = cast[ptr byte](empty[0].unsafeAddr)
-    result = hashToG2(pmsg, 0, pdst, domainSepTag.len.uint)
+    result = hashToG2(pmsg, 0, domainSepTag)
   else:
     # Strings are always nul-terminated in Nim so don't need
     # extra nul appending compared to openarray[byte]
     # to satisfy the spec requirements
     let pmsg = cast[ptr byte](message[0].unsafeAddr)
-    result = hashToG2(pmsg, message.len.uint, pdst, domainSepTag.len.uint)
+    result = hashToG2(pmsg, message.len, domainSepTag)
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
@@ -490,15 +488,14 @@ when isMainModule:
 
       let pmsg = if msg.len == 0: nil
                  else: cast[ptr byte](msg[0].unsafeAddr)
-      let pdst = cast[ptr byte](dst[0].unsafeAddr)
 
       var ctx: HMAC[sha256]
       # Important: do we need to include the null byte at the end?
       let pointFP2 = hashToBaseFP2(
         ctx,
-        pmsg, msg.len.uint,
+        pmsg, msg.len,
         ctr,
-        pdst, dst.len.uint
+        dst
       )
       doAssert fp2 == pointFP2
       echo "Success hashToBaseFP2 ", astToStr(id)
