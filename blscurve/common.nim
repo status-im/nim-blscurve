@@ -572,6 +572,7 @@ proc getBytes*(a: BIG_384): array[MODBYTES_384, byte] =
 func fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
   ## Unserialize big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``MODBYTES_384_29``.
+  zeroMem(res.addr, sizeof(res))
   let length = if len(a) > MODBYTES_384: MODBYTES_384 else: len(a)
   for i in 0..<length:
     discard BIG_384_fshl(res, 8)
@@ -584,7 +585,7 @@ func fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
 
   # TODO: there is no length check in Milagro BIG_384_29_dfromBytesLen
   #       is that normal?
-
+  zeroMem(res.addr, sizeof(res))
   for rawByte in a:
     BIG_384_dshl(res, 8)
     res[0] = res[0] + cast[Chunk](rawByte)
