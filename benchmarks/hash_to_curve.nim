@@ -21,10 +21,7 @@ import
 # ############################################################
 # https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#appendix-C.3
 
-echo "⚠️ Warning: using draft v5 of IETF Hash-To-Curve (HKDF-based)."
-echo "            This is an outdated draft.\n\n"
-
-proc benchHashToG2(iters: int) =
+proc benchHashToG2*(iters: int) =
   const dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
   let msg = "msg"
 
@@ -33,4 +30,8 @@ proc benchHashToG2(iters: int) =
   bench("Hash to G2 (Draft #5)", iters):
     point = hashToG2(msg, dst)
 
-benchHashToG2(1000)
+
+when isMainModule:
+  echo "⚠️ Warning: using draft v5 of IETF Hash-To-Curve (HKDF-based)."
+  echo "            This is an outdated draft.\n\n"
+  benchHashToG2(1000)

@@ -22,7 +22,7 @@ import
 # ############################################################
 
 
-proc benchScalarMultG1(iters: int) =
+proc benchScalarMultG1*(iters: int) =
   var x = generator1()
   var scal: BIG_384
   random(scal)
@@ -30,7 +30,7 @@ proc benchScalarMultG1(iters: int) =
   bench("Scalar multiplication G1", iters):
     x.mul(scal)
 
-proc benchScalarMultG2(iters: int) =
+proc benchScalarMultG2*(iters: int) =
   var x = generator2()
   var scal: BIG_384
   random(scal)
@@ -38,21 +38,22 @@ proc benchScalarMultG2(iters: int) =
   bench("Scalar multiplication G2", iters):
     x.mul(scal)
 
-proc benchECAddG1(iters: int) =
+proc benchECAddG1*(iters: int) =
   var x = generator1()
   var y = generator1()
 
   bench("EC add G1", iters):
     x.add(y)
 
-proc benchECAddG2(iters: int) =
+proc benchECAddG2*(iters: int) =
   var x = generator2()
   var y = generator2()
 
   bench("EC add G2", iters):
     x.add(y)
 
-benchScalarMultG1(1000)
-benchScalarMultG2(1000)
-benchEcAddG1(1000)
-benchEcAddG2(1000)
+when isMainModule:
+  benchScalarMultG1(1000)
+  benchScalarMultG2(1000)
+  benchEcAddG1(1000)
+  benchEcAddG2(1000)
