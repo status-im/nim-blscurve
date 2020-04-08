@@ -55,7 +55,7 @@ when defined(i386) or defined(amd64):
 proc report(op: string, start, stop: MonoTime, startClk, stopClk: int64, iters: int) =
   let ns = inNanoseconds((stop-start) div iters)
   let throughput = 1e9 / float64(ns)
-  echo &"{op:<30}     {throughput:>20.3f} ops/s     {ns:>9} ns/op     {(stopClk - startClk) div iters:>9} cycles"
+  echo &"{op:<55}     {throughput:>20.3f} ops/s     {ns:>9} ns/op     {(stopClk - startClk) div iters:>9} cycles"
 
 template bench*(op: string, iters: int, body: untyped): untyped =
   bind getMonotime, getTicks, report
