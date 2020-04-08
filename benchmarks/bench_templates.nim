@@ -8,8 +8,8 @@
 # those terms.
 
 import
-  # Helpers
-  ./helpers/timers,
+  # Platform helpers
+  ./platforms/platforms,
   # Standard library
   std/[monotimes, times, strformat, strutils, macros]
 
@@ -28,8 +28,6 @@ proc warmup*() =
 
 warmup()
 
-echo "\n⚠️ Cycles measurements are approximate and use the CPU nominal clock: Turbo-Boost and overclocking will skew them."
-echo "==========================================================================================================\n"
 when defined(gcc):
   echo "\nCompiled with GCC"
 elif defined(clang):
@@ -48,23 +46,35 @@ when (sizeof(int) == 4) or defined(use32):
 else:
   echo "Using Milagro with 64-bit limbs"
 
-when defined(i386) or defined(amd64):
-  import ./helpers/x86
+when SupportsCPUName:
   echo "Running on ", cpuName(), "\n\n"
+
+when SupportsGetTicks:
+  echo "\n⚠️ Cycles measurements are approximate and use the CPU nominal clock: Turbo-Boost and overclocking will skew them."
+  echo "i.e. a 20% overclock will be about 20% off (assuming no dynamic frequency scaling)"
+
+echo "\n=================================================================================================================\n"
 
 proc report(op: string, start, stop: MonoTime, startClk, stopClk: int64, iters: int) =
   let ns = inNanoseconds((stop-start) div iters)
   let throughput = 1e9 / float64(ns)
-  echo &"{op:<55}     {throughput:>20.3f} ops/s     {ns:>9} ns/op     {(stopClk - startClk) div iters:>9} cycles"
+  when SupportsGetTicks:
+    echo &"{op:<52}     {throughput:>10.3f} ops/s    {ns:>9} ns/op    {(stopClk - startClk) div iters:>9} cycles"
+  else:
+    echo &"{op:<52}     {throughput:>10.3f} ops/s    {ns:>9} ns/op"
 
 template bench*(op: string, iters: int, body: untyped): untyped =
-  bind getMonotime, getTicks, report
-
   let start = getMonotime()
-  let startClk = getTicks()
+  when SupportsGetTicks:
+    let startClk = getTicks()
   for _ in 0 ..< iters:
     body
-  let stopClk = getTicks()
+  when SupportsGetTicks:
+    let stopClk = getTicks()
   let stop = getMonotime()
+
+  when not SupportsGetTicks:
+    let startClk = -1'i64
+    let stopClk = -1'i64
 
   report(op, start, stop, startClk, stopClk, iters)
