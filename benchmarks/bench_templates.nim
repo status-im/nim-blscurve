@@ -28,7 +28,7 @@ proc warmup*() =
 
 warmup()
 
-echo "\n⚠️ Measurements are approximate and use the CPU nominal clock: Turbo-Boost and overclocking will skew them."
+echo "\n⚠️ Cycles measurements are approximate and use the CPU nominal clock: Turbo-Boost and overclocking will skew them."
 echo "==========================================================================================================\n"
 when defined(gcc):
   echo "\nCompiled with GCC"
