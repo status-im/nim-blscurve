@@ -34,6 +34,11 @@ task test, "Run all tests":
   # Public BLS API - IETF standard / post Ethereum2.0 v0.10
   test "-d:BLS_USE_IETF_API=true", "tests/eth2_vectors.nim"
 
+  # Ensure benchmarks stay relevant
+  exec "nim c -d:danger --outdir:build -r" &
+         " --verbosity:0 --hints:off --warnings:off" &
+         " benchmarks/bench_all.nim"
+
 task bench, "Run benchmarks":
   if not dirExists "build":
     mkDir "build"
