@@ -4,7 +4,7 @@ strategy:
     # TEST_LANG env variable support TODO
     Windows_32bit:
       VM: 'windows-latest'
-      PLATFORM: x86
+      PLATFORM: x86 # This is used to skip benchmark test on Windows 32-bit
       TEST_LANG: c
     Windows_64bit:
       VM: 'windows-latest'
