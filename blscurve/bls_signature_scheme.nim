@@ -22,6 +22,8 @@
 # We reuse the IETF types and procedure names
 # Cipher suite ID: BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_NUL_
 
+{.push raises: [Defect].}
+
 import
   # third-party
   nimcrypto/[hmac, sha2],
