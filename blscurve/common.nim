@@ -6,8 +6,11 @@
 # at your option.
 # This file may not be copied, modified, or distributed except according to
 # those terms.
-import nimcrypto/[sysrand, utils, hash, sha2]
-import stew/endians2
+
+{.push raises: [Defect].}
+
+import nimcrypto/[sysrand, hash, sha2]
+import stew/[byteutils]
 import milagro
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
@@ -441,7 +444,6 @@ func setx*(p: var ECP2_BLS381, x: FP2_BLS381, parity: int): int =
   ## This is custom `setx` procedure which works in way compatible to
   ## python's version.
   var y, negy: FP2_BLS381
-  var tmp0, tmp1: ECP2_BLS381
   ECP2_BLS381_rhs(addr y, unsafeAddr x)
   if FP2_BLS381_sqrt(addr y, addr y) != 1:
     ECP2_BLS381_inf(addr p)
@@ -558,16 +560,14 @@ proc toBytes*(a: BIG_384, res: var openarray[byte]): bool =
       discard BIG_384_fshr(c, 8)
     result = true
 
-proc toHex*(a: BIG_384): string {.inline.} =
-  ## Serialize big integer ``a`` and return hexadecimal string
-  ## representation, if serialization failed empty string will be returned.
-  var buffer: array[MODBYTES_384, byte]
-  if toBytes(a, buffer):
-    result = toHex(buffer, lowercase = true)
-
 proc getBytes*(a: BIG_384): array[MODBYTES_384, byte] =
   ## Serialize big integer ``a`` and return array of bytes.
   discard toBytes(a, result)
+
+proc toHex*(a: BIG_384): string {.inline.} =
+  ## Serialize big integer ``a`` and return hexadecimal string
+  ## representation, if serialization failed empty string will be returned.
+  toHex(getBytes(a))
 
 func fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
   ## Unserialize big integer from ``a`` to ``res``.
@@ -594,8 +594,11 @@ func fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
 func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
   ## Unserialize big integer from hexadecimal string ``a`` to ``res``.
   ##
-  ## Returns ``true`` if conversion was successfull.
-  fromBytes(res, fromHex(a))
+  ## Returns ``true`` if conversion was successful.
+  try:
+    fromBytes(res, hexToSeqByte(a))
+  except ValueError:
+    false
 
 proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
   ## Serialize ECP2(G2) point ``point`` to ``res``. Length of ``res`` array
@@ -623,20 +626,18 @@ proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
         res[0] = res[0] or (1'u8 shl 5)
       result = true
 
-proc toHex*(point: ECP2_BLS381): string =
-  ## Serialize ECP2(G2) point ``point`` and return hexadecimal string
-  ## representation, if serialization failed empty string will be returned.
-  ##
-  ## This procedure serialize point in compressed form (e.g. only x coordinate).
-  var buffer: array[MODBYTES_384 * 2, byte]
-  if toBytes(point, buffer):
-    result = toHex(buffer, lowercase = true)
-
 proc getBytes*(point: ECP2_BLS381): array[MODBYTES_384 * 2, byte] =
   ## Serialize ECP2(G2) point ``point`` and return array of bytes.
   ##
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   discard toBytes(point, result)
+
+proc toHex*(point: ECP2_BLS381): string =
+  ## Serialize ECP2(G2) point ``point`` and return hexadecimal string
+  ## representation, if serialization failed empty string will be returned.
+  ##
+  ## This procedure serialize point in compressed form (e.g. only x coordinate).
+  toHex(getBytes(point))
 
 func fromBytes*(res: var ECP2_BLS381, data: openarray[byte]): bool =
   ## Unserialize ECP2(G2) point from array of bytes ``data``.
@@ -670,7 +671,10 @@ func fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
   ## This procedure supports only compressed form of serialization.
   ##
   ## Returns ``true`` if conversion was successfull.
-  fromBytes(res, fromHex(a))
+  try:
+    fromBytes(res, hexToSeqByte(a))
+  except ValueError:
+    false
 
 proc toBytes*(point: ECP_BLS381, res: var openarray[byte]): bool =
   ## Serialize ECP(G1) point ``point`` to ``res``. Length of ``res`` array
@@ -697,20 +701,18 @@ proc toBytes*(point: ECP_BLS381, res: var openarray[byte]): bool =
       res[0] = res[0] or (1'u8 shl 7)
       result = true
 
-proc toHex*(point: ECP_BLS381): string =
-  ## Serialize ECP(G1) point ``point`` and return hexadecimal string
-  ## representation, if serialization failed empty string will be returned.
-  ##
-  ## This procedure serialize point in compressed form (e.g. only x coordinate).
-  var buffer: array[MODBYTES_384, byte]
-  if toBytes(point, buffer):
-    result = toHex(buffer, lowercase = true)
-
 proc getBytes*(point: ECP_BLS381): array[MODBYTES_384, byte] =
   ## Serialize ECP(G1) point ``point`` and return array of bytes.
   ##
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   discard toBytes(point, result)
+
+proc toHex*(point: ECP_BLS381): string =
+  ## Serialize ECP(G1) point ``point`` and return hexadecimal string
+  ## representation, if serialization failed empty string will be returned.
+  ##
+  ## This procedure serialize point in compressed form (e.g. only x coordinate).
+  toHex(getBytes(point))
 
 func fromBytes*(res: var ECP_BLS381, data: openarray[byte]): bool =
   ## Unserialize ECP point from array of bytes ``data``.
@@ -740,7 +742,10 @@ func fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
   ## This procedure supports only compressed form of serialization.
   ##
   ## Returns ``true`` if conversion was successfull.
-  fromBytes(res, fromHex(a))
+  try:
+    fromBytes(res, hexToSeqByte(a))
+  except ValueError:
+    false
 
 proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   ## Multiplies ECP2(G2) point by a cofactor of G2.
@@ -758,7 +763,6 @@ proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS381 =
   ## https://github.com/ethereum/eth2.0-specs/blob/v0.8.3/specs/bls_signature.md#hash_to_g2
 
   var
-    buffer: array[MODBYTES_384, byte]
     xre, xim: BIG_384
     x, one: FP2_BLS381
 
@@ -796,12 +800,6 @@ proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS381 =
   # Scale with G2 CoFactor
   result = mulCoFactor(result)
 
-proc hashToG2*(msgctx: sha256, domain: uint64): ECP2_BLS381 {.deprecated: "domain should be bytes now" .} =
-  # TODO this is an old version of the BLS hash function that has since changed
-  #      to use a byte array directly, to avoid endianess issues.
-  # Convert `domain` to its big-endian representation
-  hashToG2(msgctx, domain.toBytesBE())
-
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
   ## Pairing `magic` function.
   PAIR_BLS381_ate(addr result, unsafeAddr pointG2, unsafeAddr pointG1)
@@ -833,7 +831,6 @@ proc multiPairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
 
   if FP12_BLS381_isunity(addr v) == 1:
     result = true
-
 proc random*(a: var BIG_384) =
   ## Generates random big number `bit by bit` using nimcrypto's sysrand
   ## generator.
@@ -858,29 +855,3 @@ proc random*(a: var BIG_384) =
     inc(j)
     j = j and 0x07
 
-proc randomNum*(a: var BIG_384, q: BIG_384) =
-  ## Generates random big number `bit by bit` over modulo ``q`` using
-  ## nimcrypto's sysrand generator.
-  var
-    d: DBIG_384
-    rndBuffer: array[MODBYTES_384 * 2, byte]
-    rndByte: byte
-    j: int32
-    k: int32
-
-  doAssert(randomBytes(rndBuffer) == MODBYTES_384 * 2)
-  let length = 2 * BIG_384_nbits(q)
-  a.zero()
-
-  for i in 0..<length:
-    if j == 0:
-      rndByte = rndBuffer[k]
-      inc(k)
-    else:
-      rndByte = rndByte shr 1
-    let bit = Chunk(rndByte and 1'u8)
-    BIG_384_dshl(d, 1)
-    d[0] = d[0] + bit
-    inc(j)
-    j = j and 0x07
-  BIG_384_dmod(a, d, q)

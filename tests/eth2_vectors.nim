@@ -22,8 +22,6 @@ import
 
 const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v0.10.1_vectors"
 
-doAssert BLS_USE_IETF_API, "Testing against the IETF standard requires using that standard."
-
 proc parseTest(file: string): JsonNode =
   var yamlStream = openFileStream(file)
   defer: yamlStream.close()

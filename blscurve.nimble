@@ -22,17 +22,11 @@ task test, "Run all tests":
   # test "", "blscurve/hkdf.nim"
   # test "", "blscurve/hash_to_curve.nim"
 
-  # Internal+Public BLS API - pre Ethereum2.0 v0.10
-  # Those directly import the old API and internals
-  # and do not need the "-d:BLS_USE_IETF_API=false" flag
-  test "", "tests/old_spec/test_scheme.nim"
-  test "", "tests/old_spec/test_vectors.nim"
-
   # Internal BLS API - IETF standard / post Ethereum2.0 v0.10
   # test "", "tests/hash_to_curve.nim"
 
   # Public BLS API - IETF standard / post Ethereum2.0 v0.10
-  test "-d:BLS_USE_IETF_API=true", "tests/eth2_vectors.nim"
+  test "", "tests/eth2_vectors.nim"
 
   # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
   if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":

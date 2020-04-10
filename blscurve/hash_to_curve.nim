@@ -22,6 +22,8 @@
 # Implementation
 # ----------------------------------------------------------------------
 
+{.push raises: [Defect].}
+
 import
   # Status libraries
   nimcrypto/hmac, stew/endians2,

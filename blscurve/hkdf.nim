@@ -78,6 +78,8 @@
 # (where the constant concatenated to the end of each T(n) is a
 # single octet.)
 
+{.push raises: [Defect].}
+
 import nimcrypto/hmac
 
 func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
@@ -154,6 +156,8 @@ func hkdfExpand*[T;I: char|byte](ctx: var HMAC[T],
 # Test vectors
 # ----------------------------------------------------------------------
 # https://tools.ietf.org/html/rfc5869#appendix-A
+
+{.pop.}
 
 when isMainModule:
   import stew/byteutils, nimcrypto/[sha, sha2]
