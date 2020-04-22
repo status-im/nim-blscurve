@@ -509,8 +509,7 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   if ikm.len < 32:
     return false
 
-  # TODO: change HKDF to openarray API so we can use const string
-  let salt = "BLS-SIG-KEYGEN-SALT-"
+  const salt = "BLS-SIG-KEYGEN-SALT-"
   var ctx: HMAC[sha256]
   var prk: MDigest[sha256.bits]
 
