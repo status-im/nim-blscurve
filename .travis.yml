@@ -13,7 +13,7 @@ matrix:
   include:
     - os: linux
       compiler: gcc
-    - os: bionic
+    - dist: bionic
       # Bionic to avoid git failure "fatal: unknown date format unix"
       compiler: gcc
       arch: arm64
