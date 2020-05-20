@@ -61,6 +61,41 @@ To keep track of upstream AMCL:
 - Test
 - Commit
 
+### Executing the test suite
+
+We recomment working within the nimbus build environment described here:
+https://github.com/status-im/nim-beacon-chain/
+
+To execute the test suite, just navigate to the root of this repo and execute:
+
+```
+nimble test
+```
+
+> Please note that within the nimbus build environment, the repository will
+  be located in `nim-beacon-chain/vendor/nim-blscurve`.
+
+### Executing the fuzzing tests
+
+Before you start, please make sure that the regular test suite executes
+successfully (see the instructions above). To start a particular fuzzing
+test, navigate to the root of this repo and execute:
+
+```
+nim tests/fuzzing/run_fuzzing_test.nims <test-name>
+```
+
+You can specify the fuzzing engine being used by passing an additional
+`--fuzzer` parameter. The currently supported engines are `libFuzzer`
+(used by default) and `afl`.
+
+All fuzzing tests are located in `tests/fuzzing` and use the following
+naming convention:
+
+```
+fuzz_<test-name>.nim
+```
+
 ## License
 
 Licensed and distributed under either of

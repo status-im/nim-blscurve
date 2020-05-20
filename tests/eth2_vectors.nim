@@ -12,28 +12,19 @@
 
 import
   # Standard library
-  json, strutils, os, streams, unittest,
-  # Third party
-  yaml,
+  json, strutils, os, unittest,
   # Status libraries
   stew/byteutils,
   # Public API
-  ../blscurve
+  ../blscurve,
+  # Test helpers
+  ./test_locator
 
-const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v0.10.1_vectors"
+type InOut = enum
+  Input
+  Output
 
-proc parseTest(file: string): JsonNode =
-  var yamlStream = openFileStream(file)
-  defer: yamlStream.close()
-  result = yamlStream.loadToJson()[0]
-
-const SkippedTests = [
-  "small"/"fast_aggregate_verify_e6922a0d196d9869"/"data.yaml", # Buggy upstream vector: https://github.com/ethereum/eth2.0-specs/issues/1618
-  "small"/"fast_aggregate_verify_62bca7cd61880e26"/"data.yaml",
-  "small"/"fast_aggregate_verify_3b2b0141e95125f0"/"data.yaml",
-]
-
-template testGen(name, testJson, body: untyped): untyped =
+template testGen*(name, testJson, body: untyped): untyped =
   ## Generates a test proc
   ## with identifier "test_name"
   ## The test file is availaible as JsonNode under the
@@ -41,14 +32,9 @@ template testGen(name, testJson, body: untyped): untyped =
   proc `test _ name`() =
     var count = 0 # Need to fail if walkDir doesn't return anything
     var skipped = 0
-    const testDir = ETH2_DIR / astToStr(name)
-    for file in walkDirRec(testDir, relative = true):
-      if file in SkippedTests:
-        echo "[WARNING] Skipping - ", file
-        inc skipped
-        continue
+    for dir, file in walkTests(astToStr(name), skipped):
       echo "       ", astToStr(name), " test: ", file
-      let testJson = parseTest(testDir / file)
+      let testJson = parseTest(dir / file)
 
       body
 
@@ -57,10 +43,6 @@ template testGen(name, testJson, body: untyped): untyped =
     doAssert count > 0, "Empty or inexisting test folder: " & astToStr(name)
     if skipped > 0:
       echo "[Warning]: ", skipped, " tests skipped."
-
-type InOut = enum
-  Input
-  Output
 
 proc getFrom(T: typedesc, test: JsonNode, inout: static InOut): T =
   when inout == Output:
