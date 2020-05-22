@@ -48,7 +48,7 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
        output: var array[len_in_bytes, byte],
        msg: openArray[B],
        domainSepTag: static string,
-     ): bool =
+     ) =
   ## Arguments:
   ## - `H` A cryptographic hash function
   ## - `msg`, a byte string containing the message to hash
@@ -142,14 +142,13 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
       break
 
   # burnMem?
-  return true
 
 func hashToFieldFP2[B: byte|char, count: static int](
         H: typedesc,
         output: var array[count, FP2_BLS381],
         msg: openArray[B],
         domainSepTag: static string,
-      ): bool =
+      ) =
   ## Implementation of hash_to_field for the G2 curve of BLS12-381
   ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-07#section-5.2
   ##
@@ -494,50 +493,20 @@ func clearCofactor(P: var ECP2_BLS381) =
 
   P.affine()           # Convert from Jacobian coordinates (x', y', z') to affine (x, y, 1); (x is not the curve parameter here)
 
-func hashToG2(msg: ptr byte, msgLen: int, domainSepTag: string): ECP2_BLS381 =
+func hashToG2[B: byte|char](msg: openArray[B],
+                            domainSepTag: static string): ECP2_BLS381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
   ## The message should have an extra null byte after its declared length
-  var ctx: HMAC[sha256]
+  var u{.noInit.}: array[2, FP2_BLS381]
 
-  let u0 = hashToBaseFP2(ctx, msg, msgLen, ctr = 0, domainSepTag)
-  let u1 = hashToBaseFP2(ctx, msg, msgLen, ctr = 1, domainSepTag)
+  sha256.hashToFieldFP2(u, msg, domainSepTag)
 
-  result = mapToCurveG2(u0)
-  let Q1 = mapToCurveG2(u1)
+  result = mapToCurveG2(u[0])
+  let Q1 = mapToCurveG2(u[1])
 
   result.add(Q1)
   result.clearCofactor()
 
-func hashToG2*(msg: openarray[byte], domainSepTag: string): ECP2_BLS381 =
-  ## Hash an arbitrary raw byte message to the G2 curve of BLS12-381
-  # An extra null byte is appended as required by the spec
-  # this requires an extra allocation
-
-  var msgWithNul = newSeqUninitialized[byte](msg.len + 1)
-  msgWithNul[0 ..< msg.len] = msg
-  msgWithNul[msg.len] = 0x00
-
-  let pmsg = cast[ptr byte](msgWithNul[0].unsafeAddr)
-
-  hashToG2(pmsg, msg.len, domainSepTag)
-
-func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
-  ## Hash an arbitrary message to the G2 curve of BLS12-381
-  ## The message should have an extra null byte
-
-  if message.len == 0:
-    # Special-casing empty strings (i.e. not constant-time)
-    # is not an issue because empty strings are always vulnerable
-    # to timing attacks.
-    var empty = [byte 0x00]
-    let pmsg = cast[ptr byte](empty[0].unsafeAddr)
-    result = hashToG2(pmsg, 0, domainSepTag)
-  else:
-    # Strings are always nul-terminated in Nim so don't need
-    # extra nul appending compared to openarray[byte]
-    # to satisfy the spec requirements
-    let pmsg = cast[ptr byte](message[0].unsafeAddr)
-    result = hashToG2(pmsg, message.len, domainSepTag)
 
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
