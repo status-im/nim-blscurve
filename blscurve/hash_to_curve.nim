@@ -21,12 +21,20 @@
 
 # Implementation
 # ----------------------------------------------------------------------
+#
+# Implementation notes:
+#   Several parameters are known at compile-time, in particular the domain separation tag.
+#   The spec requires creating a `dst_prime` with appended data that can be created at compile-time.
+#   We choose to do so to avoid heap-allocation and the GC in crypto codepath.
+#   The price is a bigger codegen due to the DSTs used:
+#   - BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_ for signatures
+#   - BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_ for proof of possesions
 
-{.push raises: [Defect].}
+{.push raises: [Defect], gcsafe, noSideEffect.}
 
 import
   # Status libraries
-  nimcrypto/digest, stew/endians2,
+  nimcrypto/sha2, stew/endians2,
   # Internal
   ./milagro, ./hkdf, ./common
 
@@ -112,7 +120,7 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
 
   output.copyFrom(b_1, cur)
 
-  var b_i: array[H.bits div 8, byte]
+  var b_i{.noInit.}: array[H.bits div 8, byte]
 
   template strxor(b_i1: var array, b0: array): untyped =
     for i in 0 ..< b_i1.len:
@@ -133,91 +141,64 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
     if cur == len_in_bytes:
       break
 
+  # burnMem?
   return true
 
-func hashToBaseFP2[T](
-                   ctx: var HMAC[T],
-                   msg: ptr byte, msgLen: int,
-                   ctr: range[0'i8 .. 2'i8],
-                   domainSepTag: string,
-                  ): FP2_BLS381 =
-  ## Implementation of hash_to_base for the G2 curve of BLS12-381
-  ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-04#section-5.3
+func hashToFieldFP2[B: byte|char, count: static int](
+        H: typedesc,
+        output: var array[count, FP2_BLS381],
+        msg: openArray[B],
+        domainSepTag: static string,
+      ): bool =
+  ## Implementation of hash_to_field for the G2 curve of BLS12-381
+  ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-07#section-5.2
   ##
   ## Inputs
-  ## - msg + msgLen: the message to hash
-  ##   msg[msgLen] should be the null byte 0x00 (i.e there is an extra null-byte)
-  ##   This is an exceptional case where a string is required to end by a null-byte.
-  ##   This is a cryptographic security requirement.
-  ##   The null byte is not taken into account in msgLen.
-  ##   Non-empty Nim strings always end by a null-byte and do not require special handling.
-  ##   ⚠️: Raw byte-buffers are not null-byte terminated and require
-  ##       preprocessing. THis would trigger a buffer-overflow otherwise.
-  ## - ctr: 0, 1 or 2.
-  ##   Create independant instances of HKDF-Expand (random oracle)
-  ##   from the same HKDF-Extract pseudo-random key
-  ## - domainSepTag + domainSepTagLen: A domain separation tag (DST)
+  ## - msg: the message to hash
+  ## - count: the number of element of FP2 to output
+  ## - output: the output buffer
+  ## - domainSepTag: A domain separation tag (DST)
   ##   that MUST include a protocol identification string
   ##   SHOULD include a protocol version number.
   ##
   ## Outputs
-  ## - A point on FP2
-  ##
-  ## Temporary
-  ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].
-  #
-  # Note: ctr and domainSepTag are known at compile-time
-  #       however having them "static" would duplicate/quadruplicate code
-  #       with probably negligible performance improvement.
+  ## - `count` points on FP2
 
   const
     L_BLS = 64 # ceil((ceil(log2(p)) + k) / 8), where k is the security
                # parameter of the cryptosystem (e.g., k = 128)
     m = 2      # Extension degree of FP2
 
-  var
-    e1, e2: BIG_384
-    mprime: MDigest[T.bits]
-    info: array[5, byte]
-    t: array[L_BLS, byte]
+  # Steps:
+  # 1. len_in_bytes = count * m * L
+  # 2. pseudo_random_bytes = expand_message(msg, DST, len_in_bytes)
+  # 3. for i in (0, ..., count - 1):
+  # 4.   for j in (0, ..., m - 1):
+  # 5.     elm_offset = L * (j + i * m)
+  # 6.     tv = substr(pseudo_random_bytes, elm_offset, L)
+  # 7.     e_j = OS2IP(tv) mod p
+  # 8.   u_i = (e_0, ..., e_(m - 1))
+  # 9. return (u_0, ..., u_(count - 1))
+  const len_in_bytes = count * m * L
 
-  # The input message to HKDF has a null-byte appended to make it
-  # indistinguishable to a random oracle. (Spec section 5.1)
-  # Non-empty Nim strings have an extra null-byte after their declared length
-  # and no extra preprocessing is needed.
-  # If the input is a raw-byte buffer instead of a string,
-  # it REQUIRES allocation in a buffer
-  # with an extra null-byte beyond the declared length.
-  assert not msg.isNil
-  assert cast[ptr UncheckedArray[byte]](msg)[msgLen] == 0x00, "Expected message terminated by nul-byte but found " & $cast[ptr UncheckedArray[byte]](msg)[msgLen] & " (decimal value)"
-  hkdfExtract(
-    ctx, mprime, domainSepTag,
-    toOpenArray(cast[ptr UncheckedArray[byte]](msg), 0, msgLen) # msgLen inclusive
-  )
+  var pseudo_random_bytes{.noInit.}: array[len_bytes, byte]
+  sha256.expandMessageXMD(pseudo_random_bytes, msg, domainSepTag)
 
-  info[0] = ord'H'
-  info[1] = ord'2'
-  info[2] = ord'C'
-  info[3] = byte(ctr)
+  for i in 0 ..< count:
+    var e_0{.noInit.}, e_1{.noInit.}: BIG_384
+    var de_j{.noInit.}: DBIG_384 # Need a DBIG, L = 64 bytes = 512-bit > 384-bit
 
-
-  template loopIter(ei: untyped, i: range[1..m]): untyped {.dirty.} =
-    ## for i in 1 .. m
-    ## with m = 2 (extension degree of FP2)
-    info[4] = byte(i)
-    hkdfExpand(ctx, mprime, info, t)
-
-    block: # HKDF output is greater than 384-bit (64 bytes = 512-bit)
-           # and need to be stored and reduced in a DBIG
-      var d_ei: DBIG_384
-      discard d_ei.fromBytes(t)
+    template loopIter(e_j: untyped, j: range[1..m]): untyped {.dirty.} =
+      ## for j in 0 ..< m
+      let elm_offset = L_BLS * (j + i * m)
+      template tv: untyped = pseudo_random_bytes.toOpenArray(elm_offset, L-1)
+      discard de_j.fromBytes(tv)
       {.noSideEffect.}:
-        BIG_384_dmod(ei, d_ei, FIELD_Modulus)
+        BIG_384_dmod(e_j, de_j, FIELD_Modulus)
 
-  loopIter(e1, 1)
-  loopIter(e2, 2)
-
-  result.fromBigs(e1, e2)
+    loopIter(e_0, 0)
+    loopIter(e_1, 1)
+    output[i].fromBigs(e_0, e_1)
 
 func toFP2(x, y: uint64): FP2_BLS381 =
   ## Convert a complex tuple x + iy to FP2
