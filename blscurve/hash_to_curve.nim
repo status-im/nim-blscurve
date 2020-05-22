@@ -26,9 +26,114 @@
 
 import
   # Status libraries
-  nimcrypto/hmac, stew/endians2,
+  nimcrypto/digest, stew/endians2,
   # Internal
   ./milagro, ./hkdf, ./common
+
+func ceilDiv(a, b: int): int {.used.} =
+  ## ceil division
+  ## ceil(a / b)
+  (a + b - 1) div b
+
+func expandMessageXMD[B: byte|char], len_in_bytes: static int](
+       H: typedesc,
+       output: var array[len_in_bytes, byte],
+       msg: openArray[B],
+       domainSepTag: static string,
+     ): bool =
+  ## Arguments:
+  ## - `H` A cryptographic hash function
+  ## - `msg`, a byte string containing the message to hash
+  ## - `domainSepTag` (spec DST), a byte string that acts as a domain separation tag
+  ## - `output`, a buffer of size `len_in_bytes`.
+  ## The output will be filled with a pseudo random byte string
+  ## the size of the preallocated buffer.
+  ## Provided the `H` is indistinguishable from a random oracle
+  ## the `output` will also be indistinuishable
+  const
+    b_in_bytes = H.bits  # b_in_bytes, ceil(b / 8) for b the output size of H in bits.
+                         # For example, for b = 256, b_in_bytes = 32.
+    r_in_bytes = H.bsize # r_in_bytes, the input block size of H, measured in bytes.
+                         # For example, for SHA-256, r_in_bytes = 64.
+  static:
+    when H is sha256:
+      doAssert b_in_bytes == 32
+      doAssert r_in_bytes == 64
+
+  # Steps:
+  # 1.  ell = ceil(len_in_bytes / b_in_bytes)
+  # 2.  ABORT if ell > 255
+  # 3.  DST_prime = DST || I2OSP(len(DST), 1)
+  # 4.  Z_pad = I2OSP(0, r_in_bytes)
+  # 5.  l_i_b_str = I2OSP(len_in_bytes, 2)
+  # 6.  b_0 = H(Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime)
+  # 7.  b_1 = H(b_0 || I2OSP(1, 1) || DST_prime)
+  # 8.  for i in (2, ..., ell):
+  # 9.    b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime)
+  # 10. pseudo_random_bytes = b_1 || ... || b_ell
+  # 11. return substr(pseudo_random_bytes, 0, len_in_bytes)
+
+  const ell = ceil(len_in_bytes)
+  static: doAssert ell <= 255, "Please implement the \"oversized\" part of the Hash-To-Curve spec"
+
+  const dst_prime = domainSepTag & $char(byte(domainSepTag.len))
+  static: doAssert dst_prime.len == domainSepTag.len + 1
+
+  const z_pad = default(array[r_in_bytes, byte])
+  const l_i_b_str = toBytesBE(uint16(len_in_bytes))
+
+  var ctx: H
+
+  ctx.init()
+  let b_0 = block:
+    ctx.update(z_pad)
+    ctx.update(msg)
+    ctx.update(l_i_b_str)
+    ctx.update([byte 0])
+    ctx.update(dst_prime)
+    ctx.finish()
+    # burnMem?
+
+  ctx.init()
+  var b_1 = block:
+    ctx.update(b_0.data)
+    ctx.update([byte 1])
+    ctx.update(dst_prime)
+    ctx.finish()
+
+  var cur = 0
+
+  template copyFrom(output: var array, bi: array, cur: var int) =
+    var b_index = 0
+    while cur < min(b_1.len, len_in_bytes):
+      output[cur] = bi[b_index]
+      inc cur
+      inc b_index
+
+  output.copyFrom(b_1, cur)
+
+  var b_i: array[H.bits div 8, byte]
+
+  template strxor(b_i1: var array, b0: array): untyped =
+    for i in 0 ..< b_i1.len:
+      b_i1[i] = b_i1[i] xor b0[i]
+
+  for i in 2 ..< ell:
+    ctx.init()
+    if i == 2:
+      strxor(b_1, b_0)
+      ctx.update(b_1)
+    else:
+      strxor(b_i, b_0)
+      ctx.update(b_i)
+    ctx.update([byte i])
+    ctx.update(dst_prime)
+    discard ctx.finish(b_i)
+    output.copyFrom(b_i, cur)
+    if cur == len_in_bytes:
+      break
+
+  return true
 
 func hashToBaseFP2[T](
                    ctx: var HMAC[T],
