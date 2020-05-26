@@ -69,6 +69,11 @@ func expandMessageXMD[B: byte|char, len_in_bytes: static int](
   ## the size of the preallocated buffer.
   ## Provided the `H` is indistinguishable from a random oracle
   ## the `output` will also be indistinuishable
+  # Note: we require static string for the domain separation tag
+  # so that domainSepTagPrime can be constructed without intermediate
+  # allocations:
+  # - threadsafe
+  # - no GC in cryptographic code
   const
     b_in_bytes = H.bits.ceilDiv(8) # b_in_bytes, ceil(b / 8) for b the output size of H in bits.
                                    # For example, for b = 256, b_in_bytes = 32.
@@ -123,9 +128,9 @@ func expandMessageXMD[B: byte|char, len_in_bytes: static int](
 
   var cur = 0
 
-  template copyFrom(output: var array, bi: array, cur: var int) =
+  template copyFrom[M, N](output: var array[M, byte], bi: array[N, byte], cur: var int) =
     var b_index = 0
-    while cur < min(bi.len, len_in_bytes):
+    while b_index < bi.len and cur < len_in_bytes:
       output[cur] = bi[b_index]
       inc cur
       inc b_index
@@ -138,7 +143,7 @@ func expandMessageXMD[B: byte|char, len_in_bytes: static int](
     for i in 0 ..< b_i1.len:
       b_i1[i] = b_i1[i] xor b0[i]
 
-  for i in 2 ..< ell:
+  for i in 2 .. ell:
     ctx.init()
     if i == 2:
       strxor(b_1.data, b_0.data)
@@ -192,7 +197,7 @@ func hashToFieldFP2[B: byte|char, count: static int](
   # 9. return (u_0, ..., u_(count - 1))
   const len_in_bytes = count * m * L_BLS
 
-  var uniform_bytes{.noInit.}: array[len_bytes, byte]
+  var uniform_bytes{.noInit.}: array[len_in_bytes, byte]
   sha256.expandMessageXMD(uniform_bytes, msg, domainSepTag)
 
   for i in 0 ..< count:
@@ -200,12 +205,12 @@ func hashToFieldFP2[B: byte|char, count: static int](
     var de_j{.noInit.}: DBIG_384 # Need a DBIG, L = 64 bytes = 512-bit > 384-bit
 
     template loopIter(e_j: untyped, j: range[1..m]): untyped {.dirty.} =
-      ## for j in 0 ..< m
-      let elm_offset = L_BLS * (j + i * m)
-      template tv: untyped = uniform_bytes.toOpenArray(elm_offset, L_BLS-1)
-      discard de_j.fromBytes(tv)
-      {.noSideEffect.}:
-        BIG_384_dmod(e_j, de_j, FIELD_Modulus)
+      block: ## for j in 0 ..< m
+        let elm_offset = L_BLS * (j + i * m)
+        template tv: untyped = uniform_bytes.toOpenArray(elm_offset, elm_offset + L_BLS-1)
+        discard de_j.fromBytes(tv)
+        {.noSideEffect.}:
+          BIG_384_dmod(e_j, de_j, FIELD_Modulus)
 
     loopIter(e_0, 0)
     loopIter(e_1, 1)
@@ -505,10 +510,16 @@ func clearCofactor(P: var ECP2_BLS381) =
 
   P.affine()           # Convert from Jacobian coordinates (x', y', z') to affine (x, y, 1); (x is not the curve parameter here)
 
-func hashToG2[B: byte|char](msg: openArray[B],
+func hashToG2*[B: byte|char](msg: openArray[B],
                             domainSepTag: static string): ECP2_BLS381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
   ## The message should have an extra null byte after its declared length
+  # Note: we require static string for the domain separation tag
+  # so that domainSepTagPrime in expandMessageXMD
+  # can be constructed without intermediate
+  # allocations:
+  # - threadsafe
+  # - no GC in cryptographic code
   var u{.noInit.}: array[2, FP2_BLS381]
 
   sha256.hashToFieldFP2(u, msg, domainSepTag)
@@ -571,11 +582,84 @@ when isMainModule:
     `testExpandMessageXMD_sha256 _ id`()
 
   testExpandMessageXMD(1):
-    # TODO Currently testing vs Py-ECC due to
-    # official test vectors misreporting SHA256 (SHA512 instead)
-    # https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve/issues/265
     let msg = ""
     const expected = "f659819a6473c1835b25ea59e3d38914c98b374f0970b7e4c92181df928fca88"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  testExpandMessageXMD(2):
+    let msg = "abc"
+    const expected = "1c38f7c211ef233367b2420d04798fa4698080a8901021a795a1151775fe4da7"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  testExpandMessageXMD(3):
+    let msg = "abcdef0123456789"
+    const expected = "8f7e7b66791f0da0dbb5ec7c22ec637f79758c0a48170bfb7c4611bd304ece89"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  testExpandMessageXMD(4):
+    let msg = "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    const expected = "3b8e704fc48336aca4c2a12195b720882f2162a4b7b13a9c350db46f429b771b"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  testExpandMessageXMD(5):
+    let msg = ""
+    const expected = "8bcffd1a3cae24cf9cd7ab85628fd111bb17e3739d3b53f8" &
+                     "9580d217aa79526f1708354a76a402d3569d6a9d19ef3de4d0b991" &
+                     "e4f54b9f20dcde9b95a66824cbdf6c1a963a1913d43fd7ac443a02" &
+                     "fc5d9d8d77e2071b86ab114a9f34150954a7531da568a1ea8c7608" &
+                     "61c0cde2005afc2c114042ee7b5848f5303f0611cf297f"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  testExpandMessageXMD(6):
+    let msg = "abc"
+    const expected = "fe994ec51bdaa821598047b3121c149b364b178606d5e72b" &
+                     "fbb713933acc29c186f316baecf7ea22212f2496ef3f785a27e84a" &
+                     "40d8b299cec56032763eceeff4c61bd1fe65ed81decafff4a31d01" &
+                     "98619c0aa0c6c51fca15520789925e813dcfd318b542f879944127" &
+                     "1f4db9ee3b8092a7a2e8d5b75b73e28fb1ab6b4573c192"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  testExpandMessageXMD(7):
+    let msg = "abcdef0123456789"
+    const expected = "c9ec7941811b1e19ce98e21db28d22259354d4d0643e3011" &
+                     "75e2f474e030d32694e9dd5520dde93f3600d8edad94e5c3649030" &
+                     "88a7228cc9eff685d7eaac50d5a5a8229d083b51de4ccc3733917f" &
+                     "4b9535a819b445814890b7029b5de805bf62b33a4dc7e24acdf2c9" &
+                     "24e9fe50d55a6b832c8c84c7f82474b34e48c6d43867be"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  testExpandMessageXMD(8):
+    let msg = "a512_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" &
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    const expected = "396962db47f749ec3b5042ce2452b619607f27fd3939ece2" &
+                     "746a7614fb83a1d097f554df3927b084e55de92c7871430d6b95c2" &
+                     "a13896d8a33bc48587b1f66d21b128a1a8240d5b0c26dfe795a1a8" &
+                     "42a0807bb148b77c2ef82ed4b6c9f7fcb732e7f94466c8b51e52bf" &
+                     "378fba044a31f5cb44583a892f5969dcd73b3fa128816e"
     const len_in_bytes = expected.len div 2
     const expectedBytes = hexToByteArray[len_in_bytes](expected)
 

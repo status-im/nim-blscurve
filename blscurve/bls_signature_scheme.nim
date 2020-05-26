@@ -138,7 +138,7 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
 func coreSign[T: byte|char](
        secretKey: SecretKey,
        message: openarray[T],
-       domainSepTag: string): GroupG2 =
+       domainSepTag: static string): GroupG2 =
   ## Computes a signature or proof-of-possession
   ## from a secret key and a message
   # Spec
@@ -153,7 +153,7 @@ func coreVerify[T: byte|char](
        publicKey: PublicKey,
        message: openarray[T],
        sig_or_proof: Signature or ProofOfPossession,
-       domainSepTag: string): bool =
+       domainSepTag: static string): bool =
   ## Check that a signature (or proof-of-possession) is valid
   ## for a message (or serialized publickey) under the provided public key
   # Spec
@@ -210,7 +210,11 @@ func init(ctx: var ContextCoreAggregateVerify) =
 
 template `&`(point: GroupG1 or GroupG2): untyped = unsafeAddr point
 
-func update[T: char|byte](ctx: var ContextCoreAggregateVerify, publicKey: PublicKey, message: openarray[T], domainSepTag: string) =
+func update[T: char|byte](
+       ctx: var ContextCoreAggregateVerify,
+       publicKey: PublicKey,
+       message: openarray[T],
+       domainSepTag: static string) =
   let Q = hashToG2(message, domainSepTag)                   # Q = hash_to_point(message_i)
   PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKey.point) # C1 = C1 * pairing(Q, xP)
 
@@ -268,8 +272,8 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
 # Compared to the spec API are modified
 # to enforce usage of the proof-of-posession (as recommended)
 
-const DST = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_"
-const DST_POP = "BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_"
+const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
+const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
 func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
   ## Generate a proof of possession for the public/secret keypair
