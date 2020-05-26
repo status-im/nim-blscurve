@@ -34,16 +34,27 @@
 
 import
   # Status libraries
-  nimcrypto/sha2, stew/endians2,
+  nimcrypto/[sha2, hash], stew/endians2,
   # Internal
-  ./milagro, ./hkdf, ./common
+  ./milagro, ./common
+
+import stew/byteutils
 
 func ceilDiv(a, b: int): int =
   ## ceil division
   ## ceil(a / b)
   (a + b - 1) div b
 
-func expandMessageXMD[B: byte|char], len_in_bytes: static int](
+func dstToDSTprime(dst: string): seq[byte] =
+  # Reinterpret a domain separation tag as seq[byte]
+  # and append its length.
+  # Can be used at compiletime
+  for ch in dst:
+    result.add byte(ch)
+  result.add byte(dst.len)
+  result
+
+func expandMessageXMD[B: byte|char, len_in_bytes: static int](
        H: typedesc,
        output: var array[len_in_bytes, byte],
        msg: openArray[B],
@@ -59,14 +70,14 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
   ## Provided the `H` is indistinguishable from a random oracle
   ## the `output` will also be indistinuishable
   const
-    b_in_bytes = H.bits  # b_in_bytes, ceil(b / 8) for b the output size of H in bits.
-                         # For example, for b = 256, b_in_bytes = 32.
-    r_in_bytes = H.bsize # r_in_bytes, the input block size of H, measured in bytes.
-                         # For example, for SHA-256, r_in_bytes = 64.
+    b_in_bytes = H.bits.ceilDiv(8) # b_in_bytes, ceil(b / 8) for b the output size of H in bits.
+                                   # For example, for b = 256, b_in_bytes = 32.
+    r_in_bytes = H.bsize           # r_in_bytes, the input block size of H, measured in bytes.
+                                   # For example, for SHA-256, r_in_bytes = 64.
   static:
     when H is sha256:
-      doAssert b_in_bytes == 32
-      doAssert r_in_bytes == 64
+      doAssert b_in_bytes == 32, "Expected 32, got " & $b_in_bytes
+      doAssert r_in_bytes == 64, "Expected 64, got " & $r_in_bytes
 
   # Steps:
   # 1.  ell = ceil(len_in_bytes / b_in_bytes)
@@ -81,10 +92,10 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
   # 10. uniform_bytes = b_1 || ... || b_ell
   # 11. return substr(uniform_bytes, 0, len_in_bytes)
 
-  const ell = ceil(len_in_bytes / b_in_bytes)
+  const ell = len_in_bytes.ceilDiv(b_in_bytes)
   static: doAssert ell <= 255, "Please implement the \"oversized\" part of the Hash-To-Curve spec"
 
-  const dst_prime = domainSepTag & $char(byte(domainSepTag.len))
+  const dst_prime = dstToDSTprime(domainSepTag)
   static: doAssert dst_prime.len == domainSepTag.len + 1
 
   const z_pad = default(array[r_in_bytes, byte])
@@ -94,11 +105,12 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
 
   ctx.init()
   let b_0 = block:
-    ctx.update(z_pad)
-    ctx.update(msg)
-    ctx.update(l_i_b_str)
-    ctx.update([byte 0])
-    ctx.update(dst_prime)
+    ctx.update z_pad
+    if msg.len != 0:
+      ctx.update toOpenArray(cast[ptr UncheckedArray[byte]](msg[0].unsafeaddr), 0, msg.len-1)
+    ctx.update l_i_b_str
+    ctx.update [byte 0]
+    ctx.update dst_prime
     ctx.finish()
     # burnMem?
 
@@ -113,12 +125,12 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
 
   template copyFrom(output: var array, bi: array, cur: var int) =
     var b_index = 0
-    while cur < min(b_1.len, len_in_bytes):
+    while cur < min(bi.len, len_in_bytes):
       output[cur] = bi[b_index]
       inc cur
       inc b_index
 
-  output.copyFrom(b_1, cur)
+  output.copyFrom(b_1.data, cur)
 
   var b_i{.noInit.}: array[H.bits div 8, byte]
 
@@ -129,10 +141,10 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
   for i in 2 ..< ell:
     ctx.init()
     if i == 2:
-      strxor(b_1, b_0)
-      ctx.update(b_1)
+      strxor(b_1.data, b_0.data)
+      ctx.update(b_1.data)
     else:
-      strxor(b_i, b_0)
+      strxor(b_i, b_0.data)
       ctx.update(b_i)
     ctx.update([byte i])
     ctx.update(dst_prime)
@@ -178,7 +190,7 @@ func hashToFieldFP2[B: byte|char, count: static int](
   # 7.     e_j = OS2IP(tv) mod p
   # 8.   u_i = (e_0, ..., e_(m - 1))
   # 9. return (u_0, ..., u_(count - 1))
-  const len_in_bytes = count * m * L
+  const len_in_bytes = count * m * L_BLS
 
   var uniform_bytes{.noInit.}: array[len_bytes, byte]
   sha256.expandMessageXMD(uniform_bytes, msg, domainSepTag)
@@ -190,7 +202,7 @@ func hashToFieldFP2[B: byte|char, count: static int](
     template loopIter(e_j: untyped, j: range[1..m]): untyped {.dirty.} =
       ## for j in 0 ..< m
       let elm_offset = L_BLS * (j + i * m)
-      template tv: untyped = uniform_bytes.toOpenArray(elm_offset, L-1)
+      template tv: untyped = uniform_bytes.toOpenArray(elm_offset, L_BLS-1)
       discard de_j.fromBytes(tv)
       {.noSideEffect.}:
         BIG_384_dmod(e_j, de_j, FIELD_Modulus)
@@ -507,12 +519,10 @@ func hashToG2[B: byte|char](msg: openArray[B],
   result.add(Q1)
   result.clearCofactor()
 
+{.pop.} # raises: [Defect]
 
-# Unofficial test vectors for hashToG2 primitives
+# T vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
-#
-# Those unofficial vectors are intended for debugging the building blocks of
-# of the full hashToG2 function
 
 when isMainModule:
   import stew/byteutils, nimcrypto/[sha2, hmac]
@@ -535,124 +545,155 @@ when isMainModule:
     let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
     doAssert onCurve, "The coordinates (x, y) are not on the G2 curve"
 
-  # Test vectors for hashToBaseFP2
+  # Test vectors for expandMessageXMD
   # ----------------------------------------------------------------------
-  template testHashToBaseFP2(id, constants: untyped) =
-    # https://github.com/mratsim/py_ecc/pull/1
-    proc `test _ id`() =
-      # We create a proc to avoid allocating too much globals.
+
+  template testExpandMessageXMD(id, constants: untyped) =
+    # Section "Expand test vectors {#expand-testvectors}"
+    proc `testExpandMessageXMD_sha256 _ id`() =
+      # We create a proc to avoid allocating to much globals/
       constants
 
-      let pmsg = if msg.len == 0: nil
-                 else: cast[ptr byte](msg[0].unsafeAddr)
-
-      var ctx: HMAC[sha256]
-      # Important: do we need to include the null byte at the end?
-      let pointFP2 = hashToBaseFP2(
-        ctx,
-        pmsg, msg.len,
-        ctr,
-        dst
-      )
-      doAssert fp2 == pointFP2
-      echo "Success hashToBaseFP2 ", astToStr(id)
-
-    `test _ id`()
-
-  block: # hashToBaseFP2
-    testHashToBaseFP2 msg_ctr0:
-      let
-        msg = "msg"
-        ctr = 0'i8
-        dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-
-      let fp2 = hexToFP2(
-        x = "0x18df4dc51885b18ca0082a4966b0def46287930b8f1c0b673b11ac48d19c8899bc150d83fd3a7a1430b0de541742c1d4",
-        y = "0x14eef8ca34b82d065d187a3904cb313dbb44558917cc5091574d9999b5ecfdd5af2fa3aea6e02fb253bf4ae670e72d55"
+      var uniform_bytes: array[len_in_bytes, byte]
+      sha256.expandMessageXMD(
+        uniform_bytes,
+        msg,
+        "QUUX-V01-CS02-with-expander"
       )
 
-  block:
-    testHashToBaseFP2 msg_ctr1:
-      let
-        msg = "msg"
-        ctr = 1'i8
-        dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-
-      let fp2 = hexToFP2(
-        x = "0x14c81e3d32a930af141ff28f337e375bd7f2b35d006b2f6ba9a4c9eed7937e2b20d8b251fef776b0d497859510c9fad7",
-        y = "0x05764cf5fe69554b971c5fe77eb3f3f9b89534547335b84ff02cd3d613bcd5e3037005b9226011a61a70b5bd0f0db570"
+      doAssert uniform_bytes == expectedBytes, ( "\n" &
+        "Expected " & toHex(expectedBytes) & "\n" &
+        "Computed " & toHex(uniform_bytes)
       )
 
-  # Test vectors for mapToCurveG2
-  # ----------------------------------------------------------------------
-  template testMapToCurveG2(id, constants: untyped) =
-    # https://github.com/sigp/incubator-milagro-crypto-rust/blob/49563467/src/bls381.rs#L209-L328
-    # Themselves extracted from
-    # https://github.com/kwantam/bls_sigs_ref/tree/master/python-impl
-    proc `test _ id`() =
-      # We create a proc to avoid allocating too much globals.
-      constants
+      echo "Success sha256.expandMessageXMD ", astToStr(id)
 
-      let u0 = hexToFP2(u0x, u0y)
-      let u1 = hexToFP2(u1x, u1y)
+    `testExpandMessageXMD_sha256 _ id`()
 
-      let q0 = mapToCurveG2(u0)
-      let q1 = mapToCurveG2(u1)
+  testExpandMessageXMD(1):
+    # TODO Currently testing vs Py-ECC due to
+    # official test vectors misreporting SHA256 (SHA512 instead)
+    # https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve/issues/265
+    let msg = ""
+    const expected = "f659819a6473c1835b25ea59e3d38914c98b374f0970b7e4c92181df928fca88"
+    const len_in_bytes = expected.len div 2
+    const expectedBytes = hexToByteArray[len_in_bytes](expected)
 
-      var P = q0
-      P.add(q1)
+  # # Test vectors for hashToFieldFP2
+  # # ----------------------------------------------------------------------
+  # template testHashToFieldFP2(id, constants: untyped) =
+  #   proc `test _ id`() =
+  #     # We create a proc to avoid allocating too much globals.
+  #     constants
 
-      displayECP2Coord("P (before clearCofactor)", P)
-      P.clearCofactor()
-      displayECP2Coord("P (after clearCofactor)", P)
+  #     let pmsg = if msg.len == 0: nil
+  #                else: cast[ptr byte](msg[0].unsafeAddr)
 
-      doAssert P == ecp
-      echo "Success mapToCurveG2 ", astToStr(id)
+  #     let pointFP2 = hashToBaseFP2(
+  #       ctx,
+  #       pmsg, msg.len,
+  #       ctr,
+  #       dst
+  #     )
+  #     doAssert fp2 == pointFP2
+  #     echo "Success hashToBaseFP2 ", astToStr(id)
 
-    `test _ id`()
+  #   `test _ id`()
 
-  block:
-    testMapToCurveG2 MilagroRust_1:
-      let
-        u0x = "0x004ad233c619209060e40059b81e4c1f92796b05aa1bc6358d65e53dc0d657dfbc713d4030b0b6d9234a6634fd1944e7"
-        u0y = "0x0e2386c82713441bc3b06a460bd81850f4bf376ea89c80b18c0881e855c58dc8e83b2fd23af983f4786508e30c42af01"
-        u1x = "0x08a6a75e0a8d32f1e096f29047ea879dd34a5504218d7ce92c32c244786822fb73fbf708d167ad86537468249ec6df48"
-        u1y = "0x07016d0e5e13cd65780042c6f7b4c74ae1c58da438c99582696818b5c229895b893318dcb87d2a65e557d4ebeb408b70"
+  # block: # hashToBaseFP2
+  #   testHashToBaseFP2 msg_ctr0:
+  #     let
+  #       msg = "msg"
+  #       ctr = 0'i8
+  #       dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
-      # Expected ECP2 (x, y: FP2) affine coordinates
-      # x and y are complex coordinates in the form x' + iy'
-      # that satisfy the BLS12-384 equation: y² = x³ + 4
+  #     let fp2 = hexToFP2(
+  #       x = "0x18df4dc51885b18ca0082a4966b0def46287930b8f1c0b673b11ac48d19c8899bc150d83fd3a7a1430b0de541742c1d4",
+  #       y = "0x14eef8ca34b82d065d187a3904cb313dbb44558917cc5091574d9999b5ecfdd5af2fa3aea6e02fb253bf4ae670e72d55"
+  #     )
 
-      let ecp = toECP2(
-        x = hexToFP2(
-          # x = x' + iy'
-          x = "0x04861c41efcc5fc56e62273692b48da25d950d2a0aaffb34eff80e8dbdc2d41ca38555ceb8554368436aea47d16056b5",
-          y = "0x09db5217528c55d982cf05fc54242bdcd25f1ebb73372e00e16d8e0f19dc3aeabdeef2d42d693405a04c37d60961526a",
-        ),
-        y = hexToFP2(
-          # y = x'' + iy''
-          x = "0x177d05b95e7879a7ddbd83c15114b5a4e9846fde72b2263072dc9e60db548ccbadaacb92cc4952d4f47425fe3c5e0172",
-          y = "0x0fc82c99b928ed9df12a74f9215c3df8ae1e9a3fa54c00897889296890b23a0edcbb9653f9170bf715f882b35c0b4647"
-        )
-      )
+  # block:
+  #   testHashToBaseFP2 msg_ctr1:
+  #     let
+  #       msg = "msg"
+  #       ctr = 1'i8
+  #       dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
-    testMapToCurveG2 PyECC_1_msg:
-      # from hash_to_base_FP2("msg")
-      let
-        u0x = "0x18df4dc51885b18ca0082a4966b0def46287930b8f1c0b673b11ac48d19c8899bc150d83fd3a7a1430b0de541742c1d4"
-        u0y = "0x14eef8ca34b82d065d187a3904cb313dbb44558917cc5091574d9999b5ecfdd5af2fa3aea6e02fb253bf4ae670e72d55"
-        u1x = "0x14c81e3d32a930af141ff28f337e375bd7f2b35d006b2f6ba9a4c9eed7937e2b20d8b251fef776b0d497859510c9fad7"
-        u1y = "0x05764cf5fe69554b971c5fe77eb3f3f9b89534547335b84ff02cd3d613bcd5e3037005b9226011a61a70b5bd0f0db570"
+  #     let fp2 = hexToFP2(
+  #       x = "0x14c81e3d32a930af141ff28f337e375bd7f2b35d006b2f6ba9a4c9eed7937e2b20d8b251fef776b0d497859510c9fad7",
+  #       y = "0x05764cf5fe69554b971c5fe77eb3f3f9b89534547335b84ff02cd3d613bcd5e3037005b9226011a61a70b5bd0f0db570"
+  #     )
 
-      let ecp = toECP2(
-        x = hexToFP2(
-          # x = x' + iy'
-          x = "0x07896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
-          y = "0x0bd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0",
-        ),
-        y = hexToFP2(
-          # y = x'' + iy''
-          x = "0x001bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
-          y = "0x18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"
-        )
-      )
+  # # Test vectors for mapToCurveG2
+  # # ----------------------------------------------------------------------
+  # template testMapToCurveG2(id, constants: untyped) =
+  #   # https://github.com/sigp/incubator-milagro-crypto-rust/blob/49563467/src/bls381.rs#L209-L328
+  #   # Themselves extracted from
+  #   # https://github.com/kwantam/bls_sigs_ref/tree/master/python-impl
+  #   proc `test _ id`() =
+  #     # We create a proc to avoid allocating too much globals.
+  #     constants
+
+  #     let u0 = hexToFP2(u0x, u0y)
+  #     let u1 = hexToFP2(u1x, u1y)
+
+  #     let q0 = mapToCurveG2(u0)
+  #     let q1 = mapToCurveG2(u1)
+
+  #     var P = q0
+  #     P.add(q1)
+
+  #     displayECP2Coord("P (before clearCofactor)", P)
+  #     P.clearCofactor()
+  #     displayECP2Coord("P (after clearCofactor)", P)
+
+  #     doAssert P == ecp
+  #     echo "Success mapToCurveG2 ", astToStr(id)
+
+  #   `test _ id`()
+
+  # block:
+  #   testMapToCurveG2 MilagroRust_1:
+  #     let
+  #       u0x = "0x004ad233c619209060e40059b81e4c1f92796b05aa1bc6358d65e53dc0d657dfbc713d4030b0b6d9234a6634fd1944e7"
+  #       u0y = "0x0e2386c82713441bc3b06a460bd81850f4bf376ea89c80b18c0881e855c58dc8e83b2fd23af983f4786508e30c42af01"
+  #       u1x = "0x08a6a75e0a8d32f1e096f29047ea879dd34a5504218d7ce92c32c244786822fb73fbf708d167ad86537468249ec6df48"
+  #       u1y = "0x07016d0e5e13cd65780042c6f7b4c74ae1c58da438c99582696818b5c229895b893318dcb87d2a65e557d4ebeb408b70"
+
+  #     # Expected ECP2 (x, y: FP2) affine coordinates
+  #     # x and y are complex coordinates in the form x' + iy'
+  #     # that satisfy the BLS12-384 equation: y² = x³ + 4
+
+  #     let ecp = toECP2(
+  #       x = hexToFP2(
+  #         # x = x' + iy'
+  #         x = "0x04861c41efcc5fc56e62273692b48da25d950d2a0aaffb34eff80e8dbdc2d41ca38555ceb8554368436aea47d16056b5",
+  #         y = "0x09db5217528c55d982cf05fc54242bdcd25f1ebb73372e00e16d8e0f19dc3aeabdeef2d42d693405a04c37d60961526a",
+  #       ),
+  #       y = hexToFP2(
+  #         # y = x'' + iy''
+  #         x = "0x177d05b95e7879a7ddbd83c15114b5a4e9846fde72b2263072dc9e60db548ccbadaacb92cc4952d4f47425fe3c5e0172",
+  #         y = "0x0fc82c99b928ed9df12a74f9215c3df8ae1e9a3fa54c00897889296890b23a0edcbb9653f9170bf715f882b35c0b4647"
+  #       )
+  #     )
+
+  #   testMapToCurveG2 PyECC_1_msg:
+  #     # from hash_to_base_FP2("msg")
+  #     let
+  #       u0x = "0x18df4dc51885b18ca0082a4966b0def46287930b8f1c0b673b11ac48d19c8899bc150d83fd3a7a1430b0de541742c1d4"
+  #       u0y = "0x14eef8ca34b82d065d187a3904cb313dbb44558917cc5091574d9999b5ecfdd5af2fa3aea6e02fb253bf4ae670e72d55"
+  #       u1x = "0x14c81e3d32a930af141ff28f337e375bd7f2b35d006b2f6ba9a4c9eed7937e2b20d8b251fef776b0d497859510c9fad7"
+  #       u1y = "0x05764cf5fe69554b971c5fe77eb3f3f9b89534547335b84ff02cd3d613bcd5e3037005b9226011a61a70b5bd0f0db570"
+
+  #     let ecp = toECP2(
+  #       x = hexToFP2(
+  #         # x = x' + iy'
+  #         x = "0x07896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
+  #         y = "0x0bd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0",
+  #       ),
+  #       y = hexToFP2(
+  #         # y = x'' + iy''
+  #         x = "0x001bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
+  #         y = "0x18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"
+  #       )
+  #     )
