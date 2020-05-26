@@ -38,7 +38,7 @@ import
   # Internal
   ./milagro, ./hkdf, ./common
 
-func ceilDiv(a, b: int): int {.used.} =
+func ceilDiv(a, b: int): int =
   ## ceil division
   ## ceil(a / b)
   (a + b - 1) div b
@@ -78,10 +78,10 @@ func expandMessageXMD[B: byte|char], len_in_bytes: static int](
   # 7.  b_1 = H(b_0 || I2OSP(1, 1) || DST_prime)
   # 8.  for i in (2, ..., ell):
   # 9.    b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime)
-  # 10. pseudo_random_bytes = b_1 || ... || b_ell
-  # 11. return substr(pseudo_random_bytes, 0, len_in_bytes)
+  # 10. uniform_bytes = b_1 || ... || b_ell
+  # 11. return substr(uniform_bytes, 0, len_in_bytes)
 
-  const ell = ceil(len_in_bytes)
+  const ell = ceil(len_in_bytes / b_in_bytes)
   static: doAssert ell <= 255, "Please implement the \"oversized\" part of the Hash-To-Curve spec"
 
   const dst_prime = domainSepTag & $char(byte(domainSepTag.len))
@@ -170,18 +170,18 @@ func hashToFieldFP2[B: byte|char, count: static int](
 
   # Steps:
   # 1. len_in_bytes = count * m * L
-  # 2. pseudo_random_bytes = expand_message(msg, DST, len_in_bytes)
+  # 2. uniform_bytes = expand_message(msg, DST, len_in_bytes)
   # 3. for i in (0, ..., count - 1):
   # 4.   for j in (0, ..., m - 1):
   # 5.     elm_offset = L * (j + i * m)
-  # 6.     tv = substr(pseudo_random_bytes, elm_offset, L)
+  # 6.     tv = substr(uniform_bytes, elm_offset, L)
   # 7.     e_j = OS2IP(tv) mod p
   # 8.   u_i = (e_0, ..., e_(m - 1))
   # 9. return (u_0, ..., u_(count - 1))
   const len_in_bytes = count * m * L
 
-  var pseudo_random_bytes{.noInit.}: array[len_bytes, byte]
-  sha256.expandMessageXMD(pseudo_random_bytes, msg, domainSepTag)
+  var uniform_bytes{.noInit.}: array[len_bytes, byte]
+  sha256.expandMessageXMD(uniform_bytes, msg, domainSepTag)
 
   for i in 0 ..< count:
     var e_0{.noInit.}, e_1{.noInit.}: BIG_384
@@ -190,7 +190,7 @@ func hashToFieldFP2[B: byte|char, count: static int](
     template loopIter(e_j: untyped, j: range[1..m]): untyped {.dirty.} =
       ## for j in 0 ..< m
       let elm_offset = L_BLS * (j + i * m)
-      template tv: untyped = pseudo_random_bytes.toOpenArray(elm_offset, L-1)
+      template tv: untyped = uniform_bytes.toOpenArray(elm_offset, L-1)
       discard de_j.fromBytes(tv)
       {.noSideEffect.}:
         BIG_384_dmod(e_j, de_j, FIELD_Modulus)
