@@ -454,6 +454,8 @@ func hashToG2*(message, domainSepTag: string): ECP2_BLS381 =
     let pmsg = cast[ptr byte](message[0].unsafeAddr)
     result = hashToG2(pmsg, message.len, domainSepTag)
 
+{.pop.}
+
 # Unofficial test vectors for hashToG2 primitives
 # ----------------------------------------------------------------------
 #

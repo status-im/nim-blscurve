@@ -20,13 +20,17 @@ proc test(env, path: string, lang = "c") =
 task test, "Run all tests":
   # Debug - test intermediate computations
   # test "", "blscurve/hkdf.nim"
+  # test "", "blscurve/draft_v5/hash_to_curve_draft_v5.nim"
   # test "", "blscurve/hash_to_curve.nim"
 
-  # Internal BLS API - IETF standard / post Ethereum2.0 v0.10
-  # test "", "tests/hash_to_curve.nim"
+  # Internal BLS API - IETF standard
+  # test "", "tests/hash_to_curve_v5.nim"
+  # test "", "tests/hash_to_curve_v7.nim"
 
-  # Public BLS API - IETF standard / post Ethereum2.0 v0.10
-  test "", "tests/eth2_vectors.nim"
+  # Public BLS API - IETF standard / Ethereum2.0 v0.10.x ~ v0.11.x
+  test "-d:BLS_ETH2_SPEC=\"v0.11.x\"", "tests/eth2_vectors.nim"
+  # Public BLS API - IETF standard / Ethereum2.0 v0.12.x
+  test "-d:BLS_ETH2_SPEC=\"v0.12.x\"", "tests/eth2_vectors.nim"
 
   # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
   if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":

@@ -2,12 +2,17 @@ import
   # Standard library
   json, strutils, os, streams,
   # Third party
-  yaml
+  yaml,
+  # Detect spec version
+  ../blscurve
 
 export
   os, json
 
-const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v0.12.0_vectors"
+when BLS_ETH2_SPEC == "v0.11.x":
+  const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v0.10.1_vectors"
+else:
+  const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v0.12.0_vectors"
 
 proc parseTest*(file: string): JsonNode =
   var yamlStream = openFileStream(file)

@@ -78,27 +78,47 @@ proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string): T 
           "Couldn't parse input '" & name & "' (" & $T &
           "): " & test["input"][name].getStr()
 
-proc aggFrom(T: typedesc, test: JsonNode): T =
-  when T is seq[(PublicKey, seq[byte])]:
-    for pubkey in test["input"]["pubkeys"]:
-      result.setLen(result.len + 1)
-      doAssert result[^1][0].fromHex(pubkey.getStr()),
-          "Couldn't parse input PublicKey: " & pubkey.getStr()
-    var i = 0
-    for message in test["input"]["messages"]:
-      result[i][1] = message.getStr().hexToSeqByte()
-      inc i
-  elif T is seq[PublicKey]:
-    for pubkey in test["input"]["pubkeys"]:
-      result.setLen(result.len + 1)
-      doAssert result[^1].fromHex(pubkey.getStr()),
-          "Couldn't parse input PublicKey: " & pubkey.getStr()
-  elif T is seq[seq[byte]]:
-    for message in test["input"]["messages"]:
-      result.setLen(result.len + 1)
-      result[^1] = message.getStr().hexToSeqByte()
-  else:
-    {.error: "Unreachable".}
+when BLS_ETH2_SPEC == "v0.12.x":
+  proc aggFrom(T: typedesc, test: JsonNode): T =
+    when T is seq[(PublicKey, seq[byte])]:
+      for pubkey in test["input"]["pubkeys"]:
+        result.setLen(result.len + 1)
+        doAssert result[^1][0].fromHex(pubkey.getStr()),
+            "Couldn't parse input PublicKey: " & pubkey.getStr()
+      var i = 0
+      for message in test["input"]["messages"]:
+        result[i][1] = message.getStr().hexToSeqByte()
+        inc i
+    elif T is seq[PublicKey]:
+      for pubkey in test["input"]["pubkeys"]:
+        result.setLen(result.len + 1)
+        doAssert result[^1].fromHex(pubkey.getStr()),
+            "Couldn't parse input PublicKey: " & pubkey.getStr()
+    elif T is seq[seq[byte]]:
+      for message in test["input"]["messages"]:
+        result.setLen(result.len + 1)
+        result[^1] = message.getStr().hexToSeqByte()
+    else:
+      {.error: "Unreachable".}
+else:
+  proc aggFrom(T: typedesc, test: JsonNode): T =
+    when T is seq[(PublicKey, seq[byte])]:
+      for pair in test["input"]["pairs"]:
+        result.setLen(result.len + 1)
+        doAssert result[^1][0].fromHex(pair["pubkey"].getStr()),
+            "Couldn't parse input PublicKey: " & pair["pubkey"].getStr()
+        result[^1][1] = pair["message"].getStr().hexToSeqByte()
+    elif T is seq[PublicKey]:
+      for pair in test["input"]["pairs"]:
+        result.setLen(result.len + 1)
+        doAssert result[^1].fromHex(pair["pubkey"].getStr()),
+            "Couldn't parse input PublicKey: " & pair["pubkey"].getStr()
+    elif T is seq[seq[byte]]:
+      for pair in test["input"]["pairs"]:
+        result.setLen(result.len + 1)
+        result[^1] = pair["message"].getStr().hexToSeqByte()
+    else:
+      {.error: "Unreachable".}
 
 testGen(sign, test):
   let

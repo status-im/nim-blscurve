@@ -28,7 +28,13 @@ import
   # third-party
   nimcrypto/[hmac, sha2],
   # internal
-  ./milagro, ./common, ./hkdf, ./hash_to_curve
+  ./milagro, ./common, ./hkdf
+
+const BLS_ETH2_SPEC* {.strdefine.} = "v0.12.x"
+when BLS_ETH2_SPEC == "v0.11.x":
+  import ./draft_v5/hash_to_curve_draft_v5
+else:
+  import ./hash_to_curve
 
 # Public Types
 # ----------------------------------------------------------------------
