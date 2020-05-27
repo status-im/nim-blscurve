@@ -116,6 +116,7 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
   ##
   ## Array ``sigs`` must not be empty!
   # TODO: what is the correct empty signature to return?
+  #       for now we assume that empty aggregation is handled at the client level
   doAssert(len(sigs) > 0)
   result = sigs[0]
   result.aggregate(sigs.toOpenArray(1, sigs.high))
@@ -359,6 +360,8 @@ func aggregateVerify*(
   # Note: we can't have openarray of openarrays until openarrays are first-class value types
   if publicKeys.len != proofs.len or publicKeys != messages.len:
     return false
+  if not(publicKeys.len >= 1):
+    return false
 
   var ctx: ContextCoreAggregateVerify
   ctx.init()
@@ -381,6 +384,9 @@ func aggregateVerify*(
   # Note: we can't have openarray of openarrays until openarrays are first-class value types
   if publicKeys.len != messages.len:
     return false
+  if not(publicKeys.len >= 1):
+    return false
+
 
   var ctx: ContextCoreAggregateVerify
   ctx.init()
@@ -398,6 +404,8 @@ func aggregateVerify*[T: string or seq[byte]](
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
   # Note: we can't have tuple of openarrays until openarrays are first-class value types
+  if not(publicKey_msg_pairs.len >= 1):
+    return false
   var ctx: ContextCoreAggregateVerify
   ctx.init()
   for i in 0 ..< publicKey_msg_pairs.len:
