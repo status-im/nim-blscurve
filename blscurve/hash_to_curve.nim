@@ -38,8 +38,6 @@ import
   # Internal
   ./milagro, ./common
 
-import stew/byteutils
-
 func ceilDiv(a, b: int): int =
   ## ceil division
   ## ceil(a / b)
@@ -536,25 +534,7 @@ func hashToG2*[B: byte|char](msg: openArray[B],
 # ----------------------------------------------------------------------
 
 when isMainModule:
-  import stew/byteutils, nimcrypto/[sha2, hmac]
-
-  proc hexToBytes(s: string): seq[byte] =
-    if s.len != 0: return hexToSeqByte(s)
-
-  proc displayECP2Coord(name: string, point: ECP2_BLS381) =
-    echo "-------------------------------------------"
-    echo "Point ", name, ':'
-    echo "In jacobian projective coordinates (x, y, z)"
-    echo point
-    echo "In affine coordinate (x, y)"
-    var x, y: FP2_BLS381
-    discard ECP2_BLS381_get(x.addr, y.addr, point.unsafeAddr)
-    echo "(", $x, ", ", $y, ")"
-
-  proc toECP2(x, y: FP2_BLS381): ECP2_BLS381 =
-    ## Create a point (x, y) on the G2 curve
-    let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
-    doAssert onCurve, "The coordinates (x, y) are not on the G2 curve"
+  import stew/byteutils
 
   # Test vectors for expandMessageXMD
   # ----------------------------------------------------------------------
@@ -662,6 +642,119 @@ when isMainModule:
                      "378fba044a31f5cb44583a892f5969dcd73b3fa128816e"
     const len_in_bytes = expected.len div 2
     const expectedBytes = hexToByteArray[len_in_bytes](expected)
+
+  # Test vectors for HashToG2
+  # ----------------------------------------------------------------------
+
+  proc displayECP2Coord(name: string, point: ECP2_BLS381) =
+    echo "  --"
+    echo "  ", name, ':'
+    echo "    In jacobian projective coordinates (x, y, z)"
+    echo "      ", point
+    echo "    In affine coordinate (x, y)"
+    var x, y: FP2_BLS381
+    discard ECP2_BLS381_get(x.addr, y.addr, point.unsafeAddr)
+    echo "      (", $x, ", ", $y, ")"
+
+  proc toECP2(x, y: FP2_BLS381): ECP2_BLS381 =
+    ## Create a point (x, y) on the G2 curve
+    let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
+    doAssert onCurve, "The coordinates (x, y) are not on the G2 curve"
+
+
+  template testHashToG2(id, constants: untyped) =
+    proc `hashToG2Proxy _ id`() =
+      # We recreate hashToG2 so that we can check
+      # each step in a fine grained manner
+      constants
+
+      var u{.noInit.}: array[2, FP2_BLS381]
+
+      sha256.hashToFieldFP2(u, msg, domainSepTag)
+
+      let Q0 = mapToCurveG2(u[0])
+      let Q1 = mapToCurveG2(u[1])
+
+      var R = Q0
+      R.add(Q1)
+      var P = R
+      P.clearCofactor()
+
+      if P != P_ref:
+        echo "Test failed for input:"
+        echo "  suite:  BLS12381G2_XMD:SHA~256_SSWU_RO_"
+        echo "  DST:    ", domainSepTag
+        echo "  msg:    \"", msg, '\"'
+        echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        echo "  u0_cpt: ", u[0]
+        echo "  u0_ref: ", u0_ref
+        echo "     ok?: ", u[0] == u0_ref
+        echo "  u1_cpt: ", u[1]
+        echo "  u1_ref: ", u1_ref
+        echo "     ok?: ", u[1] == u1_ref
+        echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        displayECP2Coord("Q0_cpt", Q0)
+        displayECP2Coord("Q0_ref", Q0_ref)
+        echo "     ok?: ", Q0 == Q0_ref
+        displayECP2Coord("Q1_cpt", Q1)
+        displayECP2Coord("Q1_ref", Q1_ref)
+        echo "     ok?: ", Q1 == Q1_ref
+        echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        displayECP2Coord("R_cpt ", R)
+        echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        displayECP2Coord("P_cpt ", P)
+        displayECP2Coord("P_ref ", P_ref)
+        echo "     ok?: ", P == P_ref
+        echo "Exiting with error"
+        quit 1
+      echo "Success HashToG2", astToStr(id)
+    `hashToG2Proxy _ id`()
+
+  block:
+    testHashToG2(1):
+      const domainSepTag = "QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_"
+      let msg = ""
+
+      const
+        Px_re  = "0141ebfbdca40eb85b87142e130ab689c673cf60f1a3e98d693352" &
+                 "66f30d9b8d4ac44c1038e9dcdd5393faf5c41fb78a"
+        Px_im  = "05cb8437535e20ecffaef7752baddf98034139c38452458baeefab" &
+                 "379ba13dff5bf5dd71b72418717047f5b0f37da03d"
+        Py_re  = "0503921d7f6a12805e72940b963c0cf3471c7b2a524950ca195d11" &
+                 "062ee75ec076daf2d4bc358c4b190c0c98064fdd92"
+        Py_im  = "12424ac32561493f3fe3c260708a12b7c620e7be00099a974e259d" &
+                 "dc7d1f6395c3c811cdd19f1e8dbf3e9ecfdcbab8d6"
+        u0_re  = "03dbc2cce174e91ba93cbb08f26b917f98194a2ea08d1cce75b2b9" &
+                 "cc9f21689d80bd79b594a613d0a68eb807dfdc1cf8"
+        u0_im  = "05a2acec64114845711a54199ea339abd125ba38253b70a92c876d" &
+                 "f10598bd1986b739cad67961eb94f7076511b3b39a"
+        u1_re  = "02f99798e8a5acdeed60d7e18e9120521ba1f47ec090984662846b" &
+                 "c825de191b5b7641148c0dbc237726a334473eee94"
+        u1_im  = "145a81e418d4010cc027a68f14391b30074e89e60ee7a22f87217b" &
+                 "2f6eb0c4b94c9115b436e6fa4607e95a98de30a435"
+        q0x_re = "019ad3fc9c72425a998d7ab1ea0e646a1f6093444fc6965f1cad5a" &
+                 "3195a7b1e099c050d57f45e3fa191cc6d75ed7458c"
+        q0x_im = "171c88b0b0efb5eb2b88913a9e74fe111a4f68867b59db252ce586" &
+                 "8af4d1254bfab77ebde5d61cd1a86fb2fe4a5a1c1d"
+        q0y_re = "0ba10604e62bdd9eeeb4156652066167b72c8d743b050fb4c1016c" &
+                 "31b505129374f76e03fa127d6a156213576910fef3"
+        q0y_im = "0eb22c7a543d3d376e9716a49b72e79a89c9bfe9feee8533ed931c" &
+                 "bb5373dde1fbcd7411d8052e02693654f71e15410a"
+        q1x_re = "113d2b9cd4bd98aee53470b27abc658d91b47a78a51584f3d4b950" &
+                 "677cfb8a3e99c24222c406128c91296ef6b45608be"
+        q1x_im = "13855912321c5cb793e9d1e88f6f8d342d49c0b0dbac613ee9e17e" &
+                 "3c0b3c97dfbb5a49cc3fb45102fdbaf65e0efe2632"
+        q1y_re = "0fd3def0b7574a1d801be44fde617162aa2e89da47f464317d9bb5" &
+                 "abc3a7071763ce74180883ad7ad9a723a9afafcdca"
+        q1y_im = "056f617902b3c0d0f78a9a8cbda43a26b65f602f8786540b9469b0" &
+                 "60db7b38417915b413ca65f875c130bebfaa59790c"
+
+      let
+        u0_ref = hexToFP2(u0_re, u0_im)
+        u1_ref = hexToFP2(u1_re, u1_im)
+        Q0_ref = toECP2(hexToFP2(q0x_re, q0x_im), hexToFP2(q0y_re, q0y_im))
+        Q1_ref = toECP2(hexToFP2(q1x_re, q1x_im), hexToFP2(q1y_re, q1y_im))
+        P_ref = toECP2(hexToFP2(Px_re, Px_im), hexToFP2(Py_re, Py_im))
 
   # # Test vectors for hashToFieldFP2
   # # ----------------------------------------------------------------------
