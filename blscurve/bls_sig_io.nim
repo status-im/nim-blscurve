@@ -21,7 +21,7 @@ func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
      ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its hex raw bytes representation.
-  ## Returns true on asuccess and false otherwise
+  ## Returns true on a success and false otherwise
   when obj is SecretKey:
     result = obj.intVal.fromHex(hexStr)
   else:

@@ -115,6 +115,7 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
   ## and return aggregated signature.
   ##
   ## Array ``sigs`` must not be empty!
+  # TODO: what is the correct empty signature to return?
   doAssert(len(sigs) > 0)
   result = sigs[0]
   result.aggregate(sigs.toOpenArray(1, sigs.high))
@@ -272,8 +273,8 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
 # Compared to the spec API are modified
 # to enforce usage of the proof-of-posession (as recommended)
 
-const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
-const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
+const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 
 func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
   ## Generate a proof of possession for the public/secret keypair

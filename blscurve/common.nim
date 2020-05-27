@@ -601,7 +601,9 @@ func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successful.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError:
+  except ValueError, IndexError:
+    # TODO: change to exception-free
+    # https://github.com/status-im/nim-blscurve/issues/57
     false
 
 proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
@@ -677,7 +679,9 @@ func fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successfull.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError:
+  except ValueError, IndexError:
+    # TODO: change to exception-free
+    # https://github.com/status-im/nim-blscurve/issues/57
     false
 
 proc toBytes*(point: ECP_BLS381, res: var openarray[byte]): bool =
@@ -748,7 +752,9 @@ func fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successfull.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError:
+  except ValueError, IndexError:
+    # TODO: change to exception-free
+    # https://github.com/status-im/nim-blscurve/issues/57
     false
 
 proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =

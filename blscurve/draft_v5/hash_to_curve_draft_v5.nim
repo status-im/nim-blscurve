@@ -28,7 +28,8 @@ import
   # Status libraries
   nimcrypto/hmac, stew/endians2,
   # Internal
-  ./milagro, ./hkdf, ./common
+  ../milagro, ../common,
+  ../hkdf
 
 func hashToBaseFP2[T](
                    ctx: var HMAC[T],
