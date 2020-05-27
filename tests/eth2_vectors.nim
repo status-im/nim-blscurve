@@ -231,14 +231,14 @@ testGen(aggregate_verify, test):
     "   computed: " & $libSoAValid & "\n" &
     "   expected: " & $expected
 
-suite "ETH 2.0 v0.12.0 test vectors":
-  test "sign(SecretKey, message) -> Signature":
+suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors":
+  test "[" & BLS_ETH2_SPEC & "] sign(SecretKey, message) -> Signature":
     test_sign()
-  test "verify(PublicKey, message, Signature) -> bool":
+  test "[" & BLS_ETH2_SPEC & "] verify(PublicKey, message, Signature) -> bool":
     test_verify()
-  test "aggregate(openarray[Signature]) -> Signature":
+  test "[" & BLS_ETH2_SPEC & "] aggregate(openarray[Signature]) -> Signature":
     test_aggregate()
-  test "fastAggregateVerify(openarray[PublicKey], message, Signature) -> bool":
+  test "[" & BLS_ETH2_SPEC & "] fastAggregateVerify(openarray[PublicKey], message, Signature) -> bool":
     test_fast_aggregate_verify()
-  test "AggregateVerify(openarray[PublicKey, message], Signature) -> bool":
+  test "[" & BLS_ETH2_SPEC & "] AggregateVerify(openarray[PublicKey, message], Signature) -> bool":
     test_aggregate_verify()

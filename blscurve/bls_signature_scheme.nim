@@ -280,8 +280,12 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
 # Compared to the spec API are modified
 # to enforce usage of the proof-of-posession (as recommended)
 
-const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
-const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+when BLS_ETH2_SPEC == "v0.11.x":
+  const DST = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_"
+  const DST_POP = "BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_"
+else:
+  const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+  const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 
 func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
   ## Generate a proof of possession for the public/secret keypair
