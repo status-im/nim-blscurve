@@ -252,13 +252,15 @@ func isSquare(a: FP2_BLS381): bool =
   var tmp: FP2_BLS381
   result = sqrt(tmp, a)
 
-func isNeg(a: FP2_BLS381): bool =
-  ## Returns the "negative sign" (mod q) of a value
-  ## a is negative when a (mod q) > -a (mod q)
-  ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-4.1.1
-
-  let neg = neg(a)
-  result = cmp(a, neg) < 0
+func sign0(x: FP2_BLS381): bool =
+  ## Returns the "sign" (mod q^m) of a value
+  ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-07#section-4.1
+  ##
+  ## Specialized for the quadratic extension field (m == 2)
+  let sign_0 = x.a.parity()
+  let zero_0 = x.a.isZilch().int
+  let sign_1 = x.b.parity()
+  return bool(sign_0 or (zero_0 and sign_1))
 
 func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
   ## Implementation of map_to_curve_simple_swu
@@ -310,7 +312,7 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
     let x = cmov(x2, x1, e2)             # If is_square(gx1), x = x1, else x = x2
     let y2 = cmov(gx2, gx1, e2)          # If is_square(gx1), y2 = gx1, else y2 = gx2
     var y = sqrt(y2)
-    let e3 = u.isNeg() == y.isNeg()      # Fix sign of y
+    let e3 = u.sign0() == y.sign0()      # Fix sign of y
     y = cmov(neg y, y, e3)
 
   result.x = x
@@ -649,8 +651,8 @@ when isMainModule:
   proc displayECP2Coord(name: string, point: ECP2_BLS381) =
     echo "  --"
     echo "  ", name, ':'
-    echo "    In jacobian projective coordinates (x, y, z)"
-    echo "      ", point
+    # echo "    In jacobian projective coordinates (x, y, z)"
+    # echo "      ", point
     echo "    In affine coordinate (x, y)"
     var x, y: FP2_BLS381
     discard ECP2_BLS381_get(x.addr, y.addr, point.unsafeAddr)
@@ -688,26 +690,26 @@ when isMainModule:
         echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         echo "  u0_cpt: ", u[0]
         echo "  u0_ref: ", u0_ref
-        echo "     ok?: ", u[0] == u0_ref
+        echo "  ok?:    ", u[0] == u0_ref
         echo "  u1_cpt: ", u[1]
         echo "  u1_ref: ", u1_ref
-        echo "     ok?: ", u[1] == u1_ref
+        echo "  ok?:    ", u[1] == u1_ref
         echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         displayECP2Coord("Q0_cpt", Q0)
         displayECP2Coord("Q0_ref", Q0_ref)
-        echo "     ok?: ", Q0 == Q0_ref
+        echo "  ok?:    ", Q0 == Q0_ref
         displayECP2Coord("Q1_cpt", Q1)
         displayECP2Coord("Q1_ref", Q1_ref)
-        echo "     ok?: ", Q1 == Q1_ref
+        echo "  ok?:    ", Q1 == Q1_ref
         echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         displayECP2Coord("R_cpt ", R)
         echo "  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         displayECP2Coord("P_cpt ", P)
         displayECP2Coord("P_ref ", P_ref)
-        echo "     ok?: ", P == P_ref
+        echo "  ok?:    ", P == P_ref
         echo "Exiting with error"
         quit 1
-      echo "Success HashToG2", astToStr(id)
+      echo "Success HashToG2 - ", astToStr(id)
     `hashToG2Proxy _ id`()
 
   block:
@@ -755,122 +757,3 @@ when isMainModule:
         Q0_ref = toECP2(hexToFP2(q0x_re, q0x_im), hexToFP2(q0y_re, q0y_im))
         Q1_ref = toECP2(hexToFP2(q1x_re, q1x_im), hexToFP2(q1y_re, q1y_im))
         P_ref = toECP2(hexToFP2(Px_re, Px_im), hexToFP2(Py_re, Py_im))
-
-  # # Test vectors for hashToFieldFP2
-  # # ----------------------------------------------------------------------
-  # template testHashToFieldFP2(id, constants: untyped) =
-  #   proc `test _ id`() =
-  #     # We create a proc to avoid allocating too much globals.
-  #     constants
-
-  #     let pmsg = if msg.len == 0: nil
-  #                else: cast[ptr byte](msg[0].unsafeAddr)
-
-  #     let pointFP2 = hashToBaseFP2(
-  #       ctx,
-  #       pmsg, msg.len,
-  #       ctr,
-  #       dst
-  #     )
-  #     doAssert fp2 == pointFP2
-  #     echo "Success hashToBaseFP2 ", astToStr(id)
-
-  #   `test _ id`()
-
-  # block: # hashToBaseFP2
-  #   testHashToBaseFP2 msg_ctr0:
-  #     let
-  #       msg = "msg"
-  #       ctr = 0'i8
-  #       dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-
-  #     let fp2 = hexToFP2(
-  #       x = "0x18df4dc51885b18ca0082a4966b0def46287930b8f1c0b673b11ac48d19c8899bc150d83fd3a7a1430b0de541742c1d4",
-  #       y = "0x14eef8ca34b82d065d187a3904cb313dbb44558917cc5091574d9999b5ecfdd5af2fa3aea6e02fb253bf4ae670e72d55"
-  #     )
-
-  # block:
-  #   testHashToBaseFP2 msg_ctr1:
-  #     let
-  #       msg = "msg"
-  #       ctr = 1'i8
-  #       dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-
-  #     let fp2 = hexToFP2(
-  #       x = "0x14c81e3d32a930af141ff28f337e375bd7f2b35d006b2f6ba9a4c9eed7937e2b20d8b251fef776b0d497859510c9fad7",
-  #       y = "0x05764cf5fe69554b971c5fe77eb3f3f9b89534547335b84ff02cd3d613bcd5e3037005b9226011a61a70b5bd0f0db570"
-  #     )
-
-  # # Test vectors for mapToCurveG2
-  # # ----------------------------------------------------------------------
-  # template testMapToCurveG2(id, constants: untyped) =
-  #   # https://github.com/sigp/incubator-milagro-crypto-rust/blob/49563467/src/bls381.rs#L209-L328
-  #   # Themselves extracted from
-  #   # https://github.com/kwantam/bls_sigs_ref/tree/master/python-impl
-  #   proc `test _ id`() =
-  #     # We create a proc to avoid allocating too much globals.
-  #     constants
-
-  #     let u0 = hexToFP2(u0x, u0y)
-  #     let u1 = hexToFP2(u1x, u1y)
-
-  #     let q0 = mapToCurveG2(u0)
-  #     let q1 = mapToCurveG2(u1)
-
-  #     var P = q0
-  #     P.add(q1)
-
-  #     displayECP2Coord("P (before clearCofactor)", P)
-  #     P.clearCofactor()
-  #     displayECP2Coord("P (after clearCofactor)", P)
-
-  #     doAssert P == ecp
-  #     echo "Success mapToCurveG2 ", astToStr(id)
-
-  #   `test _ id`()
-
-  # block:
-  #   testMapToCurveG2 MilagroRust_1:
-  #     let
-  #       u0x = "0x004ad233c619209060e40059b81e4c1f92796b05aa1bc6358d65e53dc0d657dfbc713d4030b0b6d9234a6634fd1944e7"
-  #       u0y = "0x0e2386c82713441bc3b06a460bd81850f4bf376ea89c80b18c0881e855c58dc8e83b2fd23af983f4786508e30c42af01"
-  #       u1x = "0x08a6a75e0a8d32f1e096f29047ea879dd34a5504218d7ce92c32c244786822fb73fbf708d167ad86537468249ec6df48"
-  #       u1y = "0x07016d0e5e13cd65780042c6f7b4c74ae1c58da438c99582696818b5c229895b893318dcb87d2a65e557d4ebeb408b70"
-
-  #     # Expected ECP2 (x, y: FP2) affine coordinates
-  #     # x and y are complex coordinates in the form x' + iy'
-  #     # that satisfy the BLS12-384 equation: y² = x³ + 4
-
-  #     let ecp = toECP2(
-  #       x = hexToFP2(
-  #         # x = x' + iy'
-  #         x = "0x04861c41efcc5fc56e62273692b48da25d950d2a0aaffb34eff80e8dbdc2d41ca38555ceb8554368436aea47d16056b5",
-  #         y = "0x09db5217528c55d982cf05fc54242bdcd25f1ebb73372e00e16d8e0f19dc3aeabdeef2d42d693405a04c37d60961526a",
-  #       ),
-  #       y = hexToFP2(
-  #         # y = x'' + iy''
-  #         x = "0x177d05b95e7879a7ddbd83c15114b5a4e9846fde72b2263072dc9e60db548ccbadaacb92cc4952d4f47425fe3c5e0172",
-  #         y = "0x0fc82c99b928ed9df12a74f9215c3df8ae1e9a3fa54c00897889296890b23a0edcbb9653f9170bf715f882b35c0b4647"
-  #       )
-  #     )
-
-  #   testMapToCurveG2 PyECC_1_msg:
-  #     # from hash_to_base_FP2("msg")
-  #     let
-  #       u0x = "0x18df4dc51885b18ca0082a4966b0def46287930b8f1c0b673b11ac48d19c8899bc150d83fd3a7a1430b0de541742c1d4"
-  #       u0y = "0x14eef8ca34b82d065d187a3904cb313dbb44558917cc5091574d9999b5ecfdd5af2fa3aea6e02fb253bf4ae670e72d55"
-  #       u1x = "0x14c81e3d32a930af141ff28f337e375bd7f2b35d006b2f6ba9a4c9eed7937e2b20d8b251fef776b0d497859510c9fad7"
-  #       u1y = "0x05764cf5fe69554b971c5fe77eb3f3f9b89534547335b84ff02cd3d613bcd5e3037005b9226011a61a70b5bd0f0db570"
-
-  #     let ecp = toECP2(
-  #       x = hexToFP2(
-  #         # x = x' + iy'
-  #         x = "0x07896efdac56b0f6cbd8c78841676d63fc733b692628687bf25273aa8a107bd8cb53bbdb705b551e239dffe019abd4df",
-  #         y = "0x0bd557eda8d16ab2cb2e71cca4d7b343985064daad04734e07da5cdda26610b59cdc0810a25276467d24b315bf7860e0",
-  #       ),
-  #       y = hexToFP2(
-  #         # y = x'' + iy''
-  #         x = "0x001bdb6290cae9f30f263dd40f014b9f4406c3fbbc5fea47e2ebd45e42332553961eb53a15c09e5e090d7a7122dc6657",
-  #         y = "0x18370459c44e799af8ef31634a683e340e79c3a06f912594d287a443620933b47a2a3e5ce4470539eae50f6d49b8ebd6"
-  #       )
-  #     )

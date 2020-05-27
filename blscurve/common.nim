@@ -149,6 +149,10 @@ proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
   result = int(BIG_384_comp(a, b))
 
+proc iszilch*(a: FP_BLS381): bool {.inline.} =
+  ## Returns ``true`` if ``a`` is zero.
+  result = (FP_BLS381_iszilch(unsafeAddr a) == 1)
+
 proc cmp*(a: FP_BLS381, b: FP_BLS381): int {.inline.} =
   ## Compares two FP field members
   ##
@@ -854,4 +858,3 @@ proc random*(a: var BIG_384) =
     a[0] = a[0] + bit
     inc(j)
     j = j and 0x07
-
