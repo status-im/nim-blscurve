@@ -28,7 +28,13 @@ import
   # third-party
   nimcrypto/[hmac, sha2],
   # internal
-  ./milagro, ./common, ./hkdf, ./hash_to_curve
+  ./milagro, ./common, ./hkdf
+
+const BLS_ETH2_SPEC* {.strdefine.} = "v0.11.x"
+when BLS_ETH2_SPEC == "v0.11.x":
+  import ./draft_v5/hash_to_curve_draft_v5
+else:
+  import ./hash_to_curve
 
 # Public Types
 # ----------------------------------------------------------------------
@@ -115,6 +121,8 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
   ## and return aggregated signature.
   ##
   ## Array ``sigs`` must not be empty!
+  # TODO: what is the correct empty signature to return?
+  #       for now we assume that empty aggregation is handled at the client level
   doAssert(len(sigs) > 0)
   result = sigs[0]
   result.aggregate(sigs.toOpenArray(1, sigs.high))
@@ -138,7 +146,7 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
 func coreSign[T: byte|char](
        secretKey: SecretKey,
        message: openarray[T],
-       domainSepTag: string): GroupG2 =
+       domainSepTag: static string): GroupG2 =
   ## Computes a signature or proof-of-possession
   ## from a secret key and a message
   # Spec
@@ -153,7 +161,7 @@ func coreVerify[T: byte|char](
        publicKey: PublicKey,
        message: openarray[T],
        sig_or_proof: Signature or ProofOfPossession,
-       domainSepTag: string): bool =
+       domainSepTag: static string): bool =
   ## Check that a signature (or proof-of-possession) is valid
   ## for a message (or serialized publickey) under the provided public key
   # Spec
@@ -210,7 +218,11 @@ func init(ctx: var ContextCoreAggregateVerify) =
 
 template `&`(point: GroupG1 or GroupG2): untyped = unsafeAddr point
 
-func update[T: char|byte](ctx: var ContextCoreAggregateVerify, publicKey: PublicKey, message: openarray[T], domainSepTag: string) =
+func update[T: char|byte](
+       ctx: var ContextCoreAggregateVerify,
+       publicKey: PublicKey,
+       message: openarray[T],
+       domainSepTag: static string) =
   let Q = hashToG2(message, domainSepTag)                   # Q = hash_to_point(message_i)
   PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKey.point) # C1 = C1 * pairing(Q, xP)
 
@@ -268,8 +280,12 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
 # Compared to the spec API are modified
 # to enforce usage of the proof-of-posession (as recommended)
 
-const DST = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_"
-const DST_POP = "BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_"
+when BLS_ETH2_SPEC == "v0.11.x":
+  const DST = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_"
+  const DST_POP = "BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_"
+else:
+  const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+  const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 
 func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
   ## Generate a proof of possession for the public/secret keypair
@@ -354,6 +370,8 @@ func aggregateVerify*(
   # Note: we can't have openarray of openarrays until openarrays are first-class value types
   if publicKeys.len != proofs.len or publicKeys != messages.len:
     return false
+  if not(publicKeys.len >= 1):
+    return false
 
   var ctx: ContextCoreAggregateVerify
   ctx.init()
@@ -376,6 +394,9 @@ func aggregateVerify*(
   # Note: we can't have openarray of openarrays until openarrays are first-class value types
   if publicKeys.len != messages.len:
     return false
+  if not(publicKeys.len >= 1):
+    return false
+
 
   var ctx: ContextCoreAggregateVerify
   ctx.init()
@@ -393,6 +414,8 @@ func aggregateVerify*[T: string or seq[byte]](
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
   # Note: we can't have tuple of openarrays until openarrays are first-class value types
+  if not(publicKey_msg_pairs.len >= 1):
+    return false
   var ctx: ContextCoreAggregateVerify
   ctx.init()
   for i in 0 ..< publicKey_msg_pairs.len:

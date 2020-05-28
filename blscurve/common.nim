@@ -149,6 +149,10 @@ proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
   result = int(BIG_384_comp(a, b))
 
+proc iszilch*(a: FP_BLS381): bool {.inline.} =
+  ## Returns ``true`` if ``a`` is zero.
+  result = (FP_BLS381_iszilch(unsafeAddr a) == 1)
+
 proc cmp*(a: FP_BLS381, b: FP_BLS381): int {.inline.} =
   ## Compares two FP field members
   ##
@@ -597,7 +601,9 @@ func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successful.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError:
+  except ValueError, IndexError:
+    # TODO: change to exception-free
+    # https://github.com/status-im/nim-blscurve/issues/57
     false
 
 proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
@@ -673,7 +679,9 @@ func fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successfull.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError:
+  except ValueError, IndexError:
+    # TODO: change to exception-free
+    # https://github.com/status-im/nim-blscurve/issues/57
     false
 
 proc toBytes*(point: ECP_BLS381, res: var openarray[byte]): bool =
@@ -744,7 +752,9 @@ func fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successfull.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError:
+  except ValueError, IndexError:
+    # TODO: change to exception-free
+    # https://github.com/status-im/nim-blscurve/issues/57
     false
 
 proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
@@ -854,4 +864,3 @@ proc random*(a: var BIG_384) =
     a[0] = a[0] + bit
     inc(j)
     j = j and 0x07
-

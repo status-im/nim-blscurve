@@ -11,10 +11,13 @@ import
   # Standard library
   unittest, strutils,
   # Internals
-  ../blscurve/[common, milagro, hash_to_curve]
+  ../blscurve/[common, milagro],
+  ../blscurve/draft_v5/hash_to_curve_draft_v5
 
 # Vectors for Hash to G2 curve of BLS12-381
 # According to the IETF standard draft https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
+# Applicable to Ethereum 0.10.x and 0.11.x
+# NOT applicable to Ethereum 0.12.0
 
 func hexToFP2(x, y: string): FP2_BLS381 =
   ## Convert a complex tuple x + iy to FP2
