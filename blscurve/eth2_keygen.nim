@@ -56,8 +56,10 @@ func parent_SK_to_lamport_PK(
   # While the BLS prime is 381-bit (48 bytes)
   # the curve order is 255-bit (32 bytes)
   # and a secret key would always fit in 32 bytes
+  var tmp {.noInit.}: array[48, byte]
   var ikm {.noInit.}: array[32, byte]
-  doAssert ikm.serialize(parentSecretKey)
+  doAssert tmp.serialize(parentSecretKey)
+  ikm[0 .. 31] = tmp.toOpenArray(48-32, 48-1)
 
   # Reorganized the spec to save on stack allocations
   # and limit stackoverflow potential.
@@ -80,23 +82,28 @@ func parent_SK_to_lamport_PK(
   # 6. for i = 0 to 255
   #        lamport_PK = lamport_PK | SHA256(lamport_0[i])
   for i in 0 ..< 255:
-    ctx.update(lamport[i])
+    ctx.update(sha256.digest(lamport[i]).data)
 
-  # 3. not_IKM = flip_bits(IKM)
+  # 3. not_IKM = flip_bits(parent_SK)
+  # We can flip the bit of the IKM instead
+  # as flipping bits of milagro representation (Montgomery)
+  # doesn't make sense
   var not_ikm {.noInit.}: array[32, byte]
   for i in 0 ..< 32:
     not_ikm[i] = not ikm[i]
 
   # 4. lamport_1 = IKM_to_lamport_SK(not_IKM, salt)
   # We reuse the previous buffer to limit stack usage
-  ikm.ikm_to_lamport_SK(salt, lamport)
+  not_ikm.ikm_to_lamport_SK(salt, lamport)
 
   # TODO: inclusive/exclusive range?
   # 7. for i = 0 to 255
   #        lamport_PK = lamport_PK | SHA256(lamport_1[i])
   for i in 0 ..< 255:
-    ctx.update(lamport[i])
+    ctx.update(sha256.digest(lamport[i]).data)
 
+  # 8. compressed_lamport_PK = SHA256(lamport_PK)
+  # 9. return compressed_lamport_PK
   discard ctx.finish(lamportPublicKey)
 
 func derive_child_secretKey*(

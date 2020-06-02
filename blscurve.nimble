@@ -32,6 +32,9 @@ task test, "Run all tests":
   # Public BLS API - IETF standard / Ethereum2.0 v0.12.x
   test "-d:BLS_ETH2_SPEC=\"v0.12.x\"", "tests/eth2_vectors.nim"
 
+  # key Derivation - EIP 2333
+  test "", "tests/eip2333_key_derivation.nim"
+
   # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
   if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":
     exec "nim c -d:danger --outdir:build -r" &
