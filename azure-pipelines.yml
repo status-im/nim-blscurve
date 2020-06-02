@@ -142,6 +142,7 @@ steps:
       nimble refresh
       nimble install -y --depsOnly
       nimble install https://github.com/status-im/NimYAML@#head
+      nimble install stint
     displayName: 'Building dependencies (Posix)'
     condition: ne(variables['Agent.OS'], 'Windows_NT')
   - powershell: |
@@ -149,6 +150,7 @@ steps:
       nimble refresh
       nimble install -y --depsOnly
       nimble install https://github.com/status-im/NimYAML@#head
+      nimble install stint
     displayName: 'Building dependencies (Windows)'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
   - bash: |

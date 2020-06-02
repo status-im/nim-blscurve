@@ -35,6 +35,7 @@ build_script:
   - nimble install -y
   # testing only
   - nimble install https://github.com/status-im/NimYAML@#head # Cannot clone upstream https://github.com/flyx/NimYAML/issues/77
+  - nimble install stint
 
 test_script:
   - nimble test
