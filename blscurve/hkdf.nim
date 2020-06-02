@@ -123,7 +123,7 @@ func hkdfExpand*[T;I: char|byte](ctx: var HMAC[T],
   ##
   ## Output:
   ## - output: OKM (output keying material). The PRK is expanded to match
-  ##           the output length, the result is tored in output.
+  ##           the output length, the result is stored in output.
   ##
   ## Temporary:
   ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].

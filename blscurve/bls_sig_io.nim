@@ -65,6 +65,9 @@ const
 
 func exportRaw*(secretKey: SecretKey): array[RawSecretKeySize, byte] {.inline.}=
   ## Serialize a secret key into its raw binary representation
+  # TODO: the SecretKey size is actually not 384 bit
+  #       but 255 bit since the curve order requires 255-bit
+  #       What uses exportRaw?
   discard result.serialize(secretKey)
 
 func exportRaw*(publicKey: PublicKey): array[RawPublicKeySize, byte] {.inline.}=

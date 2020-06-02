@@ -473,6 +473,39 @@ func fastAggregateVerify*[T: byte|char](
     aggregate.point.add(publicKeys[i].point)
   return coreVerify(aggregate, message, signature, DST)
 
+func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte]): bool =
+  ## Ethereum 2 EIP-2333, extracts this from the BLS signature schemes
+  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
+  # 2. OKM = HKDF-Expand(PRK, "", L)
+  # 3. SK = OS2IP(OKM) mod r
+  # 4. return SK
+  const salt = "BLS-SIG-KEYGEN-SALT-"
+  var ctx: HMAC[sha256]
+  var prk: MDigest[sha256.bits]
+
+  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
+  ctx.hkdfExtract(prk, salt, ikm)
+
+  # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+  # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
+  # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
+
+  #  2. OKM = HKDF-Expand(PRK, "", L)
+  const L = 48
+  var okm: array[L, byte]
+  ctx.hkdfExpand(prk, "", okm) # TODO: this will likely be changed to match BLS-02 construction
+
+  #  3. x = OS2IP(OKM) mod r
+  #  5. SK = x
+  var dseckey: DBIG_384
+  if not dseckey.fromBytes(okm):
+    return false
+
+  {.noSideEffect.}:
+    BIG_384_dmod(secretKey.intVal, dseckey, CURVE_Order)
+
+  return true
+
 func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey): bool =
   ## Generate a (public key, secret key) pair
   ## from the input keying material `ikm`
@@ -532,30 +565,9 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   if ikm.len < 32:
     return false
 
-  const salt = "BLS-SIG-KEYGEN-SALT-"
-  var ctx: HMAC[sha256]
-  var prk: MDigest[sha256.bits]
-
-  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
-  ctx.hkdfExtract(prk, salt, ikm)
-
-  # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-  # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
-  # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
-
-  #  2. OKM = HKDF-Expand(PRK, "", L)
-  const L = 48
-  var okm: array[L, byte]
-  ctx.hkdfExpand(prk, "", okm)
-
-  #  3. x = OS2IP(OKM) mod r
-  #  5. SK = x
-  var dseckey: DBIG_384
-  if not dseckey.fromBytes(okm):
+  let ok = secretKey.hkdf_mod_r(ikm)
+  if not ok:
     return false
-
-  {.noSideEffect.}:
-    BIG_384_dmod(secretKey.intVal, dseckey, CURVE_Order)
 
   #  4. xP = x * P
   #  6. PK = point_to_pubkey(xP)
