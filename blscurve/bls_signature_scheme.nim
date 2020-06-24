@@ -30,7 +30,7 @@ import
   # internal
   ./milagro, ./common, ./hkdf
 
-const BLS_ETH2_SPEC* {.strdefine.} = "v0.11.x"
+const BLS_ETH2_SPEC* {.strdefine.} = "v0.12.x"
 when BLS_ETH2_SPEC == "v0.11.x":
   import ./draft_v5/hash_to_curve_draft_v5
 else:
