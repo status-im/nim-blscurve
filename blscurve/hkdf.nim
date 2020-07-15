@@ -85,7 +85,8 @@ import nimcrypto/hmac
 func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
                      prk: var MDigest[T.bits],
                      salt: openArray[S],
-                     ikm: openArray[I]
+                     ikm: openArray[I],
+                     append: static openArray[I]
                     ) =
   ## "Extract" step of HKDF.
   ## Extract a fixed size pseudom-random key
@@ -101,9 +102,16 @@ func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
   ##
   ## Temporary:
   ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].
+  ##
+  ## Compared to the spec we add a specific append procedure to do
+  ## IKM || I2OSP(0, 1)
+  ## without having to allocate the secret IKM on the heap
+
   mixin init, update, finish
   ctx.init(salt)
   ctx.update(ikm)
+  when append.len > 0:
+    ctx.update(append)
   discard ctx.finish(prk.data)
 
   # ctx.clear() - TODO: very expensive

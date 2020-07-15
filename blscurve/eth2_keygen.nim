@@ -31,7 +31,7 @@ func ikm_to_lamport_SK(
   var prk: MDigest[sha256.bits]
 
   # 0. PRK = HKDF-Extract(salt, IKM)
-  ctx.hkdfExtract(prk, salt, ikm)
+  ctx.hkdfExtract(prk, salt, ikm, default(array[0, byte]))
 
   # 1. OKM = HKDF-Expand(PRK, "" , L)
   #    with L = K * 255 and K = 32 (sha256 output)
@@ -119,17 +119,14 @@ func derive_child_secretKey*(
     index,
     compressed_lamport_PK
   )
-  childSecretKey.hkdf_mod_r(compressed_lamport_PK)
+  childSecretKey.hkdf_mod_r(compressed_lamport_PK, key_info = "")
 
 func derive_master_secretKey*(
         masterSecretKey: var SecretKey,
         ikm: openArray[byte]
      ): bool =
   ## Master key derivation
-
-  # TODO: BLS KeyGen MUST be 32 bytes
-  # https://github.com/ethereum/EIPs/issues/2337#issuecomment-637548497
-  if ikm.len < 16:
+  if ikm.len < 32:
     return false
 
-  masterSecretKey.hkdf_mod_r(ikm)
+  masterSecretKey.hkdf_mod_r(ikm, key_info = "")
