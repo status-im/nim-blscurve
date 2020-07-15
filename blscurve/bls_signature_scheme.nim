@@ -510,10 +510,7 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
   const L = 48
   var okm: array[L, byte]
   const L_octetstring = L.uint16.toBytesBE()
-  var info = key_info
-  for octet in L_octetstring:
-    info &= char(octet)
-  ctx.hkdfExpand(prk, info, okm)
+  ctx.hkdfExpand(prk, key_info, append = L_octetstring, okm)
 
   #  3. x = OS2IP(OKM) mod r
   var dseckey: DBIG_384
