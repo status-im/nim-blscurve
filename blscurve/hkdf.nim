@@ -85,7 +85,8 @@ import nimcrypto/hmac
 func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
                      prk: var MDigest[T.bits],
                      salt: openArray[S],
-                     ikm: openArray[I]
+                     ikm: openArray[I],
+                     append: static openArray[I]
                     ) =
   ## "Extract" step of HKDF.
   ## Extract a fixed size pseudom-random key
@@ -96,21 +97,29 @@ func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
   ## - salt: a buffer to an optional salt value (set to nil if unused)
   ## - ikm: "input keying material", the secret value to hash.
   ##
+  ##   Compared to the spec we add a specific append procedure to do
+  ##   IKM || I2OSP(0, 1)
+  ##   without having to allocate the secret IKM on the heap
+  ##
   ## Output:
   ## - prk: a pseudo random key of fixed size. The size is the same as the cryptographic hash chosen.
   ##
   ## Temporary:
   ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].
+
   mixin init, update, finish
   ctx.init(salt)
   ctx.update(ikm)
+  when append.len > 0:
+    ctx.update(append)
   discard ctx.finish(prk.data)
 
   # ctx.clear() - TODO: very expensive
 
-func hkdfExpand*[T;I: char|byte](ctx: var HMAC[T],
+func hkdfExpand*[T;I,A: char|byte](ctx: var HMAC[T],
                     prk: MDigest[T.bits],
                     info: openArray[I],
+                    append: static openArray[A],
                     output: var openArray[byte]
                   ) =
   ## "Expand" step of HKDF
@@ -120,7 +129,10 @@ func hkdfExpand*[T;I: char|byte](ctx: var HMAC[T],
   ## Inputs:
   ## - prk: a pseudo random key (PRK) of fixed size. The size is the same as the cryptographic hash chosen.
   ## - info: optional context and application specific information (set to nil if unused)
-  ##
+  ## - append:
+  ##   Compared to the spec we add a specific append procedure to do
+  ##   OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
+  ##   without having additional allocation on the heap
   ## Output:
   ## - output: OKM (output keying material). The PRK is expanded to match
   ##           the output length, the result is stored in output.
@@ -144,6 +156,8 @@ func hkdfExpand*[T;I: char|byte](ctx: var HMAC[T],
     if i != 0:
       ctx.update(t.data)
     ctx.update(info)
+    when append.len > 0:
+      ctx.update(append)
     ctx.update([uint8(i+1)])
     discard ctx.finish(t.data)
 

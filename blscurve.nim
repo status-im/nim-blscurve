@@ -21,7 +21,4 @@ export
   derive_master_secretKey,
   derive_child_secretKey
 
-export BLS_ETH2_SPEC
-static: doAssert: BLS_ETH2_SPEC=="v0.11.x" or BLS_ETH2_SPEC=="v0.12.x"
-# Pass -d:BLS_ETH2_SPEC="v0.11.x"
-# For testnets that use the old BLS draft (schlesi, witti)
+const BLS_ETH2_SPEC* = "v0.12.x (deprecated)"

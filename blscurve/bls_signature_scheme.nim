@@ -12,7 +12,7 @@
 # Target Ethereum 2.0 specification after v0.10.
 #
 # Specification:
-# - https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-00#section-5.5
+# - https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-02
 # - https://github.com/cfrg/draft-irtf-cfrg-bls-signature
 #
 # Ethereum 2.0 specification targets minimul-pubkey-size
@@ -21,20 +21,19 @@
 #
 # We reuse the IETF types and procedure names
 # Cipher suite ID: BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_NUL_
+#
+# Draft changes: https://tools.ietf.org/rfcdiff?url1=https://tools.ietf.org/id/draft-irtf-cfrg-bls-signature-00.txt&url2=https://tools.ietf.org/id/draft-irtf-cfrg-bls-signature-02.txt
 
 {.push raises: [Defect].}
 
 import
   # third-party
   nimcrypto/[hmac, sha2],
+  stew/endians2,
   # internal
   ./milagro, ./common, ./hkdf
 
-const BLS_ETH2_SPEC* {.strdefine.} = "v0.12.x"
-when BLS_ETH2_SPEC == "v0.11.x":
-  import ./draft_v5/hash_to_curve_draft_v5
-else:
-  import ./hash_to_curve
+import ./hash_to_curve
 
 # Public Types
 # ----------------------------------------------------------------------
@@ -99,10 +98,23 @@ func subgroupCheck(P: GroupG1 or GroupG2): bool =
     rP.mul(CURVE_Order)
   result = rP.isInf()
 
-func privToPub*(secretKey: SecretKey): PublicKey =
+func secretKeyToPublickey*(secretKey: SecretKey): PublicKey {.noInit.} =
   ## Generates a public key from a secret key
+  # Inputs:
+  # - SK, a secret integer such that 0 <= SK < r.
+  #
+  # Outputs:
+  # - PK, a public key encoded as an octet string.
+  #
+  # Procedure:
+  # 1. xP = SK * P
+  # 2. PK = point_to_pubkey(xP)
+  # 3. return PK
   result.point = generator1()
   result.point.mul(secretKey.intVal)
+
+func privToPub*(secretKey: SecretKey): PublicKey {.noInit, inline, deprecated: "Use secretKeyToPublickey instead".} =
+  secretKeyToPublickey(secretKey)
 
 # Aggregate
 # ----------------------------------------------------------------------
@@ -168,11 +180,12 @@ func coreVerify[T: byte|char](
   # 1. R = signature_to_point(signature)
   # 2. If R is INVALID, return INVALID
   # 3. If signature_subgroup_check(R) is INVALID, return INVALID
-  # 4. xP = pubkey_to_point(PK)
-  # 5. Q = hash_to_point(message)
-  # 6. C1 = pairing(Q, xP)
-  # 7. C2 = pairing(R, P)
-  # 8. If C1 == C2, return VALID, else return INVALID
+  # 4. If KeyValidate(PK) is INVALID, return INVALID
+  # 5. xP = pubkey_to_point(PK)
+  # 6. Q = hash_to_point(message)
+  # 7. C1 = pairing(Q, xP)
+  # 8. C2 = pairing(R, P)
+  # 9. If C1 == C2, return VALID, else return INVALID
   #
   # Note for G2 (minimal-pubkey-size)
   # pairing(U, V) := e(V, U)
@@ -182,11 +195,11 @@ func coreVerify[T: byte|char](
   # in this case G1 since e(G1, G2) -> GT
   # and pairing(R, P) := e(P, R)
 
-  # Precondition:
-  # The public key PK must satisfy KeyValidate(PK) == VALID
-  if not subgroupCheck(publicKey.point):
-      return false
+  # 3. If signature_subgroup_check(R) is INVALID, return INVALID
   if not subgroupCheck(sig_or_proof.point):
+    return false
+  # 4. If KeyValidate(PK) is INVALID, return INVALID
+  if not subgroupCheck(publicKey.point):
     return false
   let Q = hashToG2(message, domainSepTag)
 
@@ -200,16 +213,19 @@ type
   ContextCoreAggregateVerify = object
     # Streaming API for Aggregate verification to handle both SoA and AoS data layout
     # Spec
-    # 1. R = signature_to_point(signature)
-    # 2. If R is INVALID, return INVALID
-    # 3. If signature_subgroup_check(R) is INVALID, return INVALID
-    # 4. C1 = 1 (the identity element in GT)
-    # 5. for i in 1, ..., n:
-    # 6.     xP = pubkey_to_point(PK_i)
-    # 7.     Q = hash_to_point(message_i)
-    # 8.     C1 = C1 * pairing(Q, xP)
-    # 9. C2 = pairing(R, P)
-    # 10. If C1 == C2, return VALID, else return INVALID
+    # Precondition: n >= 1, otherwise return INVALID.
+    # Procedure:
+    # 1.  R = signature_to_point(signature)
+    # 2.  If R is INVALID, return INVALID
+    # 3.  If signature_subgroup_check(R) is INVALID, return INVALID
+    # 4.  C1 = 1 (the identity element in GT)
+    # 5.  for i in 1, ..., n:
+    # 6.      If KeyValidate(PK_i) is INVALID, return INVALID
+    # 7.      xP = pubkey_to_point(PK_i)
+    # 8.      Q = hash_to_point(message_i)
+    # 9.      C1 = C1 * pairing(Q, xP)
+    # 10. C2 = pairing(R, P)
+    # 11. If C1 == C2, return VALID, else return INVALID
     C1: array[AteBitsCount, FP12_BLS381]
 
 func init(ctx: var ContextCoreAggregateVerify) =
@@ -222,9 +238,12 @@ func update[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
        message: openarray[T],
-       domainSepTag: static string) =
+       domainSepTag: static string): bool =
+  if not subgroupCheck(publicKey.point):
+    return false
   let Q = hashToG2(message, domainSepTag)                   # Q = hash_to_point(message_i)
   PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKey.point) # C1 = C1 * pairing(Q, xP)
+  return true
 
 func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
   # Implementation strategy
@@ -270,22 +289,13 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
 #                         enforcing message signed by different public key to be distinct
 # - proof of possession: a separate public key called proof-of-possession is used to allow signing
 #                        on the same message while defending against rogue key attacks
-# with respective ID / domain separation tag:
-# - BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_NUL_
-# - BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_AUG_
-# - BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_
-#   - POP tag: BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_
 #
 # We implement the proof-of-possession scheme
 # Compared to the spec API are modified
 # to enforce usage of the proof-of-posession (as recommended)
 
-when BLS_ETH2_SPEC == "v0.11.x":
-  const DST = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_"
-  const DST_POP = "BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_"
-else:
-  const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
-  const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 
 func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
   ## Generate a proof of possession for the public/secret keypair
@@ -378,7 +388,8 @@ func aggregateVerify*(
   for i in 0 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
       return false
-    ctx.update(publicKeys[i], messages[i], DST)
+    if not ctx.update(publicKeys[i], messages[i], DST):
+      return false
   return ctx.finish(signature)
 
 func aggregateVerify*(
@@ -397,11 +408,11 @@ func aggregateVerify*(
   if not(publicKeys.len >= 1):
     return false
 
-
   var ctx: ContextCoreAggregateVerify
   ctx.init()
   for i in 0 ..< publicKeys.len:
-    ctx.update(publicKeys[i], messages[i], DST)
+    if not ctx.update(publicKeys[i], messages[i], DST):
+      return false
   return ctx.finish(signature)
 
 func aggregateVerify*[T: string or seq[byte]](
@@ -419,7 +430,8 @@ func aggregateVerify*[T: string or seq[byte]](
   var ctx: ContextCoreAggregateVerify
   ctx.init()
   for i in 0 ..< publicKey_msg_pairs.len:
-    ctx.update(publicKey_msg_pairs[i].publicKey, publicKey_msg_pairs[i].message, DST)
+    if not ctx.update(publicKey_msg_pairs[i].publicKey, publicKey_msg_pairs[i].message, DST):
+      return false
   return ctx.finish(signature)
 
 func fastAggregateVerify*[T: byte|char](
@@ -473,30 +485,34 @@ func fastAggregateVerify*[T: byte|char](
     aggregate.point.add(publicKeys[i].point)
   return coreVerify(aggregate, message, signature, DST)
 
-func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte]): bool =
+func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: string): bool =
   ## Ethereum 2 EIP-2333, extracts this from the BLS signature schemes
   # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
   # 2. OKM = HKDF-Expand(PRK, "", L)
+  # 3. SK = OS2IP(OKM) mod r
+  # 4. return SK
+  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
+  # 2. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
   # 3. SK = OS2IP(OKM) mod r
   # 4. return SK
   const salt = "BLS-SIG-KEYGEN-SALT-"
   var ctx: HMAC[sha256]
   var prk: MDigest[sha256.bits]
 
-  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
-  ctx.hkdfExtract(prk, salt, ikm)
+  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
+  ctx.hkdfExtract(prk, salt, ikm, [byte 0])
 
   # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
   # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
   # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
 
-  #  2. OKM = HKDF-Expand(PRK, "", L)
+  # 2. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
   const L = 48
   var okm: array[L, byte]
-  ctx.hkdfExpand(prk, "", okm) # TODO: this will likely be changed to match BLS-02 construction
+  const L_octetstring = L.uint16.toBytesBE()
+  ctx.hkdfExpand(prk, key_info, append = L_octetstring, okm)
 
   #  3. x = OS2IP(OKM) mod r
-  #  5. SK = x
   var dseckey: DBIG_384
   if not dseckey.fromBytes(okm):
     return false
@@ -506,7 +522,7 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte]): bool =
 
   return true
 
-func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey): bool =
+func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey, key_info = ""): bool =
   ## Generate a (public key, secret key) pair
   ## from the input keying material `ikm`
   ##
@@ -546,26 +562,26 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   #  - PK, a public key encoded as an octet string.
   #  - SK, the corresponding secret key, an integer 0 <= SK < r.
   #
+  # Parameters:
+  # - key_info, an optional octet string.
+  #   If key_info is not supplied, it defaults to the empty string.
+  #
   #  Definitions:
   #  - HKDF-Extract is as defined in RFC5869, instantiated with hash H.
   #  - HKDF-Expand is as defined in RFC5869, instantiated with hash H.
-  #  - L is the integer given by ceil((1.5 * ceil(log2(r))) / 8).
+  #  - L is the integer given by ceil((3 * ceil(log2(r))) / 16).
   #  - "BLS-SIG-KEYGEN-SALT-" is an ASCII string comprising 20 octets.
   #  - "" is the empty string.
   #
   #  Procedure:
-  #  1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
-  #  2. OKM = HKDF-Expand(PRK, "", L)
+  #  1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
+  #  2. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
   #  3. x = OS2IP(OKM) mod r
-  #  4. xP = x * P
-  #  5. SK = x
-  #  6. PK = point_to_pubkey(xP)
-  #  7. return (PK, SK)
-
+  #  4. SK = OS2IP(OKM) mod r
   if ikm.len < 32:
     return false
 
-  let ok = secretKey.hkdf_mod_r(ikm)
+  let ok = secretKey.hkdf_mod_r(ikm, key_info)
   if not ok:
     return false
 
