@@ -28,7 +28,7 @@
 #define MBITS_BLS381 381
 #define MOD8_BLS381 3
 #define MODTYPE_BLS381 NOT_SPECIAL
-#define MAXXES_BLS381 14
+#define MAXXES_BLS381 25
 
 
 #endif

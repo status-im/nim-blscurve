@@ -624,6 +624,7 @@ int FP4_BLS381_sqrt(FP4_BLS381 *r,FP4_BLS381* x)
     FP2_BLS381_mul_ip(&s);
     FP2_BLS381_norm(&s);
     FP2_BLS381_sub(&a,&a,&s); // a-=txx(s)
+    FP2_BLS381_norm(&a);
 
     if (!FP2_BLS381_sqrt(&s,&a)) return 0;
 

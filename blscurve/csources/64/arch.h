@@ -40,7 +40,7 @@
 /*** START OF USER CONFIGURABLE SECTION - set architecture ***/
 
 #ifdef CMAKE
-#define CHUNK @AMCL_CHUNK@  /**< size of chunk in bits = wordlength of computer = 16, 32 or 64. Note not all curve options are supported on 16-bit processors - see rom.c */
+#define CHUNK 64  /**< size of chunk in bits = wordlength of computer = 16, 32 or 64. Note not all curve options are supported on 16-bit processors - see rom.c */
 #else
 #define CHUNK 64		/**< size of chunk in bits = wordlength of computer = 16, 32 or 64. Note not all curve options are supported on 16-bit processors - see rom.c */
 #endif

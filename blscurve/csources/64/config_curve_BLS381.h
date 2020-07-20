@@ -41,7 +41,7 @@ under the License.
 #define SEXTIC_TWIST_BLS381 M_TYPE
 #define SIGN_OF_X_BLS381 NEGATIVEX
 
-#define ATE_BITS_BLS381 65
+#define ATE_BITS_BLS381 
 
 #endif
 

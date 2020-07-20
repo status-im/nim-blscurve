@@ -767,6 +767,7 @@ void FP_BLS381_sqrt(FP_BLS381 *r,FP_BLS381 *a)
         FP_BLS381_mul(&i,&i,&v); // i=(2x)^(p+3)/8
         FP_BLS381_mul(&i,&i,&v); // i=(2x)^(p-1)/4
         BIG_384_29_dec(i.g,1);  // i=(2x)^(p-1)/4 - 1
+        BIG_384_29_norm(i.g);
         FP_BLS381_mul(r,a,&v);
         FP_BLS381_mul(r,r,&i);
         FP_BLS381_reduce(r);

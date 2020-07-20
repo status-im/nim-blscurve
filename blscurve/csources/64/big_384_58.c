@@ -23,31 +23,57 @@
 #include "big_384_58.h"
 
 /* test a=0? */
+/* libsodium constant time implementation */
 int BIG_384_58_iszilch(BIG_384_58 a)
 {
     int i;
+    chunk d = 0;
+
+#ifdef DEBUG_NORM
+    if ((a[MPV_384_58]!=1 && a[MPV_384_58]!=0) || a[MNV_384_58]!=0) printf("Input to iszilch not normed\n");
+#endif
+
     for (i=0; i<NLEN_384_58; i++)
-        if (a[i]!=0) return 0;
-    return 1;
+        d |= a[i];
+
+    return (1 & ((d-1)>>BASEBITS_384_58));
 }
 
 /* test a=1? */
+/* libsodium constant time implementation for
+   comparison to zero of a[1],..,a[NLEN_384_58-1]
+   then checking if a[0] == 1
+ */
 int BIG_384_58_isunity(BIG_384_58 a)
 {
     int i;
+    chunk d = 0;
+
+#ifdef DEBUG_NORM
+    if ((a[MPV_384_58]!=1 && a[MPV_384_58]!=0) || a[MNV_384_58]!=0) printf("Input to isunity not normed\n");
+#endif
+
     for(i=1; i<NLEN_384_58; i++)
-        if (a[i]!=0) return 0;
-    if (a[0]!=1) return 0;
-    return 1;
+        d |= a[i];
+
+    return (1 & ((d-1)>>BASEBITS_384_58) & ((a[0]^1)-1)>>BASEBITS_384_58);
 }
 
 /* test a=0? */
+/* libsodium constant time implementation */
 int BIG_384_58_diszilch(DBIG_384_58 a)
 {
     int i;
+    chunk d = 0;
+
+#ifdef DEBUG_NORM
+    if ((a[DMPV_384_58]!=1 && a[DMPV_384_58]!=0) || a[DMNV_384_58]!=0) printf("Input to diszilch not normed\n");
+#endif
+
     for (i=0; i<DNLEN_384_58; i++)
-        if (a[i]!=0) return 0;
-    return 1;
+        d |= a[i];
+
+    return (1 & ((d-1)>>BASEBITS_384_58));
 }
 
 /* SU= 56 */
@@ -785,12 +811,7 @@ void BIG_384_58_monty(BIG_384_58 a,BIG_384_58 md,chunk MC,DBIG_384_58 d)
     chunk m,carry;
     for (i=0; i<NLEN_384_58; i++)
     {
-        if (MC==-1) m=(-d[i])&BMASK_384_58;
-        else
-        {
-            if (MC==1) m=d[i];
-            else m=(MC*d[i])&BMASK_384_58;
-        }
+        m = (MC*d[i])&BMASK_384_58;
         carry=0;
         for (j=0; j<NLEN_384_58; j++)
             carry=muladd_384_58(m,md[j],carry,&d[i+j]);
@@ -1011,28 +1032,48 @@ void BIG_384_58_dnorm(DBIG_384_58 a)
 
 /* Compare a and b. Return 1 for a>b, -1 for a<b, 0 for a==b */
 /* a and b MUST be normalised before call */
-int BIG_384_58_comp(BIG_384_58 a,BIG_384_58 b)
+/* libsodium constant time implementation */
+int BIG_384_58_comp(BIG_384_58 b1,BIG_384_58 b2)
 {
     int i;
-    for (i=NLEN_384_58-1; i>=0; i--)
+    chunk gt = 0;
+    chunk eq = 1;
+
+#ifdef DEBUG_NORM
+    if ((b1[MPV_384_58]!=1 && b1[MPV_384_58]!=0) || b1[MNV_384_58]!=0) printf("First input to comp not normed\n");
+    if ((b2[MPV_384_58]!=1 && b2[MPV_384_58]!=0) || b2[MNV_384_58]!=0) printf("Second input to comp not normed\n");
+#endif
+
+    for (i = NLEN_384_58-1; i>=0; i--)
     {
-        if (a[i]==b[i]) continue;
-        if (a[i]>b[i]) return 1;
-        else  return -1;
+        gt |= ((b2[i]-b1[i]) >> BASEBITS_384_58) & eq;
+        eq &= ((b2[i]^b1[i])-1) >> BASEBITS_384_58;
     }
-    return 0;
+
+    return (int)(gt+gt+eq) - 1;
 }
 
-int BIG_384_58_dcomp(DBIG_384_58 a,DBIG_384_58 b)
+/* Compare b1 and b2. Return 1 for b1>b2, -1 for a<b, 0 for a==b */
+/* a and b MUST be normalised before call */
+/* libsodium constant time implementation */
+int BIG_384_58_dcomp(DBIG_384_58 b1,DBIG_384_58 b2)
 {
     int i;
+    chunk gt = 0;
+    chunk eq = 1;
+
+#ifdef DEBUG_NORM
+    if ((b1[DMPV_384_58]!=1 && b1[DMPV_384_58]!=0) || b1[DMNV_384_58]!=0) printf("First input to dcomp not normed\n");
+    if ((b2[DMPV_384_58]!=1 && b2[DMPV_384_58]!=0) || b2[DMNV_384_58]!=0) printf("Second input to dcomp not normed\n");
+#endif
+
     for (i=DNLEN_384_58-1; i>=0; i--)
     {
-        if (a[i]==b[i]) continue;
-        if (a[i]>b[i]) return 1;
-        else  return -1;
+        gt |= ((b2[i]-b1[i]) >> BASEBITS_384_58) & eq;
+        eq &= ((b2[i]^b1[i])-1) >> BASEBITS_384_58;
     }
-    return 0;
+
+    return (int)(gt+gt+eq) - 1;
 }
 
 /* return number of bits in a */
@@ -1231,8 +1272,7 @@ int BIG_384_58_parity(BIG_384_58 a)
 /* SU= 16 */
 int BIG_384_58_bit(BIG_384_58 a,int n)
 {
-    if (a[n/BASEBITS_384_58]&((chunk)1<<(n%BASEBITS_384_58))) return 1;
-    else return 0;
+    return ((int)(a[n/BASEBITS_384_58]>>(n%BASEBITS_384_58))) & 1;
 }
 
 /* return last n bits of a, where n is small < BASEBITS */
@@ -1249,7 +1289,7 @@ int BIG_384_58_lastbits(BIG_384_58 a,int n)
 // {
 //     int i,b,j=0,r=0;
 //     int len=8*MODBYTES_384_58;
-// 
+//
 //     BIG_384_58_zero(m);
 //     /* generate random BIG */
 //     for (i=0; i<len; i++)
@@ -1262,7 +1302,7 @@ int BIG_384_58_lastbits(BIG_384_58 a,int n)
 //         j++;
 //         j&=7;
 //     }
-// 
+//
 // #ifdef DEBUG_NORM
 //     m[MPV_384_58]=1;
 //     m[MNV_384_58]=0;
@@ -1343,6 +1383,7 @@ void BIG_384_58_moddiv(BIG_384_58 r,BIG_384_58 a1,BIG_384_58 b1,BIG_384_58 m)
     BIG_384_58_copy(b,b1);
 
     BIG_384_58_mod(a,m);
+    BIG_384_58_mod(b,m);
     BIG_384_58_invmodp(z,b,m);
 
     BIG_384_58_mul(d,a,z);
@@ -1387,69 +1428,168 @@ int BIG_384_58_jacobi(BIG_384_58 a,BIG_384_58 p)
     else return -1;
 }
 
-/* Set r=1/a mod p. Binary method */
-/* SU= 240 */
+/* Arazi and Qi inversion mod 256 */
+static int invmod256(int a)
+{
+    int U,t1,t2,b,c;
+    t1=0;
+    c=(a>>1)&1;
+    t1+=c;
+    t1&=1;
+    t1=2-t1;
+    t1<<=1;
+    U=t1+1;
+
+// i=2
+    b=a&3;
+    t1=U*b;
+    t1>>=2;
+    c=(a>>2)&3;
+    t2=(U*c)&3;
+    t1+=t2;
+    t1*=U;
+    t1&=3;
+    t1=4-t1;
+    t1<<=2;
+    U+=t1;
+
+// i=4
+    b=a&15;
+    t1=U*b;
+    t1>>=4;
+    c=(a>>4)&15;
+    t2=(U*c)&15;
+    t1+=t2;
+    t1*=U;
+    t1&=15;
+    t1=16-t1;
+    t1<<=4;
+    U+=t1;
+
+    return U;
+}
+
+/* a=1/a mod 2^BIGBITS. This is very fast! */
+void BIG_384_58_invmod2m(BIG_384_58 a)
+{
+    int i;
+    BIG_384_58 U,t1,b,c;
+    BIG_384_58_zero(U);
+    BIG_384_58_inc(U,invmod256(BIG_384_58_lastbits(a,8)));
+    for (i=8; i<BIGBITS_384_58; i<<=1)
+    {
+        BIG_384_58_norm(U);
+        BIG_384_58_copy(b,a);
+        BIG_384_58_mod2m(b,i);   // bottom i bits of a
+
+        BIG_384_58_smul(t1,U,b);
+        BIG_384_58_shr(t1,i); // top i bits of U*b
+
+        BIG_384_58_copy(c,a);
+        BIG_384_58_shr(c,i);
+        BIG_384_58_mod2m(c,i); // top i bits of a
+
+        BIG_384_58_smul(b,U,c);
+        BIG_384_58_mod2m(b,i);  // bottom i bits of U*c
+
+        BIG_384_58_add(t1,t1,b);
+        BIG_384_58_norm(t1);
+        BIG_384_58_smul(b,t1,U);
+        BIG_384_58_copy(t1,b);  // (t1+b)*U
+        BIG_384_58_mod2m(t1,i);				// bottom i bits of (t1+b)*U
+
+        BIG_384_58_one(b);
+        BIG_384_58_shl(b,i);
+        BIG_384_58_sub(t1,b,t1);
+        BIG_384_58_norm(t1);
+
+        BIG_384_58_shl(t1,i);
+
+        BIG_384_58_add(U,U,t1);
+    }
+    BIG_384_58_copy(a,U);
+    BIG_384_58_norm(a);
+    BIG_384_58_mod2m(a,BIGBITS_384_58);
+}
+
+/* Set r=1/a mod p. Kaliski method - on entry a < p*/
 void BIG_384_58_invmodp(BIG_384_58 r,BIG_384_58 a,BIG_384_58 p)
 {
-    BIG_384_58 u,v,x1,x2,t,one;
-    BIG_384_58_mod(a,p);
-    BIG_384_58_copy(u,a);
-    BIG_384_58_copy(v,p);
-    BIG_384_58_one(one);
-    BIG_384_58_copy(x1,one);
-    BIG_384_58_zero(x2);
+    int k, p1, pu, pv, psw, pmv;
+    BIG_384_58 u, v, s, w;
 
-    while (BIG_384_58_comp(u,one)!=0 && BIG_384_58_comp(v,one)!=0)
+    BIG_384_58_copy(u, p);
+    BIG_384_58_copy(v, a);
+    BIG_384_58_mod(v, p);
+    BIG_384_58_zero(r);
+    BIG_384_58_one(s);
+
+    // v = a2^BIGBITS_384_58 mod p
+    for (k = 0; k < BIGBITS_384_58; k++)
     {
-        while (BIG_384_58_parity(u)==0)
-        {
-            BIG_384_58_fshr(u,1);
-            if (BIG_384_58_parity(x1)!=0)
-            {
-                BIG_384_58_add(x1,p,x1);
-                BIG_384_58_norm(x1);
-            }
-            BIG_384_58_fshr(x1,1);
-        }
-        while (BIG_384_58_parity(v)==0)
-        {
-            BIG_384_58_fshr(v,1);
-            if (BIG_384_58_parity(x2)!=0)
-            {
-                BIG_384_58_add(x2,p,x2);
-                BIG_384_58_norm(x2);
-            }
-            BIG_384_58_fshr(x2,1);
-        }
-        if (BIG_384_58_comp(u,v)>=0)
-        {
-            BIG_384_58_sub(u,u,v);
-            BIG_384_58_norm(u);
-            if (BIG_384_58_comp(x1,x2)>=0) BIG_384_58_sub(x1,x1,x2);
-            else
-            {
-                BIG_384_58_sub(t,p,x2);
-                BIG_384_58_add(x1,x1,t);
-            }
-            BIG_384_58_norm(x1);
-        }
-        else
-        {
-            BIG_384_58_sub(v,v,u);
-            BIG_384_58_norm(v);
-            if (BIG_384_58_comp(x2,x1)>=0) BIG_384_58_sub(x2,x2,x1);
-            else
-            {
-                BIG_384_58_sub(t,p,x1);
-                BIG_384_58_add(x2,x2,t);
-            }
-            BIG_384_58_norm(x2);
-        }
+        BIG_384_58_sub(w, v, p);
+        BIG_384_58_norm(w);
+        BIG_384_58_cmove(v, w, (BIG_384_58_comp(v, p) > 0));
+        BIG_384_58_fshl(v, 1);
     }
-    if (BIG_384_58_comp(u,one)==0)
-        BIG_384_58_copy(r,x1);
-    else
-        BIG_384_58_copy(r,x2);
+
+    // CT Kaliski almost inverse
+    // The correction step is included
+    for (k = 0; k < 2 * BIGBITS_384_58; k++)
+    {
+        p1 = !BIG_384_58_iszilch(v);
+
+        pu = BIG_384_58_parity(u);
+        pv = BIG_384_58_parity(v);
+        // Cases 2-4 of Kaliski
+        psw = p1 & ((!pu) | (pv & (BIG_384_58_comp(u,v)>0)));
+        // Cases 3-4 of Kaliski
+        pmv = p1 & pu & pv;
+
+        // Swap necessary for cases 2-4 of Kaliski
+        BIG_384_58_cswap(u, v, psw);
+        BIG_384_58_cswap(r, s, psw);
+
+        // Addition and subtraction for cases 3-4 of Kaliski
+        BIG_384_58_sub(w, v, u);
+        BIG_384_58_norm(w);
+        BIG_384_58_cmove(v, w, pmv);
+
+        BIG_384_58_add(w, r, s);
+        BIG_384_58_norm(w);
+        BIG_384_58_cmove(s, w, pmv);
+
+        // Subtraction for correction step
+        BIG_384_58_sub(w, r, p);
+        BIG_384_58_norm(w);
+        BIG_384_58_cmove(r, w, (!p1) & (BIG_384_58_comp(r, p) > 0));
+
+        // Shifts for all Kaliski cases and correction step
+        BIG_384_58_fshl(r, 1);
+        BIG_384_58_fshr(v, 1);
+
+        // Restore u,v,r,s to the original position
+        BIG_384_58_cswap(u, v, psw);
+        BIG_384_58_cswap(r, s, psw);
+    }
+
+    // Last step of kaliski
+    // Moved after the correction step
+    BIG_384_58_sub(w, r, p);
+    BIG_384_58_norm(w);
+    BIG_384_58_cmove(r, w, (BIG_384_58_comp(r,p)>0));
+
+    BIG_384_58_sub(r, p, r);
+    BIG_384_58_norm(r);
+
+    // Restore inverse from Montgomery form
+    for (k = 0; k < BIGBITS_384_58; k++)
+    {
+        BIG_384_58_add(w, r, p);
+        BIG_384_58_norm(w);
+        BIG_384_58_cmove(r, w, BIG_384_58_parity(r));
+        BIG_384_58_fshr(r, 1);
+    }
 }
 
 /* set x = x mod 2^m */
@@ -1497,5 +1637,3 @@ void BIG_384_58_dfromBytesLen(DBIG_384_58 a,char *b,int s)
     a[DMNV_384_58]=0;
 #endif
 }
-
-

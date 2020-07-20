@@ -107,7 +107,7 @@ void FP12_BLS381_zero(FP12_BLS381 *w)
 /* SU= 16 */
 int FP12_BLS381_equals(FP12_BLS381 *x,FP12_BLS381 *y)
 {
-    if (FP4_BLS381_equals(&(x->a),&(y->a)) && FP4_BLS381_equals(&(x->b),&(y->b)) && FP4_BLS381_equals(&(x->b),&(y->b)))
+    if (FP4_BLS381_equals(&(x->a),&(y->a)) && FP4_BLS381_equals(&(x->b),&(y->b)) && FP4_BLS381_equals(&(x->c),&(y->c)))
         return 1;
     return 0;
 }

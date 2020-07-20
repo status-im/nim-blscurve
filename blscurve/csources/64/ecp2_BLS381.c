@@ -641,6 +641,7 @@ void ECP2_BLS381_mapit(ECP2_BLS381 *Q,octet *W)
         FP2_BLS381_from_BIGs(&X,one,hv);
         if (ECP2_BLS381_setx(Q,&X)) break;
         BIG_384_58_inc(hv,1);
+        BIG_384_58_norm(hv);
     }
 
     BIG_384_58_rcopy(Fx,Fra_BLS381);
