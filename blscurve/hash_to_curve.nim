@@ -160,7 +160,7 @@ func expandMessageXMD[B: byte|char, len_in_bytes: static int](
 
 func hashToFieldFP2[B: byte|char, count: static int](
         H: typedesc,
-        output: var array[count, FP2_BLS381],
+        output: var array[count, FP2_BLS12381],
         msg: openArray[B],
         domainSepTag: static string,
       ) =
@@ -214,7 +214,7 @@ func hashToFieldFP2[B: byte|char, count: static int](
     loopIter(e_1, 1)
     output[i].fromBigs(e_0, e_1)
 
-func toFP2(x, y: uint64): FP2_BLS381 =
+func toFP2(x, y: uint64): FP2_BLS12381 =
   ## Convert a complex tuple x + iy to FP2
   # TODO: the result does not seem to need zero-initialization
   var xBig, yBig: BIG_384
@@ -224,7 +224,7 @@ func toFP2(x, y: uint64): FP2_BLS381 =
 
   result.fromBigs(xBig, yBig)
 
-func hexToFP2(x, y: string): FP2_BLS381 =
+func hexToFP2(x, y: string): FP2_BLS12381 =
   ## Convert a complex tuple x + iy to FP2
   # TODO: the result does not seem to need zero-initialization
   var xBig, yBig: BIG_384
@@ -234,7 +234,7 @@ func hexToFP2(x, y: string): FP2_BLS381 =
 
   result.fromBigs(xBig, yBig)
 
-func isSquare(a: FP2_BLS381): bool =
+func isSquare(a: FP2_BLS12381): bool =
   ## Returns true if ``a`` is a square in the FP2 field
   ## This is NOT a constant-time operation (Milagro has branches)
 
@@ -249,10 +249,10 @@ func isSquare(a: FP2_BLS381): bool =
   # For now, we use Milagro built-in sqrt which returns true if
   # a is a quadratic residue (congruent to a perfect square mod q)
   # https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-4
-  var tmp: FP2_BLS381
+  var tmp: FP2_BLS12381
   result = sqrt(tmp, a)
 
-func sign0(x: FP2_BLS381): bool =
+func sign0(x: FP2_BLS12381): bool =
   ## Returns the "sign" (mod q^m) of a value
   ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-07#section-4.1
   ##
@@ -263,7 +263,7 @@ func sign0(x: FP2_BLS381): bool =
   let sign_1 = x.b.parity()
   return bool(sign_0 or (zero_0 and sign_1))
 
-func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
+func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS12381): tuple[x, y: FP2_BLS12381] =
   ## Implementation of map_to_curve_simple_swu
   ## to map an element of FP2 to a curve isogenous
   ## to the G2 curve of BLS12-381 curve.
@@ -289,7 +289,7 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
     var one {.global.} = block:
       # TODO, we need an increment procedure
       #       this is incredibly inefficient
-      var one: FP2_BLS381
+      var one: FP2_BLS12381
       setOne(one)
       one
 
@@ -319,7 +319,7 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS381): tuple[x, y: FP2_BLS381] =
   result.x = x
   result.y = y
 
-func isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
+func isogeny_map_G2(xp, yp: FP2_BLS12381): ECP2_BLS12381 =
   ## 3-isogeny map from a point P' (x', y') on G'2
   ## to a point P(x, y) on G2 curve of BLS12-381.
   ##
@@ -432,10 +432,10 @@ func isogeny_map_G2(xp, yp: FP2_BLS381): ECP2_BLS381 =
   let x = xNum.mul inv(xDen)
   let y = yp.mul yNum.mul inv(yDen)
 
-  let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
+  let onCurve = bool ECP2_BLS12381_set(addr result, unsafeAddr x, unsafeAddr y)
   assert onCurve
 
-func mapToCurveG2(u: FP2_BLS381): ECP2_BLS381 =
+func mapToCurveG2(u: FP2_BLS12381): ECP2_BLS12381 =
   ## Map a field element FP2 to the G2 curve of BLS12-381
   ## using the simplified SWU method for pairing-friendly curves
   ##
@@ -451,7 +451,7 @@ func mapToCurveG2(u: FP2_BLS381): ECP2_BLS381 =
   # 3-isogeny map P'(x', y') to G2 with coordinate P(x, y)
   result = isogeny_map_G2(pointPrime.x, pointPrime.y)
 
-func clearCofactor(P: var ECP2_BLS381) =
+func clearCofactor(P: var ECP2_BLS12381) =
   ## From any point on the elliptic curve of G2 of BLS12-381
   ## Obtain a point in the G2 subgroup
   ##
@@ -477,7 +477,7 @@ func clearCofactor(P: var ECP2_BLS381) =
   # - Addition-chain: https://en.wikipedia.org/wiki/Addition_chain / https://en.wikipedia.org/wiki/Addition-chain_exponentiation
   #
   # Budroni's paper mention an implementation in Milagro of BLS G2 hashmaps.
-  # We reuse the relevant clearCofactor routines from ``ECP2_BLS381_mapit``
+  # We reuse the relevant clearCofactor routines from ``ECP2_BLS12381_mapit``
   # In Milagro terms: "Q -> x2Q -xQ -Q +F(xQ -Q) +F(F(2Q))"
   #
   # We use the notation from Riad Wahby
@@ -512,7 +512,7 @@ func clearCofactor(P: var ECP2_BLS381) =
   P.affine()           # Convert from Jacobian coordinates (x', y', z') to affine (x, y, 1); (x is not the curve parameter here)
 
 func hashToG2*[B: byte|char](msg: openArray[B],
-                            domainSepTag: static string): ECP2_BLS381 =
+                            domainSepTag: static string): ECP2_BLS12381 =
   ## Hash an arbitrary message to the G2 curve of BLS12-381
   ## The message should have an extra null byte after its declared length
   # Note: we require static string for the domain separation tag
@@ -521,7 +521,7 @@ func hashToG2*[B: byte|char](msg: openArray[B],
   # allocations:
   # - threadsafe
   # - no GC in cryptographic code
-  var u{.noInit.}: array[2, FP2_BLS381]
+  var u{.noInit.}: array[2, FP2_BLS12381]
 
   sha256.hashToFieldFP2(u, msg, domainSepTag)
 
@@ -650,19 +650,19 @@ when isMainModule:
   # Test vectors for HashToG2
   # ----------------------------------------------------------------------
 
-  proc displayECP2Coord(name: string, point: ECP2_BLS381) =
+  proc displayECP2Coord(name: string, point: ECP2_BLS12381) =
     echo "  --"
     echo "  ", name, ':'
     # echo "    In jacobian projective coordinates (x, y, z)"
     # echo "      ", point
     echo "    In affine coordinate (x, y)"
-    var x, y: FP2_BLS381
-    discard ECP2_BLS381_get(x.addr, y.addr, point.unsafeAddr)
+    var x, y: FP2_BLS12381
+    discard ECP2_BLS12381_get(x.addr, y.addr, point.unsafeAddr)
     echo "      (", $x, ", ", $y, ")"
 
-  proc toECP2(x, y: FP2_BLS381): ECP2_BLS381 =
+  proc toECP2(x, y: FP2_BLS12381): ECP2_BLS12381 =
     ## Create a point (x, y) on the G2 curve
-    let onCurve = bool ECP2_BLS381_set(addr result, unsafeAddr x, unsafeAddr y)
+    let onCurve = bool ECP2_BLS12381_set(addr result, unsafeAddr x, unsafeAddr y)
     doAssert onCurve, "The coordinates (x, y) are not on the G2 curve"
 
 

@@ -2,3 +2,6 @@
 	path = amcl
   branch = develop
 	url = https://github.com/apache/incubator-milagro-crypto-c
+[submodule "miracl-core"]
+	path = core
+	url = https://github.com/miracl/core

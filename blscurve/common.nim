@@ -13,22 +13,22 @@ import nimcrypto/[sysrand, hash, sha2]
 import stew/[byteutils]
 import milagro
 
-var CURVE_Order* {.importc: "CURVE_Order_BLS381".}: BIG_384
-var FIELD_Modulus* {.importc: "Modulus_BLS381".}: BIG_384
-var FrobeniusReal {.importc: "Fra_BLS381".}: BIG_384
-var FrobeniusIm {.importc: "Frb_BLS381".}: BIG_384
+var CURVE_Order* {.importc: "CURVE_Order_BLS12381".}: BIG_384
+var FIELD_Modulus* {.importc: "Modulus_BLS12381".}: BIG_384
+var FrobeniusReal {.importc: "Fra_BLS12381".}: BIG_384
+var FrobeniusIm {.importc: "Frb_BLS12381".}: BIG_384
 let FrobeniusConst = block:
-  var result: FP2_BLS381
-  FP2_BLS381_from_BIGs(addr result, FrobeniusReal, FrobeniusIm)
-  # SEXTIC_TWIST_BLS381 = MType
-  FP2_BLS381_inv(addr result, addr result)
-  FP2_BLS381_norm(addr result)
+  var result: FP2_BLS12381
+  FP2_BLS12381_from_BIGs(addr result, FrobeniusReal, FrobeniusIm)
+  # SEXTIC_TWIST_BLS12381 = MType
+  FP2_BLS12381_inv(addr result, addr result)
+  FP2_BLS12381_norm(addr result)
   result
-var CurveNegX* {.importc: "CURVE_Bnx_BLS381".}: BIG_384
+var CurveNegX* {.importc: "CURVE_Bnx_BLS12381".}: BIG_384
   ## Curve parameter, it is negative i.e. -x
 
 const
-  AteBitsCount* = 65 ## ATE_BITS_BLS381 value
+  AteBitsCount* = 65 ## ATE_BITS_BLS12381 value
 
 type
   Domain* = array[8, byte]
@@ -84,25 +84,25 @@ proc copy*(dst: var BIG_384, src: BIG_384) {.inline.} =
   ## Copy value if big integer ``src`` to ``dst``.
   BIG_384_copy(dst, src)
 
-proc setOne*(dst: var FP2_BLS381) {.inline.} =
+proc setOne*(dst: var FP2_BLS12381) {.inline.} =
   ## Set value of ``dst`` to FP2.one
-  FP2_BLS381_one(addr dst)
+  FP2_BLS12381_one(addr dst)
 
-proc add*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+proc add*(dst: var FP2_BLS12381, x: FP2_BLS12381, y: FP2_BLS12381) {.inline.} =
   ## Set ``dst`` to ``x + y``.
-  FP2_BLS381_add(addr dst, unsafeAddr x, unsafeAddr y)
+  FP2_BLS12381_add(addr dst, unsafeAddr x, unsafeAddr y)
 
-proc add*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc add*(x: FP2_BLS12381, y: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Returns ``x + y``.
-  FP2_BLS381_add(addr result, unsafeAddr x, unsafeAddr y)
+  FP2_BLS12381_add(addr result, unsafeAddr x, unsafeAddr y)
 
-proc sub*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+proc sub*(dst: var FP2_BLS12381, x: FP2_BLS12381, y: FP2_BLS12381) {.inline.} =
   ## Set ``dst`` to ``x - y``.
-  FP2_BLS381_sub(addr dst, unsafeAddr x, unsafeAddr y)
+  FP2_BLS12381_sub(addr dst, unsafeAddr x, unsafeAddr y)
 
-proc sub*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc sub*(x: FP2_BLS12381, y: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Returns ``x - y``.
-  FP2_BLS381_sub(addr result, unsafeAddr x, unsafeAddr y)
+  FP2_BLS12381_sub(addr result, unsafeAddr x, unsafeAddr y)
 
 proc shiftr*(a: var BIG_384, bits: int) {.inline.} =
   ## Shift big integer ``a`` to the right by ``bits`` bits.
@@ -113,35 +113,35 @@ proc norm*(a: BIG_384) {.inline.} =
   ## All digits of the input are reduced ``mod 2^BASEBITS``.
   discard BIG_384_norm(a)
 
-proc norm*(a: var FP_BLS381) {.inline.} =
+proc norm*(a: var FP_BLS12381) {.inline.} =
   ## Normalize FP field member.
-  FP_BLS381_norm(addr a)
+  FP_BLS12381_norm(addr a)
 
-proc norm*(a: var FP2_BLS381) {.inline.} =
+proc norm*(a: var FP2_BLS12381) {.inline.} =
   ## Normalize FP2 field number.
-  FP2_BLS381_norm(addr a)
+  FP2_BLS12381_norm(addr a)
 
-proc sqr*(x: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc sqr*(x: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Retruns ``x ^ 2``.
-  FP2_BLS381_sqr(addr result, unsafeAddr x)
+  FP2_BLS12381_sqr(addr result, unsafeAddr x)
 
-proc sqrt*(a: var FP2_BLS381, b: FP2_BLS381): bool {.inline.} =
+proc sqrt*(a: var FP2_BLS12381, b: FP2_BLS12381): bool {.inline.} =
   ## ``a ≡ sqrt(b) (mod q)``
   ## Returns true if b is a quadratic residue
   ## (i.e. congruent to a perfect square mod q)
-  return bool FP2_BLS381_sqrt(addr a, unsafeAddr b)
+  return bool FP2_BLS12381_sqrt(addr a, unsafeAddr b)
 
-proc sqrt*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc sqrt*(a: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## ``result ≡ sqrt(a) (mod q)``
-  discard FP2_BLS381_sqrt(addr result, unsafeAddr a)
+  discard FP2_BLS12381_sqrt(addr result, unsafeAddr a)
 
-proc pow*(a: FP2_BLS381, b: BIG_384): FP2_BLS381 {.inline.} =
+proc pow*(a: FP2_BLS12381, b: BIG_384): FP2_BLS12381 {.inline.} =
   ## Compute ``result = a^b (mod q)``
-  FP2_BLS381_pow(addr result, unsafeAddr a, b)
+  FP2_BLS12381_pow(addr result, unsafeAddr a, b)
 
-proc nres*(a: BIG_384): FP_BLS381 {.inline.} =
+proc nres*(a: BIG_384): FP_BLS12381 {.inline.} =
   ## Convert big integer value to residue form mod Modulus.
-  FP_BLS381_nres(addr result, a)
+  FP_BLS12381_nres(addr result, a)
 
 proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Compares two big integers, inputs must be normalized externally
@@ -149,20 +149,20 @@ proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
   result = int(BIG_384_comp(a, b))
 
-proc iszilch*(a: FP_BLS381): bool {.inline.} =
+proc iszilch*(a: FP_BLS12381): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
-  result = (FP_BLS381_iszilch(unsafeAddr a) == 1)
+  result = (FP_BLS12381_iszilch(unsafeAddr a) == 1)
 
-proc cmp*(a: FP_BLS381, b: FP_BLS381): int {.inline.} =
+proc cmp*(a: FP_BLS12381, b: FP_BLS12381): int {.inline.} =
   ## Compares two FP field members
   ##
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
   var ab, bb: BIG_384
-  FP_BLS381_redc(ab, unsafeAddr a)
-  FP_BLS381_redc(bb, unsafeAddr b)
+  FP_BLS12381_redc(ab, unsafeAddr a)
+  FP_BLS12381_redc(bb, unsafeAddr b)
   result = cmp(ab, bb)
 
-proc cmp*(a: FP2_BLS381, b: FP2_BLS381): int {.inline.} =
+proc cmp*(a: FP2_BLS12381, b: FP2_BLS12381): int {.inline.} =
   ## Compares two FP2 field members.
   ##
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
@@ -170,170 +170,170 @@ proc cmp*(a: FP2_BLS381, b: FP2_BLS381): int {.inline.} =
   if result == 0:
     result = cmp(a.a, b.a)
 
-proc neg*(a: FP_BLS381): FP_BLS381 {.inline.} =
+proc neg*(a: FP_BLS12381): FP_BLS12381 {.inline.} =
   ## Return negated copy of ``a``. ``result = -a``.
   result = a
-  FP_BLS381_neg(addr result, unsafeAddr a)
+  FP_BLS12381_neg(addr result, unsafeAddr a)
 
-proc neg*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc neg*(a: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Return negated copy of ``a``. ``result = -a``.
   result = a
-  FP2_BLS381_neg(addr result, unsafeAddr a)
+  FP2_BLS12381_neg(addr result, unsafeAddr a)
 
-proc neg*(a: var ECP2_BLS381) {.inline.} =
+proc neg*(a: var ECP2_BLS12381) {.inline.} =
   ## Negates point ``a``. On exit a = -a.
-  ECP2_BLS381_neg(addr a)
+  ECP2_BLS12381_neg(addr a)
 
-proc neg*(a: ECP2_BLS381): ECP2_BLS381 {.inline.} =
+proc neg*(a: ECP2_BLS12381): ECP2_BLS12381 {.inline.} =
   ## Negates point ``a``. On exit result = -a.
   result = a
-  ECP2_BLS381_neg(addr result)
+  ECP2_BLS12381_neg(addr result)
 
-proc sub*(P: var ECP2_BLS381, Q: ECP2_BLS381) {.inline.} =
+proc sub*(P: var ECP2_BLS12381, Q: ECP2_BLS12381) {.inline.} =
   ## In-place substract a point Q from P
-  discard ECP2_BLS381_sub(addr P, unsafeAddr Q)
+  discard ECP2_BLS12381_sub(addr P, unsafeAddr Q)
 
-proc neg*(a: ECP_BLS381): ECP_BLS381 {.inline.} =
+proc neg*(a: ECP_BLS12381): ECP_BLS12381 {.inline.} =
   ## Negates point ``a``. On exit a = -a.
   result = a
-  ECP_BLS381_neg(addr result)
+  ECP_BLS12381_neg(addr result)
 
-func psi*(P: var ECP2_BLS381) {.inline.} =
+func psi*(P: var ECP2_BLS12381) {.inline.} =
   ## Multiply a elliptic curve point by the frobenius constant
   ## This is the "Psi: untwist-Frobenius-twist" operation
   {.noSideEffect.}:
-    discard ECP2_BLS381_frob(addr P, unsafeAddr FrobeniusConst)
+    discard ECP2_BLS12381_frob(addr P, unsafeAddr FrobeniusConst)
 
-proc inf*(a: var ECP_BLS381) {.inline.} =
+proc inf*(a: var ECP_BLS12381) {.inline.} =
   ## Makes point ``a`` infinite.
-  ECP_BLS381_inf(addr a)
+  ECP_BLS12381_inf(addr a)
 
-proc isinf*(a: ECP_BLS381): bool {.inline.} =
+proc isinf*(a: ECP_BLS12381): bool {.inline.} =
   ## Check if ``a`` is infinite.
   var tmp = a
-  result = (ECP_BLS381_isinf(addr tmp) != 0)
+  result = (ECP_BLS12381_isinf(addr tmp) != 0)
 
-proc isinf*(a: ECP2_BLS381): bool {.inline.} =
+proc isinf*(a: ECP2_BLS12381): bool {.inline.} =
   ## Check if ``a`` is infinite.
   var tmp = a
-  result = (ECP2_BLS381_isinf(addr tmp) != 0)
+  result = (ECP2_BLS12381_isinf(addr tmp) != 0)
 
-proc inv*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc inv*(a: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Returns the reciprocal copy of ``a``
   ## ``result = 1/a``
-  FP2_BLS381_inv(addr result, unsafeAddr a)
+  FP2_BLS12381_inv(addr result, unsafeAddr a)
 
-proc rhs*(x: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc rhs*(x: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Returns ``x ^ 3 + b``.
-  ECP2_BLS381_rhs(addr result, unsafeAddr x)
+  ECP2_BLS12381_rhs(addr result, unsafeAddr x)
 
-proc iszilch*(a: FP2_BLS381): bool {.inline.} =
+proc iszilch*(a: FP2_BLS12381): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
-  result = (FP2_BLS381_iszilch(unsafeAddr a) == 1)
+  result = (FP2_BLS12381_iszilch(unsafeAddr a) == 1)
 
-proc cmov*(a: var FP2_BLS381, b: FP2_BLS381, c: bool) {.inline.} =
+proc cmov*(a: var FP2_BLS12381, b: FP2_BLS12381, c: bool) {.inline.} =
   ## Conditional copy of FP2 element (without branching)
   ## if c: a = b
   ## if not c: a is unchanged
   ## This is a constant time operation
-  FP2_BLS381_cmove(addr a, unsafeAddr b, cint(c))
+  FP2_BLS12381_cmove(addr a, unsafeAddr b, cint(c))
 
-proc cmov*(a: FP2_BLS381, b: FP2_BLS381, c: bool): FP2_BLS381 {.inline.} =
+proc cmov*(a: FP2_BLS12381, b: FP2_BLS12381, c: bool): FP2_BLS12381 {.inline.} =
   ## Conditional copy of FP2 element (without branching)
   ## if c: result = b
   ## if not c: result = a
   ## This is a constant time operation
   result = a
-  FP2_BLS381_cmove(addr result, unsafeAddr b, cint(c))
+  FP2_BLS12381_cmove(addr result, unsafeAddr b, cint(c))
 
-proc parity*(a: FP2_BLS381): int {.inline.} =
+proc parity*(a: FP2_BLS12381): int {.inline.} =
   ## Returns parity for ``a``.
   var t: BIG_384
-  FP_BLS381_redc(t, unsafeAddr a.a)
+  FP_BLS12381_redc(t, unsafeAddr a.a)
   result = int(BIG_384_parity(t))
 
-proc parity*(a: FP_BLS381): int {.inline.} =
+proc parity*(a: FP_BLS12381): int {.inline.} =
   ## Returns parity for ``a``.
   var t: BIG_384
-  FP_BLS381_redc(t, unsafeAddr a)
+  FP_BLS12381_redc(t, unsafeAddr a)
   result = int(BIG_384_parity(t))
 
 proc parity*(a: BIG_384): int {.inline.} =
   ## Returns parity for ``a``.
   result = int(BIG_384_parity(a))
 
-func inf*(a: var ECP2_BLS381) {.inline.} =
+func inf*(a: var ECP2_BLS12381) {.inline.} =
   ## Makes point ``a`` infinite.
-  ECP2_BLS381_inf(addr a)
+  ECP2_BLS12381_inf(addr a)
 
-proc affine*(a: var ECP_BLS381) {.inline.} =
+proc affine*(a: var ECP_BLS12381) {.inline.} =
   ## Convert ``a`` from (x, y, z) to (x, y).
-  ECP_BLS381_affine(addr a)
+  ECP_BLS12381_affine(addr a)
 
-proc affine*(a: var ECP2_BLS381) {.inline.} =
+proc affine*(a: var ECP2_BLS12381) {.inline.} =
   ## Convert ``a`` from (x, y, z) to (x, y, 1).
-  ECP2_BLS381_affine(addr a)
+  ECP2_BLS12381_affine(addr a)
 
-proc add*(a: var ECP2_BLS381, b: ECP2_BLS381) {.inline.} =
+proc add*(a: var ECP2_BLS12381, b: ECP2_BLS12381) {.inline.} =
   ## Add point ``b`` to point ``a``.
-  # ECP2_BLS381_add() always return 0.
-  discard ECP2_BLS381_add(addr a, unsafeAddr b)
+  # ECP2_BLS12381_add() always return 0.
+  discard ECP2_BLS12381_add(addr a, unsafeAddr b)
 
-proc double*(a: var ECP2_BLS381) {.inline.} =
+proc double*(a: var ECP2_BLS12381) {.inline.} =
   ## Doubles point ``a``.
-  discard ECP2_BLS381_dbl(addr a)
+  discard ECP2_BLS12381_dbl(addr a)
 
-proc add*(a: var ECP_BLS381, b: ECP_BLS381) {.inline.} =
+proc add*(a: var ECP_BLS12381, b: ECP_BLS12381) {.inline.} =
   ## Add point ``b`` to point ``a``.
-  ECP_BLS381_add(addr a, unsafeAddr b)
+  ECP_BLS12381_add(addr a, unsafeAddr b)
 
-proc mul*(dst: var FP2_BLS381, x: FP2_BLS381, y: FP2_BLS381) {.inline.} =
+proc mul*(dst: var FP2_BLS12381, x: FP2_BLS12381, y: FP2_BLS12381) {.inline.} =
   ## Set ``dst`` to ``x * y``.
-  FP2_BLS381_mul(addr dst, unsafeAddr x, unsafeAddr y)
+  FP2_BLS12381_mul(addr dst, unsafeAddr x, unsafeAddr y)
 
-proc mul*(x: FP2_BLS381, y: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc mul*(x: FP2_BLS12381, y: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Returns ``x * y``.
-  FP2_BLS381_mul(addr result, unsafeAddr x, unsafeAddr y)
+  FP2_BLS12381_mul(addr result, unsafeAddr x, unsafeAddr y)
 
-proc mul*(a: var ECP2_BLS381, b: BIG_384) {.inline.} =
+proc mul*(a: var ECP2_BLS12381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
-  ECP2_BLS381_mul(addr a, b)
+  ECP2_BLS12381_mul(addr a, b)
 
-proc mul*(a: var ECP_BLS381, b: BIG_384) {.inline.} =
+proc mul*(a: var ECP_BLS12381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
-  ECP_BLS381_mul(addr a, b)
+  ECP_BLS12381_mul(addr a, b)
 
-proc div2*(a: FP2_BLS381): FP2_BLS381 {.inline.} =
+proc div2*(a: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Returns ``a div 2``
-  FP2_BLS381_div2(addr result, unsafeAddr a)
+  FP2_BLS12381_div2(addr result, unsafeAddr a)
 
-proc get*(a: ECP2_BLS381, x, y: var FP2_BLS381): int {.inline.} =
+proc get*(a: ECP2_BLS12381, x, y: var FP2_BLS12381): int {.inline.} =
   ## Get coordinates ``x`` and ``y`` from point ``a``.
-  result = int(ECP2_BLS381_get(addr x, addr y, unsafeAddr a))
+  result = int(ECP2_BLS12381_get(addr x, addr y, unsafeAddr a))
 
-proc get*(a: ECP_BLS381, x, y: var BIG_384): int {.inline.} =
+proc get*(a: ECP_BLS12381, x, y: var BIG_384): int {.inline.} =
   ## Get coordinates ``x`` and ``y`` from point ``a``.
-  result = int(ECP_BLS381_get(x, y, unsafeAddr a))
+  result = int(ECP_BLS12381_get(x, y, unsafeAddr a))
 
-proc `==`*(a, b: ECP_BLS381): bool {.inline.} =
+proc `==`*(a, b: ECP_BLS12381): bool {.inline.} =
   ## Compare points ``a`` and ``b`` in ECP Group.
-  result = (ECP_BLS381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  result = (ECP_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
 
-proc `==`*(a, b: ECP2_BLS381): bool {.inline.} =
+proc `==`*(a, b: ECP2_BLS12381): bool {.inline.} =
   ## Compare points ``a`` and ``b`` in ECP2 Group.
-  result = (ECP2_BLS381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  result = (ECP2_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
 
-proc `==`*(a, b: FP_BLS381): bool {.inline.} =
+proc `==`*(a, b: FP_BLS12381): bool {.inline.} =
   ## Compare field elements over FP.
-  result = (FP_BLS381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  result = (FP_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
 
-proc `==`*(a, b: FP2_BLS381): bool {.inline.} =
+proc `==`*(a, b: FP2_BLS12381): bool {.inline.} =
   ## Compare field elements over FP2.
-  result = (FP2_BLS381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  result = (FP2_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
 
-proc `==`*(a, b: FP12_BLS381): bool {.inline.} =
+proc `==`*(a, b: FP12_BLS12381): bool {.inline.} =
   ## Compare field elements over FP12.
-  result = (FP12_BLS381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  result = (FP12_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
 
 proc `$`*(a: BIG_384): string =
   ## Returns string hexadecimal representation of big integer ``a``.
@@ -355,35 +355,35 @@ proc `$`*(a: BIG_384): string =
     else:
       result.add(chr(ord('a') - 10 + alpha))
 
-proc `$`*(r: FP_BLS381): string =
-  ## Return string representation of ``FP_BLS381``.
+proc `$`*(r: FP_BLS12381): string =
+  ## Return string representation of ``FP_BLS12381``.
   var c: BIG_384
-  FP_BLS381_redc(c, unsafeAddr r)
+  FP_BLS12381_redc(c, unsafeAddr r)
   result = $c
 
-proc `$`*(w: FP2_BLS381): string =
-  ## Return string representation of ``FP2_BLS381``.
+proc `$`*(w: FP2_BLS12381): string =
+  ## Return string representation of ``FP2_BLS12381``.
   var wx = w
   var bx, by: BIG_384
-  FP2_BLS381_reduce(addr wx)
-  FP_BLS381_redc(bx, addr wx.a)
-  FP_BLS381_redc(by, addr wx.b)
+  FP2_BLS12381_reduce(addr wx)
+  FP_BLS12381_redc(bx, addr wx.a)
+  FP_BLS12381_redc(by, addr wx.b)
   result = "["
   result.add($bx)
   result.add(", ")
   result.add($by)
   result.add("]")
 
-proc `$`*(w: FP4_BLS381): string =
-  ## Return string representation of ``FP4_BLS381``.
+proc `$`*(w: FP4_BLS12381): string =
+  ## Return string representation of ``FP4_BLS12381``.
   result = "["
   result.add($w.a)
   result.add(", ")
   result.add($w.b)
   result.add("]")
 
-proc `$`*(w: FP12_BLS381): string =
-  ## Return string representation of ``FP12_BLS381``.
+proc `$`*(w: FP12_BLS12381): string =
+  ## Return string representation of ``FP12_BLS12381``.
   result = "["
   result.add($w.a)
   result.add(", ")
@@ -392,24 +392,24 @@ proc `$`*(w: FP12_BLS381): string =
   result.add($w.c)
   result.add("]")
 
-proc `$`*(p: ECP_BLS381): string =
-  ## Return string representation of ``ECP_BLS381``.
+proc `$`*(p: ECP_BLS12381): string =
+  ## Return string representation of ``ECP_BLS12381``.
   if p.isinf():
     result = "INFINITY"
   else:
     var x, y: BIG_384
     var px = p
-    ECP_BLS381_affine(addr px)
-    FP_BLS381_redc(x, addr px.x)
-    FP_BLS381_redc(y, addr px.y)
+    ECP_BLS12381_affine(addr px)
+    FP_BLS12381_redc(x, addr px.x)
+    FP_BLS12381_redc(y, addr px.y)
     result = "("
     result.add($x)
     result.add(", ")
     result.add($y)
     result.add(")")
 
-proc `$`*(p: ECP2_BLS381): string =
-  ## Return string representation of ``ECP2_BLS381``.
+proc `$`*(p: ECP2_BLS12381): string =
+  ## Return string representation of ``ECP2_BLS12381``.
   if p.isinf():
     result = "INFINITY"
   else:
@@ -421,109 +421,109 @@ proc `$`*(p: ECP2_BLS381): string =
     result.add($p.z)
     result.add(")")
 
-func setx*(p: var ECP2_BLS381, x: FP2_BLS381, greatest: bool): int =
+func setx*(p: var ECP2_BLS12381, x: FP2_BLS12381, greatest: bool): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## rust's library https://github.com/zkcrypto/pairing.
-  var y, negy: FP2_BLS381
-  ECP2_BLS381_rhs(addr y, unsafeAddr x)
-  if FP2_BLS381_sqrt(addr y, addr y) != 1:
-    ECP2_BLS381_inf(addr p)
+  var y, negy: FP2_BLS12381
+  ECP2_BLS12381_rhs(addr y, unsafeAddr x)
+  if FP2_BLS12381_sqrt(addr y, addr y) != 1:
+    ECP2_BLS12381_inf(addr p)
     result = 0
   else:
-    FP2_BLS381_copy(addr p.x, unsafeAddr x)
-    FP2_BLS381_copy(addr negy, addr y)
-    FP2_BLS381_neg(addr negy, addr negy)
+    FP2_BLS12381_copy(addr p.x, unsafeAddr x)
+    FP2_BLS12381_copy(addr negy, addr y)
+    FP2_BLS12381_neg(addr negy, addr negy)
     if not((cmp(y, negy) < 0) xor greatest):
-      FP2_BLS381_copy(addr p.y, addr negy)
+      FP2_BLS12381_copy(addr p.y, addr negy)
     else:
-      FP2_BLS381_copy(addr p.y, addr y)
-    FP2_BLS381_one(addr p.z)
+      FP2_BLS12381_copy(addr p.y, addr y)
+    FP2_BLS12381_one(addr p.z)
     result = 1
 
-func setx*(p: var ECP2_BLS381, x: FP2_BLS381, parity: int): int =
+func setx*(p: var ECP2_BLS12381, x: FP2_BLS12381, parity: int): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## python's version.
-  var y, negy: FP2_BLS381
-  ECP2_BLS381_rhs(addr y, unsafeAddr x)
-  if FP2_BLS381_sqrt(addr y, addr y) != 1:
-    ECP2_BLS381_inf(addr p)
+  var y, negy: FP2_BLS12381
+  ECP2_BLS12381_rhs(addr y, unsafeAddr x)
+  if FP2_BLS12381_sqrt(addr y, addr y) != 1:
+    ECP2_BLS12381_inf(addr p)
     result = 0
   else:
-    FP2_BLS381_copy(addr p.x, unsafeAddr x)
-    FP2_BLS381_copy(addr negy, addr y)
-    FP2_BLS381_neg(addr negy, addr negy)
+    FP2_BLS12381_copy(addr p.x, unsafeAddr x)
+    FP2_BLS12381_copy(addr negy, addr y)
+    FP2_BLS12381_neg(addr negy, addr negy)
     if parity(y) != parity:
-      FP2_BLS381_copy(addr p.y, addr negy)
+      FP2_BLS12381_copy(addr p.y, addr negy)
     else:
-      FP2_BLS381_copy(addr p.y, addr y)
-    FP2_BLS381_one(addr p.z)
+      FP2_BLS12381_copy(addr p.y, addr y)
+    FP2_BLS12381_one(addr p.z)
     result = 1
 
-func setx*(p: var ECP_BLS381, x: BIG_384, greatest: bool): int =
+func setx*(p: var ECP_BLS12381, x: BIG_384, greatest: bool): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## rust's library https://github.com/zkcrypto/pairing.
-  var rhs, negy: FP_BLS381
+  var rhs, negy: FP_BLS12381
   var t, m: BIG_384
   {.noSideEffect.}:
     BIG_384_rcopy(m, FIELD_Modulus)
-  FP_BLS381_nres(addr rhs, x)
-  ECP_BLS381_rhs(addr rhs, addr rhs)
-  FP_BLS381_redc(t, addr rhs)
+  FP_BLS12381_nres(addr rhs, x)
+  ECP_BLS12381_rhs(addr rhs, addr rhs)
+  FP_BLS12381_redc(t, addr rhs)
   if BIG_384_jacobi(t, m) == 0:
     p.inf()
     result = 0
   else:
-    FP_BLS381_nres(addr p.x, x)
-    FP_BLS381_sqrt(addr p.y, addr rhs)
-    FP_BLS381_redc(t, addr p.y)
-    FP_BLS381_neg(addr negy, addr p.y)
-    FP_BLS381_norm(addr negy)
+    FP_BLS12381_nres(addr p.x, x)
+    FP_BLS12381_sqrt(addr p.y, addr rhs)
+    FP_BLS12381_redc(t, addr p.y)
+    FP_BLS12381_neg(addr negy, addr p.y)
+    FP_BLS12381_norm(addr negy)
     if not((cmp(p.y, negy) < 0) xor greatest):
       p.y = negy
-    FP_BLS381_reduce(addr p.y)
-    FP_BLS381_one(addr p.z)
+    FP_BLS12381_reduce(addr p.y)
+    FP_BLS12381_one(addr p.z)
     result = 1
 
-func setx*(p: var ECP_BLS381, x: BIG_384, parity: int): int =
+func setx*(p: var ECP_BLS12381, x: BIG_384, parity: int): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``parity``.
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## python's version.
-  var rhs, negy: FP_BLS381
+  var rhs, negy: FP_BLS12381
   var t, m: BIG_384
   {.noSideEffect.}:
     BIG_384_rcopy(m, FIELD_Modulus)
-  FP_BLS381_nres(addr rhs, x)
-  ECP_BLS381_rhs(addr rhs, addr rhs)
-  FP_BLS381_redc(t, addr rhs)
+  FP_BLS12381_nres(addr rhs, x)
+  ECP_BLS12381_rhs(addr rhs, addr rhs)
+  FP_BLS12381_redc(t, addr rhs)
   if BIG_384_jacobi(t, m) == 0:
     p.inf()
     result = 0
   else:
-    FP_BLS381_nres(addr p.x, x)
-    FP_BLS381_sqrt(addr p.y, addr rhs)
-    FP_BLS381_redc(t, addr p.y)
-    FP_BLS381_neg(addr negy, addr p.y)
-    FP_BLS381_norm(addr negy)
+    FP_BLS12381_nres(addr p.x, x)
+    FP_BLS12381_sqrt(addr p.y, addr rhs)
+    FP_BLS12381_redc(t, addr p.y)
+    FP_BLS12381_neg(addr negy, addr p.y)
+    FP_BLS12381_norm(addr negy)
     if parity(t) != parity:
       p.y = negy
-    FP_BLS381_reduce(addr p.y)
-    FP_BLS381_one(addr p.z)
+    FP_BLS12381_reduce(addr p.y)
+    FP_BLS12381_one(addr p.z)
     result = 1
 
-proc fromBigs*(p: var FP2_BLS381, x, y: BIG_384) {.inline.} =
+proc fromBigs*(p: var FP2_BLS12381, x, y: BIG_384) {.inline.} =
   ## Set value of ``p`` from two big integers ``x`` and ``y``.
-  FP2_BLS381_from_BIGs(addr p, x, y)
+  FP2_BLS12381_from_BIGs(addr p, x, y)
 
-proc fromBigs*(p: var ECP2_BLS381, xr, xi, yr, yi, zr, zi: BIG_384) =
+proc fromBigs*(p: var ECP2_BLS12381, xr, xi, yr, yi, zr, zi: BIG_384) =
   ## Set value of ``p`` from 6 big integers.
-  var x, y, z: FP2_BLS381
+  var x, y, z: FP2_BLS12381
   x.fromBigs(xr, xi)
   y.fromBigs(yr, yi)
   z.fromBigs(zr, zi)
@@ -531,17 +531,17 @@ proc fromBigs*(p: var ECP2_BLS381, xr, xi, yr, yi, zr, zi: BIG_384) =
   p.y = y
   p.z = z
 
-proc fromFPs*(p: var FP2_BLS381, x, y: FP_BLS381) {.inline.} =
+proc fromFPs*(p: var FP2_BLS12381, x, y: FP_BLS12381) {.inline.} =
   ## Set value of ``p`` from two big integers ``x`` and ``y``.
-  FP2_BLS381_from_FPs(addr p, x, y)
+  FP2_BLS12381_from_FPs(addr p, x, y)
 
-proc generator1*(): ECP_BLS381 {.inline.} =
-  ECP_BLS381_generator(addr result)
+proc generator1*(): ECP_BLS12381 {.inline.} =
+  ECP_BLS12381_generator(addr result)
 
-proc generator2*(): ECP2_BLS381 {.inline.} =
-  ECP2_BLS381_generator(addr result)
+proc generator2*(): ECP2_BLS12381 {.inline.} =
+  ECP2_BLS12381_generator(addr result)
 
-proc isOnCurve*(x: FP2_BLS381, y: FP2_BLS381): bool =
+proc isOnCurve*(x: FP2_BLS12381, y: FP2_BLS12381): bool =
   ## Returns ``true`` if point is on curve or points to infinite.
   if x.iszilch() and y.iszilch():
     result = true
@@ -606,7 +606,7 @@ func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
     # https://github.com/status-im/nim-blscurve/issues/57
     false
 
-proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
+proc toBytes*(point: ECP2_BLS12381, res: var openarray[byte]): bool =
   ## Serialize ECP2(G2) point ``point`` to ``res``. Length of ``res`` array
   ## must be at least ``MODBYTES_384 * 2``.
   ##
@@ -615,15 +615,15 @@ proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
   ## Returns ``true`` if ``a`` was succesfully serialized,
   ## ``false`` otherwise.
   if len(res) >= MODBYTES_384 * 2:
-    var x, y: FP2_BLS381
+    var x, y: FP2_BLS12381
     var x0, x1, y0: BIG_384
     if point.get(x, y) == -1:
       zeroMem(addr res[0], MODBYTES_384 * 2)
       res[0] = res[0] or (1'u8 shl 7) or (1'u8 shl 6)
       result = true
     else:
-      FP_BLS381_redc(x0, addr x.a)
-      FP_BLS381_redc(x1, addr x.b)
+      FP_BLS12381_redc(x0, addr x.a)
+      FP_BLS12381_redc(x1, addr x.b)
       var negy = y.neg()
       discard toBytes(x1, res.toOpenArray(0, MODBYTES_384 - 1))
       discard toBytes(x0, res.toOpenArray(MODBYTES_384, MODBYTES_384 * 2 - 1))
@@ -632,20 +632,20 @@ proc toBytes*(point: ECP2_BLS381, res: var openarray[byte]): bool =
         res[0] = res[0] or (1'u8 shl 5)
       result = true
 
-proc getBytes*(point: ECP2_BLS381): array[MODBYTES_384 * 2, byte] =
+proc getBytes*(point: ECP2_BLS12381): array[MODBYTES_384 * 2, byte] =
   ## Serialize ECP2(G2) point ``point`` and return array of bytes.
   ##
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   discard toBytes(point, result)
 
-proc toHex*(point: ECP2_BLS381): string =
+proc toHex*(point: ECP2_BLS12381): string =
   ## Serialize ECP2(G2) point ``point`` and return hexadecimal string
   ## representation, if serialization failed empty string will be returned.
   ##
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   toHex(getBytes(point))
 
-func fromBytes*(res: var ECP2_BLS381, data: openarray[byte]): bool =
+func fromBytes*(res: var ECP2_BLS12381, data: openarray[byte]): bool =
   ## Unserialize ECP2(G2) point from array of bytes ``data``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -666,12 +666,12 @@ func fromBytes*(res: var ECP2_BLS381, data: openarray[byte]): bool =
         if x1.fromBytes(buffer):
           copyMem(addr buffer[0], unsafeAddr data[MODBYTES_384], MODBYTES_384)
           if x0.fromBytes(buffer):
-            var x: FP2_BLS381
+            var x: FP2_BLS12381
             x.fromBigs(x0, x1)
             if res.setx(x, greatest) == 1:
               result = true
 
-func fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
+func fromHex*(res: var ECP2_BLS12381, a: string): bool {.inline.} =
   ## Unserialize ECP2(G2) point from hexadecimal string ``a`` to ``res``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -684,7 +684,7 @@ func fromHex*(res: var ECP2_BLS381, a: string): bool {.inline.} =
     # https://github.com/status-im/nim-blscurve/issues/57
     false
 
-proc toBytes*(point: ECP_BLS381, res: var openarray[byte]): bool =
+proc toBytes*(point: ECP_BLS12381, res: var openarray[byte]): bool =
   ## Serialize ECP(G1) point ``point`` to ``res``. Length of ``res`` array
   ## must be at least ``MODBYTES_384``.
   ##
@@ -709,20 +709,20 @@ proc toBytes*(point: ECP_BLS381, res: var openarray[byte]): bool =
       res[0] = res[0] or (1'u8 shl 7)
       result = true
 
-proc getBytes*(point: ECP_BLS381): array[MODBYTES_384, byte] =
+proc getBytes*(point: ECP_BLS12381): array[MODBYTES_384, byte] =
   ## Serialize ECP(G1) point ``point`` and return array of bytes.
   ##
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   discard toBytes(point, result)
 
-proc toHex*(point: ECP_BLS381): string =
+proc toHex*(point: ECP_BLS12381): string =
   ## Serialize ECP(G1) point ``point`` and return hexadecimal string
   ## representation, if serialization failed empty string will be returned.
   ##
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   toHex(getBytes(point))
 
-func fromBytes*(res: var ECP_BLS381, data: openarray[byte]): bool =
+func fromBytes*(res: var ECP_BLS12381, data: openarray[byte]): bool =
   ## Unserialize ECP point from array of bytes ``data``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -744,7 +744,7 @@ func fromBytes*(res: var ECP_BLS381, data: openarray[byte]): bool =
           if res.setx(x, greatest) == 1:
             result = true
 
-func fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
+func fromHex*(res: var ECP_BLS12381, a: string): bool {.inline.} =
   ## Unserialize ECP point from hexadecimal string ``a`` to ``res``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -757,9 +757,9 @@ func fromHex*(res: var ECP_BLS381, a: string): bool {.inline.} =
     # https://github.com/status-im/nim-blscurve/issues/57
     false
 
-proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
+proc mulCoFactor*(point: ECP2_BLS12381): ECP2_BLS12381 =
   ## Multiplies ECP2(G2) point by a cofactor of G2.
-  var lowpart: ECP2_BLS381
+  var lowpart: ECP2_BLS12381
   result = point
   lowpart = point
   mul(result, G2_CoFactorHigh)
@@ -767,14 +767,14 @@ proc mulCoFactor*(point: ECP2_BLS381): ECP2_BLS381 =
   mul(lowpart, G2_CoFactorLow)
   add(result, lowpart)
 
-proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS381 =
+proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS12381 =
   ## Perform transformation of sha2-256 context (which must be already
   ## updated with ``message``) over domain ``domain`` to point in G2.
   ## https://github.com/ethereum/eth2.0-specs/blob/v0.8.3/specs/bls_signature.md#hash_to_g2
 
   var
     xre, xim: BIG_384
-    x, one: FP2_BLS381
+    x, one: FP2_BLS12381
 
   var ctx1 = msgctx
   ctx1.update(domain)
@@ -798,7 +798,7 @@ proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS381 =
   while true:
     # Without normalization of `x` 32bit version will fail
     norm(x)
-    if ECP2_BLS381_setx(addr result, addr x) == 1:
+    if ECP2_BLS12381_setx(addr result, addr x) == 1:
       break
     # Increment `x` by FP2(1, 0)
     x = add(x, one)
@@ -810,36 +810,36 @@ proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS381 =
   # Scale with G2 CoFactor
   result = mulCoFactor(result)
 
-proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS381 =
+proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS12381 =
   ## Pairing `magic` function.
-  PAIR_BLS381_ate(addr result, unsafeAddr pointG2, unsafeAddr pointG1)
-  PAIR_BLS381_fexp(addr result)
+  PAIR_BLS12381_ate(addr result, unsafeAddr pointG2, unsafeAddr pointG1)
+  PAIR_BLS12381_fexp(addr result)
 
 proc doublePairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
                     pointG2_2: GroupG2, pointG1_2: GroupG1): bool =
   ## Double pairing `magic` function.
-  var v: FP12_BLS381
+  var v: FP12_BLS12381
   var npoint = neg(pointG1_1)
-  PAIR_BLS381_double_ate(addr v, unsafeAddr pointG2_1, addr npoint,
+  PAIR_BLS12381_double_ate(addr v, unsafeAddr pointG2_1, addr npoint,
                          unsafeAddr pointG2_2, unsafeAddr pointG1_2)
-  PAIR_BLS381_fexp(addr v)
+  PAIR_BLS12381_fexp(addr v)
 
-  if FP12_BLS381_isunity(addr v) == 1:
+  if FP12_BLS12381_isunity(addr v) == 1:
     result = true
 
 proc multiPairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
                    pointG2_2: GroupG2, pointG1_2: GroupG1): bool =
   ## New multi-pairing mechanism function.
-  var r: array[AteBitsCount, FP12_BLS381]
-  var v: FP12_BLS381
+  var r: array[AteBitsCount, FP12_BLS12381]
+  var v: FP12_BLS12381
   var npoint = neg(pointG1_1)
-  PAIR_BLS381_initmp(addr r[0])
-  PAIR_BLS381_another(addr r[0], unsafeAddr pointG2_1, addr npoint)
-  PAIR_BLS381_another(addr r[0], unsafeAddr pointG2_2, unsafeAddr pointG1_2)
-  PAIR_BLS381_miller(addr v, addr r[0])
-  PAIR_BLS381_fexp(addr v)
+  PAIR_BLS12381_initmp(addr r[0])
+  PAIR_BLS12381_another(addr r[0], unsafeAddr pointG2_1, addr npoint)
+  PAIR_BLS12381_another(addr r[0], unsafeAddr pointG2_2, unsafeAddr pointG1_2)
+  PAIR_BLS12381_miller(addr v, addr r[0])
+  PAIR_BLS12381_fexp(addr v)
 
-  if FP12_BLS381_isunity(addr v) == 1:
+  if FP12_BLS12381_isunity(addr v) == 1:
     result = true
 proc random*(a: var BIG_384) =
   ## Generates random big number `bit by bit` using nimcrypto's sysrand

@@ -226,11 +226,11 @@ type
     # 9.      C1 = C1 * pairing(Q, xP)
     # 10. C2 = pairing(R, P)
     # 11. If C1 == C2, return VALID, else return INVALID
-    C1: array[AteBitsCount, FP12_BLS381]
+    C1: array[AteBitsCount, FP12_BLS12381]
 
 func init(ctx: var ContextCoreAggregateVerify) =
   ## initialize an aggregate verification context
-  PAIR_BLS381_initmp(addr ctx.C1[0])                                # C1 = 1 (identity element)
+  PAIR_BLS12381_initmp(addr ctx.C1[0])                                # C1 = 1 (identity element)
 
 template `&`(point: GroupG1 or GroupG2): untyped = unsafeAddr point
 
@@ -242,7 +242,7 @@ func update[T: char|byte](
   if not subgroupCheck(publicKey.point):
     return false
   let Q = hashToG2(message, domainSepTag)                   # Q = hash_to_point(message_i)
-  PAIR_BLS381_another(addr ctx.C1[0], &Q, &publicKey.point) # C1 = C1 * pairing(Q, xP)
+  PAIR_BLS12381_another(addr ctx.C1[0], &Q, &publicKey.point) # C1 = C1 * pairing(Q, xP)
   return true
 
 func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
@@ -270,13 +270,13 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature): bool =
 
   # Accumulate the multiplicative inverse of C2 into C1
   let nP1 = neg(generator1())
-  PAIR_BLS381_another(addr ctx.C1[0], &signature.point, &nP1)
+  PAIR_BLS12381_another(addr ctx.C1[0], &signature.point, &nP1)
   # Optimal Ate Pairing
-  var v: FP12_BLS381
-  PAIR_BLS381_miller(addr v, addr ctx.C1[0])
-  PAIR_BLS381_fexp(addr v)
+  var v: FP12_BLS12381
+  PAIR_BLS12381_miller(addr v, addr ctx.C1[0])
+  PAIR_BLS12381_fexp(addr v)
 
-  if FP12_BLS381_isunity(addr v) == 1:
+  if FP12_BLS12381_isunity(addr v) == 1:
     return true
   return false
 
