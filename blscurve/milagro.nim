@@ -267,7 +267,8 @@ proc FP2_BLS12381_mul*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381, z: ptr FP2_BLS1
      milagro_func.}
 proc FP2_BLS12381_div2*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381){.milagro_func.}
 proc FP2_BLS12381_sqr*(w: ptr FP2_BLS12381, x: ptr FP2_BLS12381){.milagro_func.}
-proc FP2_BLS12381_sqrt*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381): cint {.milagro_func.}
+proc FP2_BLS12381_qr*(x: ptr FP2_BLS12381): cint {.milagro_func.}
+proc FP2_BLS12381_sqrt*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381) {.milagro_func.}
 proc FP2_BLS12381_pow*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381, b: BIG_384){.milagro_func.}
 proc FP2_BLS12381_equals*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381): cint {.
      milagro_func.}

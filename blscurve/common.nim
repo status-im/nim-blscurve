@@ -125,15 +125,21 @@ proc sqr*(x: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Retruns ``x ^ 2``.
   FP2_BLS12381_sqr(addr result, unsafeAddr x)
 
+func isSquare*(a: FP2_BLS12381): bool {.inline.} =
+  ## Returns true if ``a`` is a square in the FP2 extension field
+  result = FP2_BLS12381_qr(unsafeAddr a) == 1
+
 proc sqrt*(a: var FP2_BLS12381, b: FP2_BLS12381): bool {.inline.} =
   ## ``a ≡ sqrt(b) (mod q)``
   ## Returns true if b is a quadratic residue
   ## (i.e. congruent to a perfect square mod q)
-  return bool FP2_BLS12381_sqrt(addr a, unsafeAddr b)
+  result = b.isSquare()
+  if result:
+    FP2_BLS12381_sqrt(addr a, unsafeAddr b)
 
 proc sqrt*(a: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## ``result ≡ sqrt(a) (mod q)``
-  discard FP2_BLS12381_sqrt(addr result, unsafeAddr a)
+  FP2_BLS12381_sqrt(addr result, unsafeAddr a)
 
 proc pow*(a: FP2_BLS12381, b: BIG_384): FP2_BLS12381 {.inline.} =
   ## Compute ``result = a^b (mod q)``
@@ -428,10 +434,11 @@ func setx*(p: var ECP2_BLS12381, x: FP2_BLS12381, greatest: bool): int =
   ## rust's library https://github.com/zkcrypto/pairing.
   var y, negy: FP2_BLS12381
   ECP2_BLS12381_rhs(addr y, unsafeAddr x)
-  if FP2_BLS12381_sqrt(addr y, addr y) != 1:
+  if not y.isSquare():
     ECP2_BLS12381_inf(addr p)
     result = 0
   else:
+    FP2_BLS12381_sqrt(addr y, addr y)
     FP2_BLS12381_copy(addr p.x, unsafeAddr x)
     FP2_BLS12381_copy(addr negy, addr y)
     FP2_BLS12381_neg(addr negy, addr negy)
@@ -449,11 +456,11 @@ func setx*(p: var ECP2_BLS12381, x: FP2_BLS12381, parity: int): int =
   ## python's version.
   var y, negy: FP2_BLS12381
   ECP2_BLS12381_rhs(addr y, unsafeAddr x)
-  if FP2_BLS12381_sqrt(addr y, addr y) != 1:
+  if not y.isSquare():
     ECP2_BLS12381_inf(addr p)
     result = 0
   else:
-    FP2_BLS12381_copy(addr p.x, unsafeAddr x)
+    FP2_BLS12381_sqrt(addr y, addr y)
     FP2_BLS12381_copy(addr negy, addr y)
     FP2_BLS12381_neg(addr negy, addr negy)
     if parity(y) != parity:

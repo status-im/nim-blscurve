@@ -234,24 +234,6 @@ func hexToFP2(x, y: string): FP2_BLS12381 =
 
   result.fromBigs(xBig, yBig)
 
-func isSquare(a: FP2_BLS12381): bool =
-  ## Returns true if ``a`` is a square in the FP2 field
-  ## This is NOT a constant-time operation (Milagro has branches)
-
-  # Constant-time implementation:
-  #
-  # is_square(x) := { True,  if x^((q - 1) / 2) is 0 or 1 in F;
-  #                 { False, otherwise.
-  #
-  # In an extension field of order q:
-  #   q - 1 (mod q) ≡ -1 (mod q)
-  #
-  # For now, we use Milagro built-in sqrt which returns true if
-  # a is a quadratic residue (congruent to a perfect square mod q)
-  # https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#section-4
-  var tmp: FP2_BLS12381
-  result = sqrt(tmp, a)
-
 func sign0(x: FP2_BLS12381): bool =
   ## Returns the "sign" (mod q^m) of a value
   ## https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-07#section-4.1
