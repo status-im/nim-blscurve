@@ -14,7 +14,7 @@ import
   ../blscurve/bls_signature_scheme,
   ../blscurve/milagro
 
-proc newKeyPair*(): tuple[pubkey: ECP_BLS381, seckey: BIG_384] {.noInit.}=
+proc newKeyPair*(): tuple[pubkey: ECP_BLS12381, seckey: BIG_384] {.noInit.}=
   ## Generates a new public-private keypair
   ## This requires entropy on the system
   # The input-keying-material requires 32 bytes at least for security
@@ -31,5 +31,5 @@ proc newKeyPair*(): tuple[pubkey: ECP_BLS381, seckey: BIG_384] {.noInit.}=
   doAssert keyGen(ikm, pk, sk), "Key generation failure"
 
   # We cast because the fields are normally private to the signature module
-  result.pubkey = cast[ECP_BLS381](pk)
+  result.pubkey = cast[ECP_BLS12381](pk)
   result.seckey = cast[BIG_384](sk)

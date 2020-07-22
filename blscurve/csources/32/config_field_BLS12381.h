@@ -18,21 +18,27 @@
  */
 
 /**
- * @file config_big.h
+ * @file config_field.h
  * @author Mike Scott
- * @brief Config BIG  Header File
+ * @brief Config Curve  Header File
  *
  */
 
-#ifndef CONFIG_BIG_384_29_H
-#define CONFIG_BIG_384_29_H
+#ifndef CONFIG_FIELD_BLS12381_H
+#define CONFIG_FIELD_BLS12381_H
 
-#include "core.h"
+#include"core.h"
+#include "config_big_384_29.h"
 
-// BIG stuff
+// FP stuff
 
-#define MODBYTES_384_29 48   /**< Number of bytes in Modulus */
-#define BASEBITS_384_29 29     /**< Numbers represented to base 2*BASEBITS */
-
+#define MBITS_BLS12381 381	/**< Modulus bits */
+#define PM1D2_BLS12381 1     /**< Largest m such that 2^m|(p-1) */
+#define MODTYPE_BLS12381 NOT_SPECIAL  /**< Modulus type */
+#define MAXXES_BLS12381 14
+#define QNRI_BLS12381 0
+#define RIADZ_BLS12381 -3
+#define RIADZG2_BLS12381 -1
+#define TOWER_BLS12381 NEGATOWER
 
 #endif

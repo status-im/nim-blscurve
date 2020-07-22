@@ -25,7 +25,7 @@ proc benchHashToG2*(iters: int) =
   const dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
   let msg = "msg"
 
-  var point: ECP2_BLS381
+  var point: ECP2_BLS12381
 
   bench("Hash to G2 (Draft #5)", iters):
     point = hashToG2(msg, dst)
