@@ -241,7 +241,8 @@ proc ECP2_BLS12381_rhs*(r: ptr FP2_BLS12381, x: ptr FP2_BLS12381) {.
 proc FP_BLS12381_iszilch*(x: ptr FP_BLS12381): cint {.milagro_func.}
 proc FP_BLS12381_redc*(x: BIG_384, y: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_nres*(y: ptr FP_BLS12381, x: BIG_384) {.milagro_func.}
-proc FP_BLS12381_sqrt*(r, a: ptr FP_BLS12381) {.milagro_func.}
+proc FP_BLS12381_qr*(x, sqrt_hint: ptr FP_BLS12381): cint {.milagro_func.}
+proc FP_BLS12381_sqrt*(r, a, sqrt_hint: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_reduce*(x: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_one*(x: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_norm*(x: ptr FP_BLS12381) {.milagro_func.}

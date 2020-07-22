@@ -475,19 +475,16 @@ func setx*(p: var ECP_BLS12381, x: BIG_384, greatest: bool): int =
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## rust's library https://github.com/zkcrypto/pairing.
-  var rhs, negy: FP_BLS12381
-  var t, m: BIG_384
-  {.noSideEffect.}:
-    BIG_384_rcopy(m, FIELD_Modulus)
+  var rhs, negy, sqrt_hint: FP_BLS12381
+  var t: BIG_384
   FP_BLS12381_nres(addr rhs, x)
   ECP_BLS12381_rhs(addr rhs, addr rhs)
-  FP_BLS12381_redc(t, addr rhs)
-  if BIG_384_jacobi(t, m) == 0:
+  if FP_BLS12381_qr(addr rhs, addr sqrt_hint) == 0:
     p.inf()
     result = 0
   else:
     FP_BLS12381_nres(addr p.x, x)
-    FP_BLS12381_sqrt(addr p.y, addr rhs)
+    FP_BLS12381_sqrt(addr p.y, addr rhs, addr sqrt_hint)
     FP_BLS12381_redc(t, addr p.y)
     FP_BLS12381_neg(addr negy, addr p.y)
     FP_BLS12381_norm(addr negy)
@@ -502,19 +499,16 @@ func setx*(p: var ECP_BLS12381, x: BIG_384, parity: int): int =
   ##
   ## This is custom `setx` procedure which works in way compatible to
   ## python's version.
-  var rhs, negy: FP_BLS12381
-  var t, m: BIG_384
-  {.noSideEffect.}:
-    BIG_384_rcopy(m, FIELD_Modulus)
+  var rhs, negy, sqrt_hint: FP_BLS12381
+  var t: BIG_384
   FP_BLS12381_nres(addr rhs, x)
   ECP_BLS12381_rhs(addr rhs, addr rhs)
-  FP_BLS12381_redc(t, addr rhs)
-  if BIG_384_jacobi(t, m) == 0:
+  if FP_BLS12381_qr(addr rhs, addr sqrt_hint) == 0:
     p.inf()
     result = 0
   else:
     FP_BLS12381_nres(addr p.x, x)
-    FP_BLS12381_sqrt(addr p.y, addr rhs)
+    FP_BLS12381_sqrt(addr p.y, addr rhs, addr sqrt_hint)
     FP_BLS12381_redc(t, addr p.y)
     FP_BLS12381_neg(addr negy, addr p.y)
     FP_BLS12381_norm(addr negy)
