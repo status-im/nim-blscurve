@@ -27,11 +27,9 @@ proc benchHashToG2*(iters: int) =
 
   var point: ECP2_BLS12381
 
-  bench("Hash to G2 (Draft #5)", iters):
+  bench("Hash to G2", iters):
     point = hashToG2(msg, dst)
 
 
 when isMainModule:
-  echo "⚠️ Warning: using draft v5 of IETF Hash-To-Curve (HKDF-based)."
-  echo "            This is an outdated draft.\n\n"
   benchHashToG2(1000)

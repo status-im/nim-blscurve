@@ -17,6 +17,19 @@
 when not defined(cpp) or defined(objc) or defined(js):
   {.passC: "-std=c99".}
 
+# Endomorphism acceleration
+# -------------------------
+# ! Patented until September 2020
+# https://patents.google.com/patent/US7110538B2
+# https://patents.google.com/patent/US20060029222
+{.passC: "-DUSE_GLV_BLS12381".}
+# Might be covered by previous patent.
+{.passC: "-DUSE_GS_G2_BLS12381".}
+
+# To use endomorphism acceleration
+# Use PAIR_BLS12381_G1mul instead of ECP_BLS12381_mul
+# and PAIR_BLS12381_G2mul instead of ECP2_BLS12381_mul
+
 import strutils
 from os import DirSep
 

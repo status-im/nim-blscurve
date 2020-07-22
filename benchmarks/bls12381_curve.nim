@@ -23,22 +23,48 @@ import
 #
 # ############################################################
 
+{.passC: "-DUSE_GLV_BLS12381".}
+{.passC: "-DUSE_GS_G2_BLS12381".}
 
 proc benchScalarMultG1*(iters: int) =
-  var x = generator1()
+  var g1 = generator1()
+  var x: ECP_BLS12381
   var scal: BIG_384
   random(scal)
 
-  bench("Scalar multiplication G1", iters):
-    x.mul(scal)
+  bench("Scalar multiplication G1 - constant-time fixed window method", iters):
+    x = g1
+    ECP_BLS12381_mul(addr x, scal)
 
 proc benchScalarMultG2*(iters: int) =
-  var x = generator2()
+  var g2 = generator2()
+  var x: ECP2_BLS12381
   var scal: BIG_384
   random(scal)
 
-  bench("Scalar multiplication G2", iters):
-    x.mul(scal)
+  bench("Scalar multiplication G2 - constant-time fixed window method", iters):
+    x = g2
+    ECP2_BLS12381_mul(addr x, scal)
+
+proc benchScalarMultG1Endo*(iters: int) =
+  var g1 = generator1()
+  var x: ECP_BLS12381
+  var scal: BIG_384
+  random(scal)
+
+  bench("Scalar multiplication G1 - Endomorphism acceleration (GLV)", iters):
+    x = g1
+    PAIR_BLS12381_G1mul(addr x, scal)
+
+proc benchScalarMultG2Endo*(iters: int) =
+  var g2 = generator2()
+  var x: ECP2_BLS12381
+  var scal: BIG_384
+  random(scal)
+
+  bench("Scalar multiplication G2 - Endomorphism acceleration (GLS)", iters):
+    x = g2
+    PAIR_BLS12381_G2mul(addr x, scal)
 
 proc benchECAddG1*(iters: int) =
   var x = generator1()
@@ -99,7 +125,9 @@ proc benchPairingViaMultiPairing*(iters: int) =
 
 when isMainModule:
   benchScalarMultG1(1000)
+  benchScalarMultG1Endo(1000)
   benchScalarMultG2(1000)
+  benchScalarMultG2Endo(1000)
   benchEcAddG1(1000)
   benchEcAddG2(1000)
 
