@@ -39,16 +39,16 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
   else:
     result = obj.point.fromBytes(raw)
 
-func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string {.inline.} =
+func toHex*(pbj: SecretKey): distinct string {.error: "Returning the hex representation of a secret key is forbidden.".}
+  ## Prevent returning the hex representation of a SecretKey
+
+func toHex*(obj: PublicKey|Signature|ProofOfPossession): string {.inline.} =
   ## Return the hex representation of a BLS signature scheme object
   ## Signature and Proof-of-posessions are serialized in compressed form
-  when obj is SecretKey:
-    result = obj.intVal.toHex()
-  else:
-    result = obj.point.toHex()
+  result = obj.point.toHex()
 
 func serialize*(
-       dst: var openarray[byte],
+       dst: var openarray[byte or SecretByte],
        obj: SecretKey|PublicKey|Signature|ProofOfPossession): bool {.inline.} =
   ## Serialize the input `obj` in raw binary form and write it
   ## in `dst`.
@@ -63,7 +63,7 @@ const
   RawPublicKeySize = MODBYTES_384
   RawSignatureSize = MODBYTES_384 * 2
 
-func exportRaw*(secretKey: SecretKey): array[RawSecretKeySize, byte] {.inline.}=
+func exportRaw*(secretKey: SecretKey): array[RawSecretKeySize, SecretByte] {.inline.}=
   ## Serialize a secret key into its raw binary representation
   # TODO: the SecretKey size is actually not 384 bit
   #       but 255 bit since the curve order requires 255-bit

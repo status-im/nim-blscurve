@@ -32,6 +32,8 @@ const
 
 type
   Domain* = array[8, byte]
+  SecretHex* = distinct string
+  SecretByte* = distinct byte
 
 when sizeof(int) == 4 or defined(use32):
   const
@@ -549,19 +551,20 @@ proc isOnCurve*(x: FP2_BLS12381, y: FP2_BLS12381): bool =
   else:
     result = (sqr(y) == rhs(x))
 
-proc toBytes*(a: BIG_384, res: var openarray[byte]): bool =
+proc toBytes*(a: BIG_384, res: var openarray[byte or SecretByte]): bool =
   ## Serialize big integer ``a`` to ``res``. Length of ``res`` array
   ## must be at least ``MODBYTES_384``.
   ##
   ## Returns ``true`` if ``a`` was succesfully serialized,
   ## ``false`` otherwise.
+  type B = typeof(res[0]) # byte or SecretByte
   if len(res) >= MODBYTES_384:
     var c: BIG_384
     BIG_384_copy(c, a)
     # BIG_384_norm() function in Milagro operates inplace.
     discard BIG_384_norm(c)
     for i in countdown(MODBYTES_384 - 1, 0):
-      res[i] = byte(c[0] and 0xFF)
+      res[i] = B(c[0] and 0xFF)
       discard BIG_384_fshr(c, 8)
     result = true
 
