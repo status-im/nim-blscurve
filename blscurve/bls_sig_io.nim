@@ -14,6 +14,7 @@
 
 # This file should be included to have access to private fields
 # It is kept separated as it does not fall under the IETF BLS specification
+export SecretByte
 
 func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
        obj: var T,
