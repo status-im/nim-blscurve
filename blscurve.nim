@@ -12,7 +12,7 @@ import
   ./blscurve/eth2_keygen
 export
   SecretKey, PublicKey, Signature, ProofOfPossession,
-  `==`,
+  `==`, SecretByte,
   aggregate,
   sign, verify, aggregateVerify, fastAggregateVerify,
   keyGen, privToPub,
