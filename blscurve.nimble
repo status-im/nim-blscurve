@@ -19,29 +19,34 @@ proc test(env, path: string, lang = "c") =
 ### tasks
 task test, "Run all tests":
   # Debug - test intermediate computations
-  # test "", "blscurve/hkdf.nim"
-  # test "", "blscurve/draft_v5/hash_to_curve_draft_v5.nim"
-  # test "", "blscurve/hash_to_curve.nim"
+  # test "", "blscurve/miracl/hkdf.nim"
+  # test "", "blscurve/miracl/draft_v5/hash_to_curve_draft_v5.nim"
+  # test "", "blscurve/miracl/hash_to_curve.nim"
 
   # Internal BLS API - IETF standard
   # test "", "tests/hash_to_curve_v7.nim"
 
   # Public BLS API - IETF standard / Ethereum2.0 v0.12.x
-  test "", "tests/eth2_vectors.nim"
-
+  test "-d:BLS_BACKEND=miracl", "tests/eth2_vectors.nim"
   # key Derivation - EIP 2333
-  test "", "tests/eip2333_key_derivation.nim"
+  test "-d:BLS_BACKEND=miracl", "tests/eip2333_key_derivation.nim"
 
-  # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
-  if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":
-    exec "nim c -d:danger --outdir:build -r" &
-          " --verbosity:0 --hints:off --warnings:off" &
-          " benchmarks/bench_all.nim"
+  when sizeof(int) == 8 and (defined(arm64) or defined(amd64)):
+    test "-d:BLS_BACKEND=blst", "tests/eth2_vectors.nim"
+    test "-d:BLS_BACKEND=blst", "tests/eip2333_key_derivation.nim"
 
-task bench, "Run benchmarks":
-  if not dirExists "build":
-    mkDir "build"
+  # # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
+  # if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":
+  #   exec "nim c -d:danger --outdir:build -r" &
+  #         " --verbosity:0 --hints:off --warnings:off" &
+  #         " benchmarks/bench_all.nim"
 
-  exec "nim c -d:danger --outdir:build -r" &
-         " --verbosity:0 --hints:off --warnings:off" &
-         " benchmarks/bench_all.nim"
+# TODO: update benchmarks
+
+# task bench, "Run benchmarks":
+#   if not dirExists "build":
+#     mkDir "build"
+
+#   exec "nim c -d:danger --outdir:build -r" &
+#          " --verbosity:0 --hints:off --warnings:off" &
+#          " benchmarks/bench_all.nim"

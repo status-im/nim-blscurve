@@ -1,5 +1,5 @@
-# Nim-BLSCurve
-# Copyright (c) 2018 Status Research & Development GmbH
+# Nim-BLST
+# Copyright (c) 2020 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -7,10 +7,9 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-const BLS_ETH2_SPEC* = "v0.12.x (deprecated)"
+import std/os
 
-import
-  blscurve/bls_backend,
-  blscurve/keygen_eip2333
+{.compile: ".."/".."/"vendor"/"blst"/"build"/"assembly.S".}
+{.compile: ".."/".."/"vendor"/"blst"/"src"/"server.c".}
 
-export bls_backend, keygen_eip2333
+include ./blst_abi

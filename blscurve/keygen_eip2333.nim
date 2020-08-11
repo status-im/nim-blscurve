@@ -7,10 +7,13 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-const BLS_ETH2_SPEC* = "v0.12.x (deprecated)"
+import ./eth2_keygen/eth2_keygen
+export eth2_keygen
 
-import
-  blscurve/bls_backend,
-  blscurve/keygen_eip2333
+import ./bls_backend
+when BLS_BACKEND == "miracl":
+  import ./eth2_keygen/hkdf_mod_r_miracl
+else:
+  import ./eth2_keygen/hkdf_mod_r_blst
 
-export bls_backend, keygen_eip2333
+export keyGen # Spec keyGen

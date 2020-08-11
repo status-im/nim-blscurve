@@ -211,7 +211,7 @@ testGen(aggregate_verify, test):
     "   computed: " & $libSoAValid & "\n" &
     "   expected: " & $expected
 
-suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors":
+suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & BLS_BACKEND:
   test "[" & BLS_ETH2_SPEC & "] sign(SecretKey, message) -> Signature":
     test_sign()
   test "[" & BLS_ETH2_SPEC & "] verify(PublicKey, message, Signature) -> bool":
