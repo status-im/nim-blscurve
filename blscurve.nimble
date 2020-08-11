@@ -27,12 +27,13 @@ task test, "Run all tests":
   # test "", "tests/hash_to_curve_v7.nim"
 
   # Public BLS API - IETF standard / Ethereum2.0 v0.12.x
-  test "-d:BLS_BACKEND=blst", "tests/eth2_vectors.nim"
   test "-d:BLS_BACKEND=miracl", "tests/eth2_vectors.nim"
-
   # key Derivation - EIP 2333
-  test "-d:BLS_BACKEND=blst", "tests/eip2333_key_derivation.nim"
   test "-d:BLS_BACKEND=miracl", "tests/eip2333_key_derivation.nim"
+
+  when sizeof(int) == 8 and (defined(arm64) or defined(amd64)):
+    test "-d:BLS_BACKEND=blst", "tests/eth2_vectors.nim"
+    test "-d:BLS_BACKEND=blst", "tests/eip2333_key_derivation.nim"
 
   # # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
   # if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":
