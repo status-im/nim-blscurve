@@ -52,7 +52,7 @@ func serialize*(
        obj: SecretKey|PublicKey|Signature|ProofOfPossession): bool {.inline.} =
   ## Serialize the input `obj` in raw binary form and write it
   ## in `dst`.
-  ## Returns `true` if the export is succesful, `false` otherwise
+  ## Returns `true` if the export is successful, `false` otherwise
   when obj is SecretKey:
     result = obj.intVal.toBytes(dst)
   else:

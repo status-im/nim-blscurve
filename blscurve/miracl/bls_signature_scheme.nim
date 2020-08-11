@@ -71,6 +71,11 @@ type
     ## A separate public key in the Proof-of-Possession BLS signature variant scheme
     point: GroupG2
 
+  AggregateSignature*{.borrow:`.`.} = distinct Signature
+    ## An aggregated Signature.
+    ## With MIRACL backend, there is no bit-level
+    ## difference from a normal signature
+
 func `==`*(a, b: SecretKey): bool {.error: "Comparing secret keys is not allowed".}
   ## Disallow comparing secret keys. It would require constant-time comparison,
   ## and it doesn't make sense anyway.
@@ -119,14 +124,22 @@ func privToPub*(secretKey: SecretKey): PublicKey {.noInit, inline, deprecated: "
 # Aggregate
 # ----------------------------------------------------------------------
 
-proc aggregate*(sig1: var Signature, sig2: Signature) =
-  ## Aggregates signature ``sig2`` into ``sig1``.
-  sig1.point.add(sig2.point)
+func init*(agg: var AggregateSignature, sig: Signature) {.inline.} =
+  ## Initialize an aggregate signature with a signature
+  agg = AggregateSignature(sig)
 
-proc aggregate*(sig: var Signature, sigs: openarray[Signature]) =
+proc aggregate*(agg: var AggregateSignature, sig: Signature) {.inline.} =
+  ## Aggregates signature ``sig2`` into ``sig1``.
+  agg.point.add(sig.point)
+
+proc aggregate*(agg: var AggregateSignature, sigs: openarray[Signature]) =
   ## Aggregates an array of signatures `sigs` into a signature `sig`
   for s in sigs:
-    sig.point.add(s.point)
+    agg.point.add(s.point)
+
+proc finish*(sig: var Signature, agg: AggregateSignature) {.inline.} =
+  ## Canonicalize the AggregateSignature into a Signature
+  sig = Signature(agg)
 
 proc aggregate*(sigs: openarray[Signature]): Signature =
   ## Aggregates array of signatures ``sigs``
@@ -137,7 +150,8 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
   #       for now we assume that empty aggregation is handled at the client level
   doAssert(len(sigs) > 0)
   result = sigs[0]
-  result.aggregate(sigs.toOpenArray(1, sigs.high))
+  for i in 1 ..< sigs.len:
+    result.point.add(sigs[i].point)
 
 # Core operations
 # ----------------------------------------------------------------------

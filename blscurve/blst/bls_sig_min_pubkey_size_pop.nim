@@ -62,8 +62,8 @@ type
     ## A digital signature of a message using the BLS (Boneh-Lynn-Shacham) signature scheme.
     point: blst_p2_affine
 
-  AggregateSignature = object
-    ## An aggregated Signature (private type for now)
+  AggregateSignature* = object
+    ## An aggregated Signature
     point: blst_p2
 
   ProofOfPossession* = object
@@ -76,7 +76,7 @@ func `==`*(a, b: SecretKey): bool {.error: "Comparing secret keys is not allowed
 
 func `==`*(a, b: PublicKey or Signature or ProofOfPossession): bool {.inline.} =
   ## Check if 2 BLS signature scheme objects are equal
-  when a.point is blst_p1:
+  when a.point is blst_p1_affine:
     result = bool(
       blst_p1_affine_is_equal(
         a.point, b.point
@@ -95,32 +95,54 @@ func `==`*(a, b: PublicKey or Signature or ProofOfPossession): bool {.inline.} =
 
 func fromBytes*(
        obj: var (Signature|ProofOfPossession),
-       raw: array[96, byte]
+       raw: openarray[byte] or array[96, byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
   # TODO: consider using affine coordinates everywhere beside
-  result = obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
+  const L = 96
+  when raw is array:
+    result = obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
+  else:
+    if raw.len != L:
+      return false
+    let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
+    result = obj.point.blst_p2_uncompress(pa[]) == BLST_SUCCESS
 
 func fromBytes*(
        obj: var PublicKey,
-       raw: array[48, byte]
+       raw: openarray[byte] or array[48, byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  result = obj.point.blst_p1_uncompress(raw) == BLST_SUCCESS
+  const L = 48
+  when raw is array:
+    result = obj.point.blst_p1_uncompress(raw) == BLST_SUCCESS
+  else:
+    if raw.len != L:
+      return false
+    let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
+    result = obj.point.blst_p1_uncompress(pa[]) == BLST_SUCCESS
 
 func fromBytes*(
        obj: var SecretKey,
-       raw: array[32, byte]
+       raw: openarray[byte] or array[32, byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  obj.scalar.blst_scalar_from_bendian(raw)
-  return true
+  const L = 32
+  when raw is array:
+    obj.scalar.blst_scalar_from_bendian(raw)
+    return true
+  else:
+    if raw.len != 32:
+      return false
+    let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
+    obj.scalar.blst_scalar_from_bendian(pa[])
+    return true
 
 func fromHex*(
        obj: var (SecretKey|PublicKey|Signature|ProofOfPossession),
@@ -194,6 +216,18 @@ func serialize*(
   blst_p2_affine_compress(dst, obj.point)
   return true
 
+func exportRaw*(secretKey: SecretKey): array[32, byte] {.inline.}=
+  ## Serialize a secret key into its raw binary representation
+  discard result.serialize(secretKey)
+
+func exportRaw*(publicKey: PublicKey): array[48, byte] {.inline.}=
+  ## Serialize a public key into its raw binary representation
+  discard result.serialize(publicKey)
+
+func exportRaw*(signature: Signature): array[96, byte] {.inline.}=
+  ## Serialize a signature into its raw binary representation
+  discard result.serialize(signature)
+
 # Primitives
 # ----------------------------------------------------------------------
 
@@ -206,20 +240,28 @@ func privToPub*(secretKey: SecretKey): PublicKey {.inline.} =
 # Aggregate
 # ----------------------------------------------------------------------
 
-func aggregate(agg: var AggregateSignature, sig: Signature) {.inline.} =
+func init*(agg: var AggregateSignature, sig: Signature) {.inline.} =
+  ## Initialize an aggregate signature with a signature
+  agg.point.blst_p2_from_affine(sig.point)
+
+func aggregate*(agg: var AggregateSignature, sig: Signature) {.inline.} =
   ## Aggregates signature ``sig`` into ``agg``
   agg.point.blst_p2_add_or_double_affine(
     agg.point,
     sig.point
   )
 
-proc aggregate(agg: var AggregateSignature, sigs: openarray[Signature]) =
+proc aggregate*(agg: var AggregateSignature, sigs: openarray[Signature]) =
   ## Aggregates an array of signatures `sigs` into a signature `sig`
   for s in sigs:
     agg.point.blst_p2_add_or_double_affine(
       agg.point,
       s.point
     )
+
+proc finish*(sig: var Signature, agg: AggregateSignature) {.inline.} =
+  ## Canonicalize the AggregateSignature into a Signature
+  sig.point.blst_p2_to_affine(agg.point)
 
 proc aggregate*(sigs: openarray[Signature]): Signature =
   ## Aggregates array of signatures ``sigs``
@@ -230,10 +272,9 @@ proc aggregate*(sigs: openarray[Signature]): Signature =
   #       for now we assume that empty aggregation is handled at the client level
   doAssert(len(sigs) > 0)
   var agg{.noInit.}: AggregateSignature
-  agg.point.blst_p2_from_affine(sigs[0].point)
+  agg.init(sigs[0])
   agg.aggregate(sigs.toOpenArray(1, sigs.high))
-
-  result.point.blst_p2_to_affine(agg.point)
+  result.finish(agg)
 
 # Core operations
 # ----------------------------------------------------------------------

@@ -27,8 +27,9 @@ else:
     ./miracl/bls_signature_scheme
   export
     SecretKey, PublicKey, Signature, ProofOfPossession,
+    AggregateSignature,
     `==`,
-    aggregate,
+    init, aggregate, finish,
     sign, verify, aggregateVerify, fastAggregateVerify,
     privToPub,
     fromHex, fromBytes, toHex, serialize, exportRaw
