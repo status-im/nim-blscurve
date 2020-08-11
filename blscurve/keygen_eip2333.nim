@@ -12,8 +12,8 @@ export eth2_keygen
 
 import ./bls_backend
 when BLS_BACKEND == "miracl":
-  import ./eth2_keygen/hkdf_mod_r_blst
-else:
   import ./eth2_keygen/hkdf_mod_r_miracl
+else:
+  import ./eth2_keygen/hkdf_mod_r_blst
 
 export keyGen # Spec keyGen
