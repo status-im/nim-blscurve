@@ -157,5 +157,6 @@ steps:
       echo "PATH=${PATH}"
       which gcc
       gcc -v
+      git submodule update --init --recursive
       nimble test
     displayName: 'Testing the package'
