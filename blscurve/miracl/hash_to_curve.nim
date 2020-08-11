@@ -30,7 +30,7 @@
 #   - BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_ for signatures
 #   - BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_ for proof of possesions
 
-{.push raises: [Defect], gcsafe, noSideEffect.}
+{.push raises: [Defect].} # , gcsafe, noSideEffect.}
 
 import
   # Status libraries
@@ -659,7 +659,7 @@ when isMainModule:
       # each step in a fine grained manner
       constants
 
-      var u{.noInit.}: array[2, FP2_BLS381]
+      var u{.noInit.}: array[2, FP2_BLS12381]
 
       sha256.hashToFieldFP2(u, msg, domainSepTag)
 

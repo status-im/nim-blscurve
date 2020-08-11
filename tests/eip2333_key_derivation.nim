@@ -19,11 +19,14 @@ import
 
 proc toDecimal(sk: SecretKey): string =
   # The spec does not use hex but decimal ...
-  var tmp: array[48, byte]
-  let ok = tmp.serialize(sk)
-  doAssert ok
   var asBytes: array[32, byte]
-  asBytes[0 .. 31] = tmp.toOpenArray(48-32, 48-1)
+  when BLS_BACKEND == "miracl":
+    var tmp: array[48, byte]
+    let ok = tmp.serialize(sk)
+    doAssert ok
+    asBytes[0 .. 31] = tmp.toOpenArray(48-32, 48-1)
+  else:
+    let ok = asBytes.serialize(sk)
 
   let asInt = readUintBE[256](asBytes)
   result = toString(asInt, radix = 10)
@@ -100,7 +103,7 @@ proc test3 =
 
   doAssert child.toDecimal == expectedChild
 
-suite "Key Derivation (EIP-2333)":
+suite "Key Derivation (EIP-2333) - " & BLS_BACKEND:
   test "Test 0":
     test0()
   test "Test 1":

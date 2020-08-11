@@ -158,7 +158,7 @@ func hkdfExpand*[T;I,A: char|byte](ctx: var HMAC[T],
     ctx.update(info)
     when append.len > 0:
       ctx.update(append)
-    ctx.update([uint8(i+1)])
+    ctx.update([uint8(i)+1]) # For byte 255, this append "0" and not "256"
     discard ctx.finish(t.data)
 
     let iStart = i * HashLen

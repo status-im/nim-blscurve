@@ -16,9 +16,13 @@ import
   # third-party
   nimcrypto/[hmac, sha2], stew/endians2,
   # internal
-  ./milagro, ./common, ./hkdf,
-  ./hash_to_curve,
-  ./bls_signature_scheme
+  ../bls_backend,
+  ./hkdf
+
+when BLS_BACKEND == "miracl":
+  import ./hkdf_mod_r_miracl
+else:
+  import ./hkdf_mod_r_blst
 
 func ikm_to_lamport_SK(
        ikm: openArray[byte],
@@ -53,13 +57,16 @@ func parent_SK_to_lamport_PK(
   static: doAssert sizeof(salt) == 4
 
   # 1. IKM = I2OSP(parent_SK, 32)
-  # While the BLS prime is 381-bit (48 bytes)
-  # the curve order is 255-bit (32 bytes)
-  # and a secret key would always fit in 32 bytes
-  var tmp {.noInit.}: array[48, byte]
   var ikm {.noInit.}: array[32, byte]
-  doAssert tmp.serialize(parentSecretKey)
-  ikm[0 .. 31] = tmp.toOpenArray(48-32, 48-1)
+  when BLS_BACKEND == "miracl":
+    # While the BLS prime is 381-bit (48 bytes)
+    # the curve order is 255-bit (32 bytes)
+    # and a secret key would always fit in 32 bytes
+    var tmp {.noInit.}: array[48, byte]
+    doAssert tmp.serialize(parentSecretKey)
+    ikm[0 .. 31] = tmp.toOpenArray(48-32, 48-1)
+  else:
+    doAssert ikm.serialize(parentSecretKey)
 
   # Reorganized the spec to save on stack allocations
   # and limit stackoverflow potential.
