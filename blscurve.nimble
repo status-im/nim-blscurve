@@ -15,6 +15,8 @@ proc test(env, path: string, lang = "c") =
     mkDir "build"
   exec "nim " & lang & " " & env &
     " --outdir:build -r --hints:off --warnings:off " & path
+  exec "nim " & lang & " -d:release " & env &
+    " --outdir:build -r --hints:off --warnings:off " & path
 
 ### tasks
 task test, "Run all tests":
@@ -30,10 +32,13 @@ task test, "Run all tests":
   test "-d:BLS_BACKEND=miracl", "tests/eth2_vectors.nim"
   # key Derivation - EIP 2333
   test "-d:BLS_BACKEND=miracl", "tests/eip2333_key_derivation.nim"
+  # Secret key to pubkey
+  test "-d:BLS_BACKEND=miracl", "tests/priv_to_pub.nim"
 
   when sizeof(int) == 8 and (defined(arm64) or defined(amd64)):
     test "-d:BLS_BACKEND=blst", "tests/eth2_vectors.nim"
     test "-d:BLS_BACKEND=blst", "tests/eip2333_key_derivation.nim"
+    test "-d:BLS_BACKEND=blst", "tests/priv_to_pub.nim"
 
   # # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
   # if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":

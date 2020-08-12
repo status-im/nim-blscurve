@@ -9,6 +9,11 @@
 
 import std/os
 
+when defined(gcc):
+  # Using this option will miscompile
+  # scalar multiplication. Clang works fine.
+  {.passC: "-fno-tree-loop-vectorize".}
+
 {.compile: ".."/".."/"vendor"/"blst"/"build"/"assembly.S".}
 {.compile: ".."/".."/"vendor"/"blst"/"src"/"server.c".}
 

@@ -93,6 +93,30 @@ func `==`*(a, b: PublicKey or Signature or ProofOfPossession): bool {.inline.} =
 # ----------------------------------------------------------------------
 # Serialization / Deserialization
 
+func toHex*(
+       obj: SecretKey|PublicKey|Signature|ProofOfPossession|AggregateSignature,
+     ): string =
+  ## Return the hex representation of a BLS signature scheme object
+  ## They are serialized in compressed form
+  when obj is SecretKey:
+    const size = 32
+    var bytes{.noInit.}: array[size, byte]
+    bytes.blst_bendian_from_scalar(obj.scalar)
+  elif obj is PublicKey:
+    const size = 48
+    var bytes{.noInit.}: array[size, byte]
+    bytes.blst_p1_affine_compress(obj.point)
+  elif obj is (Signature or ProofOfPossession):
+    const size = 96
+    var bytes{.noInit.}: array[size, byte]
+    bytes.blst_p2_affine_compress(obj.point)
+  elif obj is AggregateSignature:
+    const size = 96
+    var bytes{.noInit.}: array[size, byte]
+    bytes.blst_p2_compress(obj.point)
+
+  result = bytes.toHex()
+
 func fromBytes*(
        obj: var (Signature|ProofOfPossession),
        raw: openarray[byte] or array[96, byte]
@@ -100,7 +124,6 @@ func fromBytes*(
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  # TODO: consider using affine coordinates everywhere beside
   const L = 96
   when raw is array:
     result = obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
@@ -164,30 +187,6 @@ func fromHex*(
   except:
     return false
 
-func toHex*(
-       obj: SecretKey|PublicKey|Signature|ProofOfPossession|AggregateSignature,
-     ): string =
-  ## Return the hex representation of a BLS signature scheme object
-  ## They are serialized in compressed form
-  when obj is SecretKey:
-    const size = 32
-    var bytes{.noInit.}: array[size, byte]
-    bytes.blst_bendian_from_scalar(obj.scalar)
-  elif obj is PublicKey:
-    const size = 48
-    var bytes{.noInit.}: array[size, byte]
-    bytes.blst_p1_affine_compress(obj.point)
-  elif obj is (Signature or ProofOfPossession):
-    const size = 96
-    var bytes{.noInit.}: array[size, byte]
-    bytes.blst_p2_affine_compress(obj.point)
-  elif obj is AggregateSignature:
-    const size = 96
-    var bytes{.noInit.}: array[size, byte]
-    bytes.blst_p2_compress(obj.point)
-
-  result = bytes.toHex()
-
 func serialize*(
        dst: var array[32, byte],
        obj: SecretKey): bool {.inline.} =
@@ -232,8 +231,10 @@ func exportRaw*(signature: Signature): array[96, byte] {.inline.}=
 
 func privToPub*(secretKey: SecretKey): PublicKey {.inline.} =
   ## Generates a public key from a secret key
-  # TODO, small secret keys like "1000" are not properly
-  # computed, those are used in test suites
+  ## Generates a public key from a secret key
+  ## This requires some -O3 compiler optimizations to be off
+  ## as such {.passC: "-fno-peel-loops -fno-tree-loop-vectorize".}
+  ## is automatically added to the compiler flags
   var pk {.noInit.}: blst_p1
   pk.blst_sk_to_pk_in_g1(secretKey.scalar)
   result.point.blst_p1_to_affine(pk)
