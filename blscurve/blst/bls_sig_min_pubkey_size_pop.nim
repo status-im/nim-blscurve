@@ -124,7 +124,6 @@ func fromBytes*(
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  # TODO: consider using affine coordinates everywhere beside
   const L = 96
   when raw is array:
     result = obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
@@ -232,8 +231,10 @@ func exportRaw*(signature: Signature): array[96, byte] {.inline.}=
 
 func privToPub*(secretKey: SecretKey): PublicKey {.inline.} =
   ## Generates a public key from a secret key
-  # TODO, keys are not properly computed unless
-  # the code is compiled with "-fsanitize=address"
+  ## Generates a public key from a secret key
+  ## This requires some -O3 compiler optimizations to be off
+  ## as such {.passC: "-fno-peel-loops -fno-tree-loop-vectorize".}
+  ## is automatically added to the compiler flags
   var pk {.noInit.}: blst_p1
   pk.blst_sk_to_pk_in_g1(secretKey.scalar)
   result.point.blst_p1_to_affine(pk)
