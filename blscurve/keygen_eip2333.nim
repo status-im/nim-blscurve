@@ -11,9 +11,11 @@ import ./eth2_keygen/eth2_keygen
 export eth2_keygen
 
 import ./bls_backend
-when BLS_BACKEND == "miracl":
-  import ./eth2_keygen/hkdf_mod_r_miracl
-else:
+when BLS_BACKEND == "blst" or (
+  BLS_BACKEND == "auto" and (defined(arm64) or defined(amd64))
+):
   import ./eth2_keygen/hkdf_mod_r_blst
+else:
+  import ./eth2_keygen/hkdf_mod_r_miracl
 
 export keyGen # Spec keyGen
