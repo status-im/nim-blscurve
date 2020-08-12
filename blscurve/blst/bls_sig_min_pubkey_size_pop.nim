@@ -158,12 +158,11 @@ func fromHex*(
   elif obj is (Signature or ProofOfPossession):
     const size = 96
 
-  var bytes{.noInit.}: array[size, byte]
-  try: # TODO: Conversion without exceptions
-    hexStr.hexToByteArray(bytes)
+  try:
+    let bytes = hexToPaddedByteArray[size](hexStr)
+    return obj.fromBytes(bytes)
   except:
     return false
-  result = obj.fromBytes(bytes)
 
 func toHex*(
        obj: SecretKey|PublicKey|Signature|ProofOfPossession|AggregateSignature,
@@ -233,6 +232,8 @@ func exportRaw*(signature: Signature): array[96, byte] {.inline.}=
 
 func privToPub*(secretKey: SecretKey): PublicKey {.inline.} =
   ## Generates a public key from a secret key
+  # TODO, small secret keys like "1000" are not properly
+  # computed, those are used in test suites
   var pk {.noInit.}: blst_p1
   pk.blst_sk_to_pk_in_g1(secretKey.scalar)
   result.point.blst_p1_to_affine(pk)

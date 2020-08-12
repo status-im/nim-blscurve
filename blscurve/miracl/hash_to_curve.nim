@@ -30,7 +30,7 @@
 #   - BLS_SIG_BLS12381G2-SHA256-SSWU-RO-_POP_ for signatures
 #   - BLS_POP_BLS12381G2-SHA256-SSWU-RO-_POP_ for proof of possesions
 
-{.push raises: [Defect].} # , gcsafe, noSideEffect.}
+{.push raises: [Defect], gcsafe, noSideEffect.}
 
 import
   # Status libraries

@@ -22,7 +22,6 @@ import
 
 # Internal BLST procedures
 # ----------------------------------------------------------------------
-
 static: doAssert limb_t is uint64
 type vec256 = array[4, limb_t]
 type vec512 = array[8, limb_t]
@@ -51,6 +50,14 @@ func limbs_from_be_bytes(
     # are cheaper than a mispredicted branch
     # and compiler can unroll the loop
     limbs[n div sizeof(limb_t)] = limb
+
+# Nim-Beacon-Chain compiles with --march=native by default
+{.emit:"""
+#ifdef __ADX__                  /* e.g. -march=broadwell */
+# define mul_mont_sparse_256 mulx_mont_sparse_256
+# define redc_mont_256 redcx_mont_256
+#endif
+""".}
 
 func redc_mont_256(
       ret: var vec256,
