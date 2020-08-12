@@ -9,10 +9,10 @@
 
 import std/os
 
-when defined(gcc) or defined(clang):
-  # Using those options will miscompile
-  # scalar multiplication
-  {.passC: "-fno-peel-loops -fno-tree-loop-vectorize".}
+when defined(gcc):
+  # Using this option will miscompile
+  # scalar multiplication. Clang works fine.
+  {.passC: "-fno-tree-loop-vectorize".}
 
 {.compile: ".."/".."/"vendor"/"blst"/"build"/"assembly.S".}
 {.compile: ".."/".."/"vendor"/"blst"/"src"/"server.c".}
