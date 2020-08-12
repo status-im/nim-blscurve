@@ -73,45 +73,49 @@ const
   BLST_AGGR_TYPE_MISMATCH* = (BLST_POINT_NOT_IN_GROUP + 1).BLST_ERROR
   BLST_VERIFY_FAIL* = (BLST_AGGR_TYPE_MISMATCH + 1).BLST_ERROR
 
+# Do not importc the types that are fully defined
+# otherwise they are improperly copied, for example
+# when using Result or Option
+# https://github.com/nim-lang/Nim/issues/9940
 type
-  limb_t* {.blst.} = uint64
-  blst_scalar* {.byref, blst.} = object
+  limb_t* = uint64
+  blst_scalar* {.byref.} = object
     l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8)) /
         typeof(256)(sizeof((limb_t)))), limb_t]
-  blst_fr* {.byref, blst.} = object
+  blst_fr* {.byref.} = object
     l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8)) /
         typeof(256)(sizeof((limb_t)))), limb_t]
-  blst_fp* {.byref, blst.} = object
+  blst_fp* {.byref.} = object
     ## 0 is "real" part, 1 is "imaginary"
     l*: array[typeof(384)(typeof(384)(384 / typeof(384)(8)) /
         typeof(384)(sizeof((limb_t)))), limb_t]
 
-  blst_fp2* {.byref, blst.} = object
+  blst_fp2* {.byref.} = object
     ## 0 is "real" part, 1 is "imaginary"
     fp*: array[2, blst_fp]
 
-  blst_fp6* {.byref, blst.} = object
+  blst_fp6* {.byref.} = object
     fp2*: array[3, blst_fp2]
 
-  blst_fp12* {.byref, blst.} = object
+  blst_fp12* {.byref.} = object
     fp6*: array[2, blst_fp6]
 
-  blst_p1* {.byref, blst.} = object
+  blst_p1* {.byref.} = object
     ## BLS12-381-specifc point operations.
     x*: blst_fp
     y*: blst_fp
     z*: blst_fp
 
-  blst_p1_affine* {.byref, blst.} = object
+  blst_p1_affine* {.byref.} = object
     x*: blst_fp
     y*: blst_fp
 
-  blst_p2* {.byref, blst.} = object
+  blst_p2* {.byref.} = object
     x*: blst_fp2
     y*: blst_fp2
     z*: blst_fp2
 
-  blst_p2_affine* {.byref, blst.} = object
+  blst_p2_affine* {.byref.} = object
     x*: blst_fp2
     y*: blst_fp2
 
