@@ -9,6 +9,11 @@
 
 import ../blscurve
 
+# This test ensures that fake secret keys can be used for testing
+# In particular this caught compiler options that miscompile BLST,
+# namely -fpeel-loops -ftree-loop-vectorize
+# which are unfortunately enabled at -O3
+
 proc test_sk_to_pk(seckey, pubkey: string) =
 
   var sk{.noInit.}: SecretKey
