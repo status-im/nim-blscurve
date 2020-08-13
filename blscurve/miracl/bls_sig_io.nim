@@ -54,12 +54,13 @@ func serialize*(
   ## in `dst`.
   ## Returns `true` if the export is successful, `false` otherwise
   when obj is SecretKey:
+    # TODO: Test if dst is 32 bytes instead of 48 bytes
     result = obj.intVal.toBytes(dst)
   else:
     result = obj.point.toBytes(dst)
 
 const
-  RawSecretKeySize = MODBYTES_384
+  RawSecretKeySize = MODBYTES_384 # TODO should be 32
   RawPublicKeySize = MODBYTES_384
   RawSignatureSize = MODBYTES_384 * 2
 

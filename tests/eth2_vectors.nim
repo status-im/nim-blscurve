@@ -186,6 +186,7 @@ testGen(aggregate_verify, test):
     pubkeys: seq[PublicKey]
     msgs: seq[seq[byte]]
     signature: Signature
+
   try:
     pubkey_msg_pairs = seq[(PublicKey, seq[byte])].aggFrom(test)
     pubkeys = seq[PublicKey].aggFrom(test)
@@ -211,7 +212,7 @@ testGen(aggregate_verify, test):
     "   computed: " & $libSoAValid & "\n" &
     "   expected: " & $expected
 
-suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & BLS_BACKEND:
+suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
   test "[" & BLS_ETH2_SPEC & "] sign(SecretKey, message) -> Signature":
     test_sign()
   test "[" & BLS_ETH2_SPEC & "] verify(PublicKey, message, Signature) -> bool":
