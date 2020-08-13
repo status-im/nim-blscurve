@@ -19,7 +19,7 @@ import
   ../bls_backend,
   ./hkdf
 
-when BLS_BACKEND == "miracl":
+when BLS_BACKEND == Miracl:
   import ./hkdf_mod_r_miracl
 else:
   import ./hkdf_mod_r_blst
@@ -58,7 +58,7 @@ func parent_SK_to_lamport_PK(
 
   # 1. IKM = I2OSP(parent_SK, 32)
   var ikm {.noInit.}: array[32, byte]
-  when BLS_BACKEND == "miracl":
+  when BLS_BACKEND == Miracl:
     # While the BLS prime is 381-bit (48 bytes)
     # the curve order is 255-bit (32 bytes)
     # and a secret key would always fit in 32 bytes

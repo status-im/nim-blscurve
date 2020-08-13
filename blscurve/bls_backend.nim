@@ -18,8 +18,8 @@ type BlsBackendKind* = enum
   BLST
   Miracl
 
-when BLS_BACKEND == "blst" or (
-      BLS_BACKEND == "auto" and
+when BLS_FORCE_BACKEND == "blst" or (
+      BLS_FORCE_BACKEND == "auto" and
         sizeof(int) == 8 and
         (defined(arm64) or defined(amd64))
     ):
