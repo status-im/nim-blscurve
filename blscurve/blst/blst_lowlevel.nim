@@ -10,9 +10,12 @@
 import std/os
 
 when defined(gcc):
-  # Using this option will miscompile
-  # scalar multiplication. Clang works fine.
-  {.passC: "-fno-tree-loop-vectorize".}
+  # * Using ftree-loop-vectorize will miscompile scalar multiplication
+  #   for example used to derive the public key in blst_sk_to_pk_in_g1
+  # * Using ftree-slp-vectorize miscompiles something when used
+  #   in nim-beacon-chain in Travis CI (TODO: test case)
+  # no-tree-vectorize removes both
+  {.passC: "-fno-tree-vectorize".}
 
 {.compile: ".."/".."/"vendor"/"blst"/"build"/"assembly.S".}
 {.compile: ".."/".."/"vendor"/"blst"/"src"/"server.c".}
