@@ -20,7 +20,7 @@ import
 proc toDecimal(sk: SecretKey): string =
   # The spec does not use hex but decimal ...
   var asBytes: array[32, byte]
-  when BLS_BACKEND == "miracl":
+  when BLS_BACKEND == Miracl:
     var tmp: array[48, byte]
     let ok = tmp.serialize(sk)
     doAssert ok
@@ -103,7 +103,7 @@ proc test3 =
 
   doAssert child.toDecimal == expectedChild
 
-suite "Key Derivation (EIP-2333) - " & BLS_BACKEND:
+suite "Key Derivation (EIP-2333) - " & $BLS_BACKEND:
   test "Test 0":
     test0()
   test "Test 1":
