@@ -7,6 +7,8 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
+import os
+
 const BLS_FORCE_BACKEND*{.strdefine.} = "auto"
 
 static: doAssert BLS_FORCE_BACKEND == "auto" or
@@ -23,7 +25,7 @@ when BLS_FORCE_BACKEND == "blst" or (
     sizeof(int) == 8 and
     (defined(arm64) or (
       defined(amd64) and
-      gorgeEx("gcc -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0))
+      gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0))
   ):
   const BLS_BACKEND* = BLST
 else:
