@@ -15,6 +15,10 @@ Hash to Elliptic curve implementation for BLS12-381.
     - v6: https://github.com/ethereum/py_ecc/pull/87
     - v7: https://github.com/ethereum/py_ecc/pull/94
 
+> The Hash-To-Curve v7 is binary compatible with Hash-To-Curve v9
+> They only differ by cosmetic changes like naming, see
+> https://tools.ietf.org/rfcdiff?url1=https://tools.ietf.org/id/draft-irtf-cfrg-hash-to-curve-07.txt&url2=https://tools.ietf.org/id/draft-irtf-cfrg-hash-to-curve-09.txt
+
 hash_to_curve
 ----------------------------------------------------------------------
 Section 3 - https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-07#section-3

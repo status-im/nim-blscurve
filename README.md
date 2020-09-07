@@ -8,7 +8,7 @@ This library implements:
 - The BLS signature scheme (Boneh-Lynn-Shacham)
 - over the BLS12-381 (Barreto-Lynn-Scott) pairing-friendly curve
 
-Cipher suite ID: BLS_SIG_BLS12381G2-SHA256-SSWU-RO-\_POP\_
+Cipher suite ID: `BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_`
 
 ## Installation
 
@@ -37,12 +37,16 @@ for the following blockchains:
 
 #### Signature scheme
 
-- IETF draft submission: https://tools.ietf.org/html/draft-boneh-bls-signature-00
+- IETF draft submission v2: https://tools.ietf.org/html/draft-boneh-bls-signature-02
 - Repo for collaboration on the draft: https://github.com/cfrg/draft-irtf-cfrg-bls-signature
 
 #### Hashing to curve
 
-- https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05
+- https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-09
+- https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve
+
+Note: the implementation was done following Hash-to-curve v7
+v9 and v7 are protocol compatible but have cosmetic changes (naming variables, precomputing constants, ...)
 
 #### Curve implementation
 
@@ -50,7 +54,9 @@ for the following blockchains:
 
 ## Backend
 
-This library uses sources from [AMCL (Apache Milagro Crypto)](https://github.com/apache/incubator-milagro-crypto-c).
+This library uses:
+- [SupraNational BLST](https://github.com/supranational/blst) on x86-64 and ARM64
+- [MIRACL Core](https://github.com/miracl/core) on all other platforms.
 
 ### Keeping track of upstream
 
@@ -63,7 +69,7 @@ To keep track of upstream AMCL:
 
 ### Executing the test suite
 
-We recomment working within the nimbus build environment described here:
+We recommend working within the nimbus build environment described here:
 https://github.com/status-im/nim-beacon-chain/
 
 To execute the test suite, just navigate to the root of this repo and execute:
@@ -104,3 +110,8 @@ Licensed and distributed under either of
 * Apache License, Version 2.0, ([LICENSE-APACHEv2](LICENSE-APACHEv2) or http://www.apache.org/licenses/LICENSE-2.0)
 
 at your option. This file may not be copied, modified, or distributed except according to those terms.
+
+### Dependencies
+
+- SupraNational BLST is distributed under the Apache License, Version 2.0
+- MIRACL Core is distributed under the Apache License, Version 2.0
