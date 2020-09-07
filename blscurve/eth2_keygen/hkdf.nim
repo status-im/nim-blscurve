@@ -146,11 +146,14 @@ func hkdfExpand*[T;I,A: char|byte](ctx: var HMAC[T],
   static: doAssert T.bits >= 0
   # assert output.len <= 255*HashLen
 
-  let N = output.len div HashLen
+  var N = output.len div HashLen
+  if output.len mod HashLen != 0:
+    inc N
+
   var t: MDigest[T.bits]
   let oArray = cast[ptr UncheckedArray[byte]](output)
 
-  for i in 0 .. N:
+  for i in 0 ..< N:
     ctx.init(prk.data)
     # T(0) = empty string
     if i != 0:
