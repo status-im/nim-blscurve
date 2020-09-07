@@ -281,13 +281,13 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS12381): tuple[x, y: FP2_BLS12381] =
     var x1 = add(tv1, tv2)
     x1 = inv(x1)                         # TODO: Spec defines inv0(0) == 0; inv0(x) == x^(q-2)
     let e1 = x1.isZilch()
-    x1.add(x1, one)
+    x1.add(x1, one)                      # // no norm needed when adding one
     x1.cmov(c2, e1)                      # If (tv1 + tv2) == 0, set x1 = -1 / Z
     x1.mul(x1, c1)                       # x1 = (-B / A) * (1 + (1 / (Z² * u^4 + Z * u²)))
     var gx1 = sqr(x1)
-    gx1.add(gx1, A)
+    gx1.add(gx1, A); gx1.norm()
     gx1.mul(gx1, x1)
-    gx1.add(gx1, B)                      # gx1 = g(x1) = x1³ + A * x1 + B
+    gx1.add(gx1, B); gx1.norm()          # gx1 = g(x1) = x1³ + A * x1 + B
     let x2 = mul(tv1, x1)                # x2 = Z * u² * x1
     tv2.mul(tv1, tv2)
     let gx2 = mul(gx1, tv2)              # gx2 = (Z * u²)³ * gx1
@@ -370,45 +370,41 @@ func isogeny_map_G2(xp, yp: FP2_BLS12381): ECP2_BLS12381 =
   var xp3 = mul(xp, xp2)
   norm(xp3)
 
+  # Note: 32-bit use 29 bits limbs so you can do at most 3 additions before normalizing
   {.noSideEffect.}: # TODO overload `+` and `*` for readability
     # xNum = k(1,3) * x'³ + k(1,2) * x'² + k(1,1) * x' + k(1,0)
     let xNum = block:
       var xNum = k13.mul(xp3)
-      norm(xNum)
       xNum.add xNum, k12.mul(xp2)
-      norm(xNum)
       xNum.add xNum, k11.mul(xp)
-      norm(xNum)
       xNum.add xNum, k10
+      norm(xNum)
       xNum
 
     # xDen = x'² + k(2,1) * x' + k(2,0)
     let xDen = block:
       var xDen = xp2
       xDen.add xDen, k21.mul(xp)
-      norm(xDen)
       xDen.add xDen, k20
+      norm(xDen)
       xDen
 
     # yNum = k(3,3) * x'³ + k(3,2) * x'² + k(3,1) * x' + k(3,0)
     let yNum = block:
       var yNum = k33.mul(xp3)
-      norm(yNum)
       yNum.add yNum, k32.mul(xp2)
-      norm(yNum)
       yNum.add yNum, k31.mul(xp)
-      norm(yNum)
       yNum.add yNum, k30
+      norm(yNum)
       yNum
 
     # yDen = x'³ + k(4,2) * x'² + k(4,1) * x' + k(4,0)
     let yDen = block:
       var yDen = xp3
       yDen.add yDen, k42.mul(xp2)
-      norm(yDen)
       yDen.add yDen, k41.mul(xp)
-      norm(yDen)
       yDen.add yDen, k40
+      norm(yDen)
       yDen
 
   let x = xNum.mul inv(xDen)
