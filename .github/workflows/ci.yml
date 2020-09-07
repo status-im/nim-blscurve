@@ -205,7 +205,6 @@ jobs:
         shell: bash
         run: |
           nimble refresh
-          nimble install -y --depsOnly
           nimble install https://github.com/status-im/NimYAML@#head
           nimble install stint
       - name: Run nim-blscurve tests
@@ -214,4 +213,5 @@ jobs:
         run: |
           export UCPU="$cpu"
           cd nim-blscurve
+          nimble install -y --depsOnly
           nimble test
