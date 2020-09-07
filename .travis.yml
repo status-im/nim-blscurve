@@ -17,6 +17,12 @@ matrix:
       # Bionic to avoid git failure "fatal: unknown date format unix"
       compiler: gcc
       arch: arm64
+    - dist: bionic
+      arch: ppc64le
+      env:
+        - ARCH=powerpc64el
+        - CHANNEL=devel
+      compiler: gcc
     - os: osx
       compiler: clang
 
