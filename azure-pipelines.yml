@@ -93,6 +93,17 @@ steps:
       echo "##vso[task.prependpath]c:\custom\$(MINGW_DIR)\bin"
     displayName: 'Mingw PATH (Windows)'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
+
+  # Nimble OpenSSL dependency link/dlopen issue
+  - bash: |
+      if [[ $PLATFORM == "x86" ]]; then
+        choco --version
+        choco install --x86 openssl
+        echo "##vso[task.prependpath]/c/Program Files (x86)/OpenSSL-Win32/bin:${PATH}"
+      fi
+    displayName: 'OpenSSL on Windows 32-bit'
+    condition: and(eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['PLATFORM'], 'x86'))
+
   - bash: |
       echo "PATH=${PATH}"
       export ncpu=
