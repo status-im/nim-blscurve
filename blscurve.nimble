@@ -10,7 +10,12 @@ requires "nim >= 1.0.4",
          "stew"
 
 ### Helper functions
-proc test(env, path: string, lang = "c") =
+proc test(env, path: string) =
+  # Compilation language is controlled by BLS_TEST_LANG
+  var lang = "c"
+  if existsEnv"BLS_TEST_LANG":
+    lang = getEnv"BLS_TEST_LANG"
+
   if not dirExists "build":
     mkDir "build"
   exec "nim " & lang & " " & env &
