@@ -1,9 +1,9 @@
 # BLS Signature Scheme over BLS12-381 pairing-friendly curve
 
-[![Build Status: Travis](https://img.shields.io/travis/status-im/nim-blscurve/master?label=Travis%20%28Linux%20x86-64%2FARM64%2C%20MacOS%20x86-64%29](https://travis-ci.org/status-im/nim-blscurve)
+[![Build Status: Travis](https://img.shields.io/travis/status-im/nim-blscurve/master?label=Travis%20%28Linux%20x86-64%2FARM64%2C%20MacOS%20x86-64%29)](https://travis-ci.org/status-im/nim-blscurve)
 [![Build status](https://ci.appveyor.com/api/projects/status/6l1il60ljfbtxw3g/branch/master?svg=true)](https://ci.appveyor.com/project/nimbus/nim-blscurve/branch/master)
 [![Build Status: Azure](https://img.shields.io/azure-devops/build/nimbus-dev/0c305144-232d-4f3e-ba77-93e4e81182da/4/master?label=Azure%20%28Linux%2064-bit%2C%20Windows%2032-bit%2F64-bit%2C%20MacOS%2064-bit%29)](https://dev.azure.com/nimbus-dev/nim-blscurve/_build?definitionId=4&branchName=master)
-[![Github Actions CI](https://github.com/mratsim/constantine/workflows/Constantine%20CI/badge.svg)](https://github.com/status-im/nim-blscurve/actions?query=workflow%3A%22BLSCurve+CI%22)
+[![Github Actions CI](https://github.com/status-im/nim-blscurve/workflows/BLSCurve%20CI/badge.svg)](https://github.com/status-im/nim-blscurve/actions?query=workflow%3A%22BLSCurve+CI%22)
 
 This library implements:
 - The BLS signature scheme (Boneh-Lynn-Shacham)
