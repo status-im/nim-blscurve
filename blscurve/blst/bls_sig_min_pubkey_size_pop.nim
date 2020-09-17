@@ -374,22 +374,22 @@ type
     # 10. If C1 == C2, return VALID, else return INVALID
     c: blst_pairing
 
-func init(ctx: var ContextCoreAggregateVerify) {.inline.} =
+func init(ctx: var ContextCoreAggregateVerify, domainSepTag: static string) {.inline.} =
   ## initialize an aggregate verification context
-  ctx.c.blst_pairing_init()                           # C1 = 1 (identity element)
+  ctx.c.blst_pairing_init(
+    hash_or_encode = kHash,
+    domainSepTag
+  )                           # C1 = 1 (identity element)
 
 func update[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
-       message: openarray[T],
-       domainSepTag: static string): bool {.inline.} =
+       message: openarray[T]): bool {.inline.} =
   result = BLST_SUCCESS == ctx.c.blst_pairing_aggregate_pk_in_g1(
     PK = publicKey.point.unsafeAddr,
     signature = nil,
-    hash_or_encode = kHash,
-    message,
-    domainSepTag,
-    ""
+    msg = message,
+    aug = ""
   )
 
 func finish(ctx: var ContextCoreAggregateVerify, signature: Signature or AggregateSignature): bool =
@@ -426,9 +426,7 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggrega
     result = BLST_SUCCESS == ctx.c.blst_pairing_aggregate_pk_in_g1(
       PK = nil,
       signature = signature.point.unsafeAddr,
-      hash_or_encode = kHash,
       msg = "",
-      domainSepTag = "",
       aug = ""
     )
   elif signature is AggregateSignature:
@@ -438,9 +436,7 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggrega
       result = BLST_SUCCESS == ctx.c.blst_pairing_aggregate_pk_in_g1(
         PK = nil,
         signature = sig,
-        hash_or_encode = kHash,
         msg = "",
-        domainSepTag = "",
         aug = ""
       )
   else:
@@ -482,8 +478,8 @@ func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
   # 5. proof = point_to_signature(R)
   # 6. return proof
   var pk{.noInit.}: array[48, byte]
-  pk.blst_p1_affine_compress(publicKey.point)    # 2. Convert to raw bytes compressed form
-  result.coreSign(secretKey, pk, DST_POP) # 3-4. hash_to_curve and multiply by secret key
+  pk.blst_p1_affine_compress(publicKey.point) # 2. Convert to raw bytes compressed form
+  result.coreSign(secretKey, pk, DST_POP)     # 3-4. hash_to_curve and multiply by secret key
 
 func popProve*(secretKey: SecretKey): ProofOfPossession =
   ## Generate a proof of possession for the public key associated with the input secret key
@@ -566,11 +562,11 @@ func aggregateVerify*(
   var ctx{.noInit.}: ref ContextCoreAggregateVerify
   new ctx
 
-  ctx[].init()
+  ctx[].init(DST)
   for i in 0 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
       return false
-    ctx[].update(publicKeys[i], messages[i], DST)
+    ctx[].update(publicKeys[i], messages[i])
   return ctx[].finish(signature)
 
 func aggregateVerify*(
@@ -594,9 +590,9 @@ func aggregateVerify*(
   var ctx{.noInit.}: ref ContextCoreAggregateVerify
   new ctx
 
-  ctx[].init()
+  ctx[].init(DST)
   for i in 0 ..< publicKeys.len:
-    result = ctx[].update(publicKeys[i], messages[i], DST)
+    result = ctx[].update(publicKeys[i], messages[i])
     if not result:
       return
   return ctx[].finish(signature)
@@ -618,9 +614,9 @@ func aggregateVerify*[T: string or seq[byte]](
   var ctx{.noInit.}: ref ContextCoreAggregateVerify
   new ctx
 
-  ctx[].init()
+  ctx[].init(DST)
   for i in 0 ..< publicKey_msg_pairs.len:
-    result = ctx[].update(publicKey_msg_pairs[i].publicKey, publicKey_msg_pairs[i].message, DST)
+    result = ctx[].update(publicKey_msg_pairs[i].publicKey, publicKey_msg_pairs[i].message)
     if not result:
       return
   return ctx[].finish(signature)

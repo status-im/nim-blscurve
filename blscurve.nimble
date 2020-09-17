@@ -45,6 +45,9 @@ task test, "Run all tests":
     test "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
     test "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"
 
+    # Internal SHA256
+    test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
+
   # # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
   # if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":
   #   exec "nim c -d:danger --outdir:build -r" &
