@@ -53,7 +53,7 @@ func limbs_from_be_bytes(
 
 # Nim-Beacon-Chain compiles with --march=native by default
 {.emit:"""
-#ifdef __ADX__                  /* e.g. -march=broadwell */
+#if defined(__ADX__) && !defined(__BLST_PORTABLE__) /* e.g. -march=broadwell */
 # define mul_mont_sparse_256 mulx_mont_sparse_256
 # define redc_mont_256 redcx_mont_256
 #endif
