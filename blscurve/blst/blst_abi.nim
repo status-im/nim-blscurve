@@ -7,6 +7,8 @@ const headerPath = currentSourcePath.rsplit(DirSep, 1)[0]/".."/".."/"vendor"/"bl
 {.pragma: blst, importc, header: headerPath.}
 
 type CTbool* = distinct cint
+  ## Boolean for constant-time protected use-cases
+
 type HashOrEncode* {.size: sizeof(cint).} = enum
   kEncode = 0
   kHash = 1
@@ -80,8 +82,7 @@ const
 type
   limb_t* = uint64
   blst_scalar* {.byref.} = object
-    l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8)) /
-        typeof(256)(sizeof((limb_t)))), limb_t]
+    l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8))), byte]
   blst_fr* {.byref.} = object
     l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8)) /
         typeof(256)(sizeof((limb_t)))), limb_t]
@@ -121,12 +122,12 @@ type
 
   blst_pairing* {.incompleteStruct, blst.} = object
 
-var
-  # Generators
-  BLS12_381_G1* {.blst.}: blst_p1_affine
-  BLS12_381_NEG_G1* {.blst.}: blst_p1_affine
-  BLS12_381_G2* {.blst.}: blst_p2_affine
-  BLS12_381_NEG_G2* {.blst.}: blst_p2_affine
+# var
+#   # Generators
+#   BLS12_381_G1* {.blst.}: blst_p1_affine
+#   BLS12_381_NEG_G1* {.blst.}: blst_p1_affine
+#   BLS12_381_G2* {.blst.}: blst_p2_affine
+#   BLS12_381_NEG_G2* {.blst.}: blst_p2_affine
 
 {.push cdecl, importc, header: headerPath.}
 
@@ -149,8 +150,11 @@ proc blst_fr_rshift*(ret: var blst_fr; a: blst_fr; count: uint)
 proc blst_fr_mul*(ret: var blst_fr; a: blst_fr; b: blst_fr)
 proc blst_fr_sqr*(ret: var blst_fr; a: blst_fr)
 proc blst_fr_cneg*(ret: var blst_fr; a: blst_fr; flag: uint)
-proc blst_fr_to*(ret: var blst_fr; a: blst_fr)
-proc blst_fr_from*(ret: var blst_fr; a: blst_fr)
+proc blst_fr_eucl_inverse*(ret: var blst_fr, a: blst_fr)
+proc blst_fr_from_uint64*(ret: var blst_fr, a: array[4, uint64])
+proc blst_uint64_from_fr*(ret: var array[4, uint64], a: blst_fr)
+proc blst_fr_from_scalar*(ret: var blst_fr; a: blst_scalar)
+proc blst_scalar_from_fr(ret: var blst_scalar, a: blst_fr)
 
 # BLS12-381-specific Fp operations (Modulo BLS12-381 prime)
 proc blst_fp_add*(ret: var blst_fp; a: blst_fp; b: blst_fp)
@@ -162,8 +166,8 @@ proc blst_fp_mul*(ret: var blst_fp; a: blst_fp; b: blst_fp)
 proc blst_fp_sqr*(ret: var blst_fp; a: blst_fp)
 proc blst_fp_cneg*(ret: var blst_fp; a: blst_fp; flag: uint)
 proc blst_fp_eucl_inverse*(ret: var blst_fp; a: blst_fp)
-proc blst_fp_to*(ret: var blst_fp; a: blst_fp)
-proc blst_fp_from*(ret: var blst_fp; a: blst_fp)
+proc blst_fp_inverse*(ret: var blst_fp; a: blst_fp)
+proc blst_fp_sqrt*(ret: var blst_fp; a: blst_fp): CTBool
 proc blst_fp_from_uint32*(ret: var blst_fp; a: array[12, uint32])
 proc blst_uint32_from_fp*(ret: var array[12, uint32]; a: blst_fp)
 proc blst_fp_from_uint64*(ret: var blst_fp; a: array[6, uint64])
@@ -182,6 +186,9 @@ proc blst_fp2_lshift*(ret: var blst_fp2; a: blst_fp2; count: uint)
 proc blst_fp2_mul*(ret: var blst_fp2; a: blst_fp2; b: blst_fp2)
 proc blst_fp2_sqr*(ret: var blst_fp2; a: blst_fp2)
 proc blst_fp2_cneg*(ret: var blst_fp2; a: blst_fp2; flag: uint)
+proc blst_fp2_eucl_inverse*(ret: var blst_fp2; a: blst_fp2)
+proc blst_fp2_inverse*(ret: var blst_fp2; a: blst_fp2)
+proc blst_fp2_sqrt*(ret: var blst_fp2; a: blst_fp2): CTBool
 
 # BLS12-381-specific Fp12 operations.
 proc blst_fp12_sqr*(ret: var blst_fp12; a: blst_fp12)
@@ -194,30 +201,45 @@ proc blst_fp12_frobenius_map*(ret: var blst_fp12; a: blst_fp12; n: uint)
   ##   caveat lector! |n| has to be non-zero and not more than 3!
 proc blst_fp12_is_equal*(a: blst_fp12; b: blst_fp12): CTBool
 proc blst_fp12_is_one*(a: blst_fp12): CTBool
+proc blst_fp12_one*(): ptr blst_fp12
+
+# BLS12-381-specific G1 operations.
 proc blst_p1_add*(dst: var blst_p1; a: blst_p1; b: blst_p1)
 proc blst_p1_add_or_double*(dst: var blst_p1; a: blst_p1; b: blst_p1)
 proc blst_p1_add_affine*(dst: var blst_p1; a: blst_p1; b: blst_p1_affine)
 proc blst_p1_add_or_double_affine*(dst: var blst_p1; a: blst_p1; b: blst_p1_affine)
 proc blst_p1_double*(dst: var blst_p1; a: blst_p1)
-proc blst_p1_mult_w5*(dst: var blst_p1; p: blst_p1; scalar: blst_scalar; nbits: uint)
+proc blst_p1_mult*(dst: var blst_p1; p: blst_p1; scalar: blst_scalar; nbits: uint)
 proc blst_p1_cneg*(p: var blst_p1; cbit: uint)
 proc blst_p1_to_affine*(dst: var blst_p1_affine; src: blst_p1)
 proc blst_p1_from_affine*(dst: var blst_p1; src: blst_p1_affine)
+proc blst_p1_on_curve(p: blst_p1): CTBool
+proc blst_p1_is_equal(a: blst_p1, b: blst_p1): CTBool
+proc blst_p1_is_inf(a: blst_p1): CTBool
 proc blst_p1_affine_on_curve*(p: blst_p1_affine): CTBool
 proc blst_p1_affine_in_g1*(p: blst_p1_affine): CTBool
 proc blst_p1_affine_is_equal*(a: blst_p1_affine; b: blst_p1_affine): CTBool
+proc blst_p1_affine_is_inf(a: blst_p1_affine): CTBool
+proc blst_p1_generator(): ptr blst_p1
+
+# BLS12-381-specific G2 operations.
 proc blst_p2_add*(dst: var blst_p2; a: blst_p2; b: blst_p2)
 proc blst_p2_add_or_double*(dst: var blst_p2; a: blst_p2; b: blst_p2)
 proc blst_p2_add_affine*(dst: var blst_p2; a: blst_p2; b: blst_p2_affine)
 proc blst_p2_add_or_double_affine*(dst: var blst_p2; a: blst_p2; b: blst_p2_affine)
 proc blst_p2_double*(dst: var blst_p2; a: blst_p2)
-proc blst_p2_mult_w5*(dst: var blst_p2; p: blst_p2; scalar: blst_scalar; nbits: uint)
+proc blst_p2_mult*(dst: var blst_p2; p: blst_p2; scalar: blst_scalar; nbits: uint)
 proc blst_p2_cneg*(p: var blst_p2; cbit: uint)
 proc blst_p2_to_affine*(dst: var blst_p2_affine; src: blst_p2)
 proc blst_p2_from_affine*(dst: var blst_p2; src: blst_p2_affine)
+proc blst_p2_on_curve(p: blst_p2): bool
+proc blst_p2_is_equal(a: blst_p2, b: blst_p2): bool
+proc blst_p2_is_inf(a: blst_p2): bool
 proc blst_p2_affine_on_curve*(p: blst_p2_affine): CTBool
 proc blst_p2_affine_in_g2*(p: blst_p2_affine): CTBool
 proc blst_p2_affine_is_equal*(a: blst_p2_affine; b: blst_p2_affine): CTBool
+proc blst_p2_affine_is_inf(a: blst_p2_affine): bool
+proc blst_p2_generator(): ptr blst_p2
 
 # Hash-to-curve operations.
 proc blst_map_to_g1*(dst: var blst_p1; u: blst_fp; v: blst_fp)
@@ -270,61 +292,75 @@ proc blst_sign_pk_in_g2*(out_sig: var blst_p1; hash: blst_p1; SK: blst_scalar)
 
 # Pairing interface
 #
-#  Usage pattern on single-processor system is
+#   Usage pattern on single-processor system is
 #
-#  blst_pairing_init(ctx);
-#  blst_pairing_aggregate_pk_in_g1(ctx, PK1, aggregated_signature, message1);
-#  blst_pairing_aggregate_pk_in_g1(ctx, PK2, NULL, message2);
-#  ...
-#  blst_pairing_commit(ctx);
-#  blst_pairing_finalverify(ctx, NULL);
+#   blst_pairing_init(ctx, hash_or_encode, DST);
+#   blst_pairing_aggregate_pk_in_g1(ctx, PK[0], aggregated_signature, msg[0]);
+#   blst_pairing_aggregate_pk_in_g1(ctx, PK[1], NULL, msg[1]);
+#   ...
+#   blst_pairing_commit(ctx);
+#   blst_pairing_finalverify(ctx, NULL);
 #
-# **********************************************************************
-#  Usage pattern on multi-processor system is
+#  **********************************************************************
+#   Usage pattern on multi-processor system is
 #
-#    blst_pairing_init(pk0);
-#    blst_pairing_init(pk1);
-#    ...
-#  start threads each processing a slice of PKs and messages:
-#      blst_pairing_aggregate_pk_in_g1(pkx, PK[], NULL, message[]);
-#      blst_pairing_commit(pkx);
-#    ...
-#    blst_fp12 gtsig;
-#    blst_aggregated_in_g2(&gtsig, aggregated_signature);
-#  join threads and merge their contexts:
-#    blst_pairing_merge(pk0, pk1);
-#    blst_pairing_merge(pk0, pk2);
-#    ...
-#    blst_pairing_finalverify(pk0, gtsig);
-#
+#     blst_pairing_init(pk[0], hash_or_encode, DST);
+#     blst_pairing_init(pk[1], hash_or_encode, DST);
+#     ...
+#   start threads each processing an N/nthreads slice of PKs and messages:
+#       blst_pairing_aggregate_pk_in_g1(pk[i], PK[i*n+0], NULL, msg[i*n+0]);
+#       blst_pairing_aggregate_pk_in_g1(pk[i], PK[i*n+1], NULL, msg[i*n+1]);
+#       ...
+#       blst_pairing_commit(pkx);
+#     ...
+#   meanwhile in main thread
+#     blst_fp12 gtsig;
+#     blst_aggregated_in_g2(&gtsig, aggregated_signature);
+#   join threads and merge their contexts:
+#     blst_pairing_merge(pk[0], pk[1]);
+#     blst_pairing_merge(pk[0], pk[2]);
+#     ...
+#     blst_pairing_finalverify(pk[0], gtsig);
 
 proc blst_miller_loop*(ret: var blst_fp12; Q: blst_p2_affine; P: blst_p1_affine)
 proc blst_final_exp*(ret: var blst_fp12; f: blst_fp12)
 proc blst_precompute_lines*(Qlines: var array[68, blst_fp6]; Q: blst_p2_affine)
 proc blst_miller_loop_lines*(ret: var blst_fp12; Qlines: array[68, blst_fp6]; P: blst_p1_affine)
 proc blst_pairing_sizeof*(): uint
-proc blst_pairing_init*(new_ctx: var blst_pairing)
+proc blst_pairing_init*[T: byte|char](new_ctx: var blst_pairing,
+                        hash_or_encode: HashOrEncode,
+                        domainSepTag: openArray[T])
+proc blst_pairing_get_dst*(ctx: blst_pairing): ptr UncheckedArray[byte]
 proc blst_pairing_commit*(ctx: var blst_pairing)
-proc blst_pairing_aggregate_pk_in_g2*[T,U,V: byte|char](
-                                     ctx: var blst_pairing; PK: ptr blst_p2_affine;
+proc blst_pairing_aggregate_pk_in_g2*[T,U: byte|char](
+                                     ctx: var blst_pairing;
+                                     PK: ptr blst_p2_affine;
                                      signature: ptr blst_p1_affine;
-                                     hash_or_encode: HashOrEncode;
                                      msg: openArray[T];
-                                     domainSepTag: openArray[U];
-                                     aug: openArray[V]): BLST_ERROR
-proc blst_pairing_mul_n_aggregate_pk_in_g2*(ctx: var blst_pairing;
-    PK: ptr blst_p2_affine; sig: ptr blst_p1_affine; hash: blst_p1_affine;
-    scalar: limb_t; nbits: uint): BLST_ERROR
-proc blst_pairing_aggregate_pk_in_g1*[T,U,V: byte|char](
-                                     ctx: var blst_pairing; PK: ptr blst_p1_affine;
+                                     aug: openArray[U]): BLST_ERROR
+proc blst_pairing_mul_n_aggregate_pk_in_g2*[T,U: byte|char](
+                                     ctx: var blst_pairing;
+                                     PK: ptr blst_p2_affine;
+                                     sig: ptr blst_p1_affine;
+                                     scalar: limb_t; nbits: uint,
+                                     msg: openArray[T];
+                                     aug: openArray[U]
+                                     ): BLST_ERROR
+proc blst_pairing_aggregate_pk_in_g1*[T,U: byte|char](
+                                     ctx: var blst_pairing;
+                                     PK: ptr blst_p1_affine;
                                      signature: ptr blst_p2_affine;
-                                     hash_or_encode: HashOrEncode;
                                      msg: openArray[T];
-                                     domainSepTag: openArray[U];
-                                     aug: openArray[V]): BLST_ERROR
-proc blst_pairing_mul_n_aggregate_pk_in_g1*(ctx: var blst_pairing;
-    PK: ptr blst_p1_affine; sig: ptr blst_p2_affine; hash: blst_p2_affine;
-    scalar: limb_t; nbits: uint): BLST_ERROR
+                                     aug: openArray[U]): BLST_ERROR
+proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](
+                                     ctx: var blst_pairing;
+                                     PK: ptr blst_p1_affine;
+                                     sig: ptr blst_p2_affine;
+                                     hash: blst_p2_affine;
+                                     scalar: limb_t; nbits: uint,
+                                     msg: openArray[T];
+                                     aug: openArray[U]
+                                     ): BLST_ERROR
 proc blst_pairing_merge*(ctx: var blst_pairing; ctx1: blst_pairing): BLST_ERROR
 proc blst_pairing_finalverify*(ctx: var blst_pairing; gtsig: ptr blst_fp12): CTBool
 
