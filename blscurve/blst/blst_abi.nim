@@ -122,12 +122,12 @@ type
 
   blst_pairing* {.incompleteStruct, blst.} = object
 
-# var
-#   # Generators
-#   BLS12_381_G1* {.blst.}: blst_p1_affine
-#   BLS12_381_NEG_G1* {.blst.}: blst_p1_affine
-#   BLS12_381_G2* {.blst.}: blst_p2_affine
-#   BLS12_381_NEG_G2* {.blst.}: blst_p2_affine
+var
+  # Generators
+  BLS12_381_G1* {.blst.}: blst_p1_affine
+  BLS12_381_NEG_G1* {.blst.}: blst_p1_affine
+  BLS12_381_G2* {.blst.}: blst_p2_affine
+  BLS12_381_NEG_G2* {.blst.}: blst_p2_affine
 
 {.push cdecl, importc, header: headerPath.}
 
