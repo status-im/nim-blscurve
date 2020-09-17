@@ -27,8 +27,15 @@ when BLS_FORCE_BACKEND == "blst" or (
       defined(amd64) and
       gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0))
   ):
+  # BLST supports: x86_64 and ARM64
+  # and has optimized SHA256 routines for x86_64 CPU with SSE3
   const BLS_BACKEND* = BLST
+elif BLS_FORCE_BACKEND == "auto" and defined(amd64):
+  # CPU doesn't support SSE3 which is used in optimized SHA256
+  const BLS_BACKEND* = BLST
+  {.passC: "-D__BLST_PORTABLE__".}
 else:
+  # Pure C fallback for all platforms
   const BLS_BACKEND* = Miracl
 
 when BLS_BACKEND == BLST:
