@@ -22,7 +22,6 @@ proc test() =
   let a = sha256.digest(input)
 
   var b{.noInit.}: array[32, byte]
-  doAssert a.data != b
   b.bls_sha256_digest(input)
   doAssert a.data == b
 
