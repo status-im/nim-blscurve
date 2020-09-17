@@ -59,9 +59,9 @@ proc report(op: string, start, stop: MonoTime, startClk, stopClk: int64, iters: 
   let ns = inNanoseconds((stop-start) div iters)
   let throughput = 1e9 / float64(ns)
   when SupportsGetTicks:
-    echo &"{op:<52}     {throughput:>10.3f} ops/s    {ns:>9} ns/op    {(stopClk - startClk) div iters:>9} cycles"
+    echo &"{op:<52}     {throughput:>15.3f} ops/s    {ns:>9} ns/op    {(stopClk - startClk) div iters:>9} cycles"
   else:
-    echo &"{op:<52}     {throughput:>10.3f} ops/s    {ns:>9} ns/op"
+    echo &"{op:<52}     {throughput:>15.3f} ops/s    {ns:>9} ns/op"
 
 template bench*(op: string, iters: int, body: untyped): untyped =
   let start = getMonotime()

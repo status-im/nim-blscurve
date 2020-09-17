@@ -39,8 +39,8 @@ else:
   const BLS_BACKEND* = Miracl
 
 when BLS_BACKEND == BLST:
-  import ./blst/bls_sig_min_pubkey_size_pop
-  export bls_sig_min_pubkey_size_pop
+  import ./blst/bls_sig_min_pubkey_size_pop, ./blst/sha256_abi
+  export bls_sig_min_pubkey_size_pop, sha256_abi
 else:
   import
     ./miracl/bls_signature_scheme
