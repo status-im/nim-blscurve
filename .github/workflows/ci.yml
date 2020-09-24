@@ -208,7 +208,6 @@ jobs:
           nimble install https://github.com/status-im/NimYAML@#head
           nimble install stint
       - name: Run nim-blscurve tests
-        if: runner.os == 'Linux' && matrix.target.cpu == 'i386'
         shell: bash
         run: |
           export UCPU="$cpu"
