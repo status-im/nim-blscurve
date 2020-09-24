@@ -147,6 +147,8 @@ when (sizeof(int) == 4) or defined(use32):
        importc: "BIG_384_29_rcopy", cdecl.}
   proc BIG_384_mod*(x, n: BIG_384) {.
        importc: "BIG_384_29_mod", cdecl.}
+  proc BIG_384_iszilch*(x: BIG_384): cint {.
+       importc: "BIG_384_29_iszilch", cdecl.}
 elif sizeof(int) == 8:
   proc BIG_384_toBytes*(b: ptr char, a: BIG_384) {.
        importc: "BIG_384_58_toBytes", cdecl.}
@@ -180,6 +182,8 @@ elif sizeof(int) == 8:
        importc: "BIG_384_58_rcopy", cdecl.}
   proc BIG_384_mod*(x, n: BIG_384) {.
        importc: "BIG_384_58_mod", cdecl.}
+  proc BIG_384_iszilch*(x: BIG_384): cint {.
+       importc: "BIG_384_58_iszilch", cdecl.}
 
 proc PAIR_BLS12381_ate*(res: ptr FP12_BLS12381, p: ptr ECP2_BLS12381,
                       q: ptr ECP_BLS12381) {.milagro_func.}
