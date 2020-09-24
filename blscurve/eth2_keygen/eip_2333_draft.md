@@ -6,7 +6,7 @@ Update history:
 - https://github.com/ethereum/EIPs/pull/2985
 
 Warning, for test vector 0 use the test vectors with intermediate computation
-the original one wasn't updated
+the original one wasn't updated, see https://github.com/ethereum/EIPs/pull/3001
 
 ---
 eip: 2333
