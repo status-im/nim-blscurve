@@ -11,11 +11,13 @@
 # https://eips.ethereum.org/EIPS/eip-2333
 
 import
+  # Standard library
+  std/[os, strutils],
   # third-party
   nimcrypto/[hmac, sha2], stew/endians2,
   # internal
   ../bls_backend,
-  ../blst/blst_lowlevel,
+  ../blst/[blst_lowlevel, sha256_abi],
   ./hkdf
 
 # Note: we can't use HKDF from BLST as it's tagged "static" and so unexported
@@ -59,60 +61,73 @@ func limbs_from_be_bytes(
 #endif
 """.}
 
+const srcPath = currentSourcePath.rsplit(DirSep, 1)[0]/".."/".."/"vendor"/"blst"/"src"
+
 func redc_mont_256(
       ret: var vec256,
       a: vec512,
       p: vec256,
       n0: limb_t
-    ) {.importc.}
+    ) {.importc, header: srcPath/"vect.h".}
   # Can use the redcx version with adx support
 
 func mul_mont_sparse_256(
       ret: var vec256,
       a, b, p: vec256,
       n0: limb_t
-    ) {.importc.}
+    ) {.importc, header: srcPath/"vect.h".}
   # Can use the mulx version with adx support
+
+func vec_is_zero(ret: pointer, num: csize_t): CTbool
+    {.importc, exportc, header: srcPath/"vect.h", nodecl.}
+func vec_zero(ret: pointer, num: csize_t)
+    {.importc, exportc, header: srcPath/"vect.h", nodecl.}
 
 # ----------------------------------------------------------------------
 
 func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: string): bool =
   ## Ethereum 2 EIP-2333, extracts this from the BLS signature schemes
-  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM)
-  # 2. OKM = HKDF-Expand(PRK, "", L)
-  # 3. SK = OS2IP(OKM) mod r
-  # 4. return SK
-  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
-  # 2. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
-  # 3. SK = OS2IP(OKM) mod r
-  # 4. return SK
-  const salt = "BLS-SIG-KEYGEN-SALT-"
+  # 1. salt = "BLS-SIG-KEYGEN-SALT-"
+  # 2. SK = 0
+  # 3. while SK == 0:
+  # 4.     salt = H(salt)
+  # 5.     PRK = HKDF-Extract(salt, IKM || I2OSP(0, 1))
+  # 6.     OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
+  # 7.     SK = OS2IP(OKM) mod r
+  # 8. return SK
+  const salt0 = "BLS-SIG-KEYGEN-SALT-"
   var ctx: HMAC[sha256]
   var prk: MDigest[sha256.bits]
 
-  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
-  ctx.hkdfExtract(prk, salt, ikm, [byte 0])
+  secretkey.addr.vec_zero(csize_t sizeof SecretKey)
 
-  # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-  # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
-  # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
+  var salt {.noInit.}: array[32, byte]
+  salt.bls_sha256_digest(salt0)
 
-  # 2. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
-  const L = 48
-  var okm: array[L, byte]
-  const L_octetstring = L.uint16.toBytesBE()
-  ctx.hkdfExpand(prk, key_info, append = L_octetstring, okm)
+  while true:
+    # 5. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
+    ctx.hkdfExtract(prk, salt, ikm, [byte 0])
+    # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+    # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
+    # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
+    # 6. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
+    const L = 48
+    var okm: array[L, byte]
+    const L_octetstring = L.uint16.toBytesBE()
+    ctx.hkdfExpand(prk, key_info, append = L_octetstring, okm)
+    # The cast is a workaround for private field access
+    let seckey = cast[ptr vec256](secretKey.unsafeAddr)
+    #  3. x = OS2IP(OKM) mod r
+    var dseckey: vec512
+    limbs_from_be_bytes(dseckey, okm)
+    {.noSideEffect.}: # Accessing C global constants wrapped in var
+      redc_mont_256(seckey[], dseckey, BLS12_381_r, r0)
+      mul_mont_sparse_256(seckey[], seckey[], BLS12_381_rRR, BLS12_381_r, r0)
 
-  # The cast is a workaround for private field access
-  let seckey = cast[ptr vec256](secretKey.unsafeAddr)
-  #  3. x = OS2IP(OKM) mod r
-  var dseckey: vec512
-  limbs_from_be_bytes(dseckey, okm)
-  {.noSideEffect.}: # Accessing C global constants wrapped in var
-    redc_mont_256(seckey[], dseckey, BLS12_381_r, r0)
-    mul_mont_sparse_256(seckey[], seckey[], BLS12_381_rRR, BLS12_381_r, r0)
-
-  # TODO: how to erase the secrets on the stack?
+    if bool secretkey.addr.vec_is_zero(csize_t sizeof SecretKey):
+      salt.bls_sha256_digest(salt)
+    else:
+      break
 
   return true
 
