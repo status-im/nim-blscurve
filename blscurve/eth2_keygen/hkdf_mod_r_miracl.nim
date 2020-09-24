@@ -28,33 +28,38 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
   # 2. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
   # 3. SK = OS2IP(OKM) mod r
   # 4. return SK
-  const salt = "BLS-SIG-KEYGEN-SALT-"
+  const salt0 = "BLS-SIG-KEYGEN-SALT-"
   var ctx: HMAC[sha256]
   var prk: MDigest[sha256.bits]
 
-  # 1. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
-  ctx.hkdfExtract(prk, salt, ikm, [byte 0])
+  # The cast is a workaround for private field access
+  cast[ptr BIG_384](secretKey.addr)[].zero()
 
-  # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
-  # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
-  # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
+  var salt = sha256.digest(salt0)
 
-  # 2. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
-  const L = 48
-  var okm: array[L, byte]
-  const L_octetstring = L.uint16.toBytesBE()
-  ctx.hkdfExpand(prk, key_info, append = L_octetstring, okm)
+  while true:
+    # 5. PRK = HKDF-Extract("BLS-SIG-KEYGEN-SALT-", IKM || I2OSP(0, 1))
+    ctx.hkdfExtract(prk, salt.data, ikm, [byte 0])
+    # curve order r = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+    # const L = ceil((1.5 * ceil(log2(r))) / 8) = 48
+    # https://www.wolframalpha.com/input/?i=ceil%28%281.5+*+ceil%28log2%2852435875175126190479447740508185965837690552500527637822603658699938581184513%29%29%29+%2F+8%29
+    # 6. OKM = HKDF-Expand(PRK, key_info || I2OSP(L, 2), L)
+    const L = 48
+    var okm: array[L, byte]
+    const L_octetstring = L.uint16.toBytesBE()
+    ctx.hkdfExpand(prk, key_info, append = L_octetstring, okm)
+    #  7. x = OS2IP(OKM) mod r
+    var dseckey: DBIG_384
+    if not dseckey.fromBytes(okm):
+      return false
+    {.noSideEffect.}:
+      # The cast is a workaround for private field access
+      BIG_384_dmod(cast[ptr BIG_384](secretKey.addr)[], dseckey, CURVE_Order)
 
-  #  3. x = OS2IP(OKM) mod r
-  var dseckey: DBIG_384
-  if not dseckey.fromBytes(okm):
-    return false
-
-  {.noSideEffect.}:
-    # The cast is a workaround for private field access
-    BIG_384_dmod(cast[ptr BIG_384](secretKey.addr)[], dseckey, CURVE_Order)
-
-  return true
+    if bool cast[ptr BIG_384](secretKey.addr)[].BIG_384_iszilch():
+      salt = sha256.digest(salt0)
+    else:
+      return true
 
 func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey, key_info = ""): bool =
   ## Generate a (public key, secret key) pair

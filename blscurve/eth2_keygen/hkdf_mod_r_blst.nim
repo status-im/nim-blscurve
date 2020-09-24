@@ -117,7 +117,7 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
     ctx.hkdfExpand(prk, key_info, append = L_octetstring, okm)
     # The cast is a workaround for private field access
     let seckey = cast[ptr vec256](secretKey.unsafeAddr)
-    #  3. x = OS2IP(OKM) mod r
+    #  7. x = OS2IP(OKM) mod r
     var dseckey: vec512
     limbs_from_be_bytes(dseckey, okm)
     {.noSideEffect.}: # Accessing C global constants wrapped in var
@@ -127,9 +127,9 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
     if bool secretkey.addr.vec_is_zero(csize_t sizeof SecretKey):
       salt.bls_sha256_digest(salt)
     else:
-      break
+      return true
 
-  return true
+
 
 func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey): bool =
   ## Generate a (public key, secret key) pair
