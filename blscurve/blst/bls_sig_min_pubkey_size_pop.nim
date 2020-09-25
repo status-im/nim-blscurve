@@ -315,26 +315,6 @@ func coreSign[T: byte|char](
   sig.blst_sign_pk_in_g1(sig, secretKey.scalar)
   signature.point.blst_p2_to_affine(sig)
 
-# TODO
-# ETH2~BLST difference https://github.com/supranational/blst/issues/11
-# We manually allow infinity pubkey with infinity signature (non-constant-time)
-# Can be accelerated by removing "vec_is_zero" in the C files
-func vec_is_zero[T: blst_p1 or blst_p1_affine or blst_p2 or blst_p2_affine](
-       v: T
-     ): bool {.inline.} =
-  # Implementation from BLST vect.h
-
-  var acc = default(limb_t)
-  let num = sizeof(T) div sizeof(limb_t)
-  const LIMB_T_BITS = sizeof(limb_t) * 8
-
-  let ap = cast[ptr UncheckedArray[limb_t]](v.unsafeAddr)
-
-  for i in 0 ..< num:
-    acc = acc or ap[i]
-
-  return bool((not(acc) and (acc-1)) shr (LIMB_T_BITS-1))
-
 func coreVerify[T: byte|char](
        publicKey: PublicKey,
        message: openarray[T],

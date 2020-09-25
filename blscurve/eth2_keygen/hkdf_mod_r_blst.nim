@@ -78,11 +78,6 @@ func mul_mont_sparse_256(
     ) {.importc, header: srcPath/"vect.h".}
   # Can use the mulx version with adx support
 
-func vec_is_zero(ret: pointer, num: csize_t): CTbool
-    {.importc, exportc, header: srcPath/"vect.h", nodecl.}
-func vec_zero(ret: pointer, num: csize_t)
-    {.importc, exportc, header: srcPath/"vect.h", nodecl.}
-
 # ----------------------------------------------------------------------
 
 func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: string): bool =
@@ -99,7 +94,7 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
   var ctx: HMAC[sha256]
   var prk: MDigest[sha256.bits]
 
-  secretkey.addr.vec_zero(csize_t sizeof SecretKey)
+  secretkey.vec_zero()
 
   var salt {.noInit.}: array[32, byte]
   salt.bls_sha256_digest(salt0)
@@ -124,7 +119,7 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
       redc_mont_256(seckey[], dseckey, BLS12_381_r, r0)
       mul_mont_sparse_256(seckey[], seckey[], BLS12_381_rRR, BLS12_381_r, r0)
 
-    if bool secretkey.addr.vec_is_zero(csize_t sizeof SecretKey):
+    if bool secretkey.vec_is_zero():
       salt.bls_sha256_digest(salt)
     else:
       return true
