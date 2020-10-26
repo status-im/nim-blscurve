@@ -155,6 +155,10 @@ proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
   result = int(BIG_384_comp(a, b))
 
+proc iszilch*(a: BIG_384): bool {.inline.} =
+  ## Returns ``true`` if ``a`` is zero.
+  result = bool(BIG_384_iszilch(a))
+
 proc iszilch*(a: FP_BLS12381): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
   result = (FP_BLS12381_iszilch(unsafeAddr a) == 1)

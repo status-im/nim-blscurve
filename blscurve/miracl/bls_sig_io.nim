@@ -22,10 +22,18 @@ func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
   ## Initialize a BLS signature scheme object from
   ## its hex raw bytes representation.
   ## Returns true on a success and false otherwise
+  ## For secret key deserialization
+  ## A zero key is invalid
   when obj is SecretKey:
     result = obj.intVal.fromHex(hexStr)
+    if obj.intVal.isZilch():
+      return false
   else:
     result = obj.point.fromHex(hexStr)
+    when obj is PublicKey:
+      # KeyValidate
+      if obj.point.isInf():
+        result = false
 
 func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
        obj: var T,
@@ -34,10 +42,18 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
+  ## For secret key deserialization
+  ## A zero key is invalid
   when obj is SecretKey:
     result = obj.intVal.fromBytes(raw)
+    if obj.intVal.isZilch():
+      return false
   else:
     result = obj.point.fromBytes(raw)
+    when obj is PublicKey:
+      # KeyValidate
+      if obj.point.isInf():
+        result = false
 
 func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string {.inline.} =
   ## Return the hex representation of a BLS signature scheme object

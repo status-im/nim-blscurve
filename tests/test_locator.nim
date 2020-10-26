@@ -9,7 +9,7 @@ import
 export
   os, json
 
-const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v0.12.0_vectors"
+const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v1.0.0-rc0_vectors"
 
 proc parseTest*(file: string): JsonNode =
   var yamlStream = openFileStream(file)
