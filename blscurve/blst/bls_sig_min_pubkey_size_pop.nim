@@ -148,24 +148,27 @@ func fromBytes*(
       return false
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
     result = obj.point.blst_p1_uncompress(pa[]) == BLST_SUCCESS
+  if obj.vec_is_zero():
+    return false
 
 func fromBytes*(
        obj: var SecretKey,
        raw: openarray[byte] or array[32, byte]
       ): bool {.inline.} =
-  ## Initialize a BLS signature scheme object from
+  ## Initialize a BLS secret key from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
   const L = 32
   when raw is array:
     obj.scalar.blst_scalar_from_bendian(raw)
-    return true
   else:
     if raw.len != 32:
       return false
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
     obj.scalar.blst_scalar_from_bendian(pa[])
-    return true
+  if obj.vec_is_zero():
+    return false
+  return true
 
 func fromHex*(
        obj: var (SecretKey|PublicKey|Signature|ProofOfPossession),
@@ -229,15 +232,17 @@ func exportRaw*(signature: Signature): array[96, byte] {.inline.}=
 # Primitives
 # ----------------------------------------------------------------------
 
-func privToPub*(secretKey: SecretKey): PublicKey {.inline.} =
+func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool {.noInit.} =
   ## Generates a public key from a secret key
   ## Generates a public key from a secret key
   ## This requires some -O3 compiler optimizations to be off
-  ## as such {.passC: "-fno-peel-loops -fno-tree-loop-vectorize".}
-  ## is automatically added to the compiler flags
+  ## as such {.passC: "-fno-tree-vectorize".}
+  ## is automatically added to the compiler flags in blst_lowlevel
+  if seckey.vec_is_zero():
+    return false
   var pk {.noInit.}: blst_p1
-  pk.blst_sk_to_pk_in_g1(secretKey.scalar)
-  result.point.blst_p1_to_affine(pk)
+  pk.blst_sk_to_pk_in_g1(seckey.scalar)
+  pubkey.point.blst_p1_to_affine(pk)
 
 # Aggregate
 # ----------------------------------------------------------------------
@@ -248,6 +253,7 @@ func init*(agg: var AggregateSignature, sig: Signature) {.inline.} =
 
 func aggregate*(agg: var AggregateSignature, sig: Signature) {.inline.} =
   ## Aggregates signature ``sig`` into ``agg``
+  # Precondition n >= 1 is respected
   agg.point.blst_p2_add_or_double_affine(
     agg.point,
     sig.point
@@ -255,6 +261,7 @@ func aggregate*(agg: var AggregateSignature, sig: Signature) {.inline.} =
 
 proc aggregate*(agg: var AggregateSignature, sigs: openarray[Signature]) =
   ## Aggregates an array of signatures `sigs` into a signature `sig`
+  # Precondition n >= 1 is respected even if sigs.len == 0
   for s in sigs:
     agg.point.blst_p2_add_or_double_affine(
       agg.point,
@@ -265,18 +272,22 @@ proc finish*(sig: var Signature, agg: AggregateSignature) {.inline.} =
   ## Canonicalize the AggregateSignature into a Signature
   sig.point.blst_p2_to_affine(agg.point)
 
-proc aggregate*(sigs: openarray[Signature]): Signature =
-  ## Aggregates array of signatures ``sigs``
-  ## and return aggregated signature.
-  ##
+proc aggregateAll*(dst: var Signature, sigs: openarray[Signature]): bool =
+  ## Returns the aggregate signature of ``sigs[0..<sigs.len]``.
+  ## Important:
+  ##   `dst` is overwritten
+  ##    if `dst` contains a signature, it WILL NOT be aggregated with `sigs`
   ## Array ``sigs`` must not be empty!
-  # TODO: what is the correct empty signature to return?
-  #       for now we assume that empty aggregation is handled at the client level
-  doAssert(len(sigs) > 0)
+  ##
+  ## Returns false if `sigs` is the empty array
+  ## and true otherwise
+  if len(sigs) == 0:
+    return false
   var agg{.noInit.}: AggregateSignature
   agg.init(sigs[0])
   agg.aggregate(sigs.toOpenArray(1, sigs.high))
-  result.finish(agg)
+  dst.finish(agg)
+  return true
 
 # Core operations
 # ----------------------------------------------------------------------
@@ -322,13 +333,6 @@ func coreVerify[T: byte|char](
        domainSepTag: static string): bool {.inline.} =
   ## Check that a signature (or proof-of-possession) is valid
   ## for a message (or serialized publickey) under the provided public key
-
-  # TODO
-  # ETH2~BLST difference https://github.com/supranational/blst/issues/11
-  if publicKey.point.vec_is_zero() and
-    sig_or_proof.point.vec_is_zero():
-      return true
-
   result = BLST_SUCCESS == blst_core_verify_pk_in_g1(
     publicKey.point,
     sig_or_proof.point,
@@ -470,7 +474,9 @@ func popProve*(secretKey: SecretKey): ProofOfPossession =
   # 4. R = SK * Q
   # 5. proof = point_to_signature(R)
   # 6. return proof
-  let pubkey = privToPub(secretKey)
+  var pubkey {.noInit.}: PublicKey
+  let ok {.used.} = pubkey.publicFromSecret(secretKey)
+  assert ok, "The secret key is INVALID, it should be initialized non-zero with keyGen or derive_child_secretKey"
   result = popProve(secretKey, pubkey)
 
 func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
