@@ -14,6 +14,9 @@ import ../blscurve
 # namely -fpeel-loops -ftree-loop-vectorize
 # which are unfortunately enabled at -O3
 
+echo "\npriv_to_pub"
+echo "----------------------------------\n"
+
 proc test_sk_to_pk(seckey, pubkey: string) =
 
   var sk{.noInit.}: SecretKey

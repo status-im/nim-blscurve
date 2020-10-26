@@ -20,8 +20,6 @@ proc test(env, path: string) =
     mkDir "build"
   exec "nim " & lang & " " & env &
     " --outdir:build -r --hints:off --warnings:off " & path
-  exec "nim " & lang & " -d:release " & env &
-    " --outdir:build -r --hints:off --warnings:off " & path
 
 ### tasks
 task test, "Run all tests":
