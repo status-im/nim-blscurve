@@ -232,7 +232,7 @@ func exportRaw*(signature: Signature): array[96, byte] {.inline.}=
 # Primitives
 # ----------------------------------------------------------------------
 
-func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool {.noInit.} =
+func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## Generates a public key from a secret key
   ## Generates a public key from a secret key
   ## This requires some -O3 compiler optimizations to be off
@@ -243,6 +243,7 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool {.noInit.
   var pk {.noInit.}: blst_p1
   pk.blst_sk_to_pk_in_g1(seckey.scalar)
   pubkey.point.blst_p1_to_affine(pk)
+  return true
 
 # Aggregate
 # ----------------------------------------------------------------------

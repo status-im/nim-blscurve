@@ -111,7 +111,7 @@ func isZero*(seckey: SecretKey): bool =
   ## Those are invalid
   result = seckey.intVal.iszilch()
 
-func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool {.noInit.} =
+func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## Generates a public key from a secret key
   ## Inputs:
   ## - SK, a secret integer such that 1 <= SK < r.
