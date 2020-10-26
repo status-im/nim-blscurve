@@ -41,6 +41,9 @@ import ./hash_to_curve
 type
   SecretKey* = object
     ## A secret key in the BLS (Boneh-Lynn-Shacham) signature scheme.
+    ##
+    ## This SecretKey is non-zero by construction.
+    ##
     ## This secret key SHOULD be protected against:
     ## - side-channel attacks:
     ##     implementation must perform exactly the same memory access
@@ -103,55 +106,103 @@ func subgroupCheck(P: GroupG1 or GroupG2): bool =
     rP.mul(CURVE_Order)
   result = rP.isInf()
 
-func secretKeyToPublickey*(secretKey: SecretKey): PublicKey {.noInit.} =
+func isZero*(seckey: SecretKey): bool =
+  ## Returns true if the secret key is zero
+  ## Those are invalid
+  result = seckey.intVal.iszilch()
+
+func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool {.noInit.} =
   ## Generates a public key from a secret key
-  # Inputs:
-  # - SK, a secret integer such that 0 <= SK < r.
-  #
-  # Outputs:
-  # - PK, a public key encoded as an octet string.
+  ## Inputs:
+  ## - SK, a secret integer such that 1 <= SK < r.
+  ##
+  ## Outputs:
+  ## - PK, a public key encoded as an octet string.
+  ##
+  ## Returns:
+  ## - false is secret key is invalid (SK == 0), true otherwise
+  ##
+  ## Side-channel/Constant-time considerations:
+  ## The SK content is not revealed unless its value
+  ## is exactly 0
   #
   # Procedure:
   # 1. xP = SK * P
   # 2. PK = point_to_pubkey(xP)
   # 3. return PK
-  result.point = generator1()
-  result.point.mul(secretKey.intVal)
 
-func privToPub*(secretKey: SecretKey): PublicKey {.noInit, inline, deprecated: "Use secretKeyToPublickey instead".} =
-  secretKeyToPublickey(secretKey)
+
+  # Always != 0:
+  # keyGen, deriveChild_secretKey, fromHex, fromBytes guarantee that.
+  if seckey.isZero():
+    return false
+  pubkey.point = generator1()
+  pubkey.point.mul(secKey.intVal)
+  return true
 
 # Aggregate
 # ----------------------------------------------------------------------
+# 2.8.  Aggregate (BLSv4)
+#
+#    The Aggregate algorithm aggregates multiple signatures into one.
+#    signature = Aggregate((signature_1, ..., signature_n))
+#
+#    Inputs:
+#    - signature_1, ..., signature_n, octet strings output by
+#      either CoreSign or Aggregate.
+#
+#    Outputs:
+#    - signature, an octet string encoding a aggregated signature
+#      that combines all inputs; or INVALID.
+#
+#    Precondition: n >= 1, otherwise return INVALID.
+#
+#    Procedure:
+#    1. aggregate = signature_to_point(signature_1)
+#    2. If aggregate is INVALID, return INVALID
+#    3. for i in 2, ..., n:
+#    4.     next = signature_to_point(signature_i)
+#    5.     If next is INVALID, return INVALID
+#    6.     aggregate = aggregate + next
+#    7. signature = point_to_signature(aggregate)
+#
+# Comments:
+# - This does not require signatures to be non-zero
 
 func init*(agg: var AggregateSignature, sig: Signature) {.inline.} =
   ## Initialize an aggregate signature with a signature
   agg = AggregateSignature(sig)
 
 proc aggregate*(agg: var AggregateSignature, sig: Signature) {.inline.} =
-  ## Aggregates signature ``sig2`` into ``sig1``.
+  ## Returns the aggregate signature of ``sig1`` + ``sig2``.
+  # Precondition n >= 1 is respected
   agg.point.add(sig.point)
 
 proc aggregate*(agg: var AggregateSignature, sigs: openarray[Signature]) =
-  ## Aggregates an array of signatures `sigs` into a signature `sig`
+  ## Returns the aggregate signature of ``sig1`` + ``sigs[0..<sigs.len]``.
+  # Precondition n >= 1 is respected even if sigs.len == 0
   for s in sigs:
-    agg.point.add(s.point)
+    agg.aggregate(s)
 
 proc finish*(sig: var Signature, agg: AggregateSignature) {.inline.} =
   ## Canonicalize the AggregateSignature into a Signature
   sig = Signature(agg)
 
-proc aggregate*(sigs: openarray[Signature]): Signature =
-  ## Aggregates array of signatures ``sigs``
-  ## and return aggregated signature.
-  ##
+proc aggregateAll*(dst: var Signature, sigs: openarray[Signature]): bool =
+  ## Returns the aggregate signature of ``sigs[0..<sigs.len]``.
+  ## Important:
+  ##   `dst` is overwritten
+  ##    if `dst` contains a signature, it WILL NOT be aggregated with `sigs`
   ## Array ``sigs`` must not be empty!
-  # TODO: what is the correct empty signature to return?
-  #       for now we assume that empty aggregation is handled at the client level
-  doAssert(len(sigs) > 0)
-  result = sigs[0]
+  ##
+  ## Returns false if `sigs` is the empty array
+  ## and true otherwise
+  if len(sigs) == 0:
+    return false
+  dst = sigs[0]
   for i in 1 ..< sigs.len:
-    result.point.add(sigs[i].point)
+    dst.point.add(sigs[i].point)
+  return true
 
 # Core operations
 # ----------------------------------------------------------------------
@@ -175,6 +226,11 @@ func coreSign[T: byte|char](
        domainSepTag: static string): GroupG2 =
   ## Computes a signature or proof-of-possession
   ## from a secret key and a message
+  ##
+  ## The SecretKey MUST be directly created via
+  ## `keyGen` or `derive_child_secretKey`
+  ## or deserialized from `fromBytes` or `fromHex`.
+  ## This ensures the precondition that it's not a zero key.
   # Spec
   # 1. Q = hash_to_point(message)
   # 2. R = SK * Q
@@ -190,6 +246,10 @@ func coreVerify[T: byte|char](
        domainSepTag: static string): bool =
   ## Check that a signature (or proof-of-possession) is valid
   ## for a message (or serialized publickey) under the provided public key
+  ##
+  ## PublicKey MUST be non-zero
+  ## `publicFromSecret`, `fromHex`, `fromBytes` ensure that.
+  ##
   # Spec
   # 1. R = signature_to_point(signature)
   # 2. If R is INVALID, return INVALID
@@ -213,6 +273,7 @@ func coreVerify[T: byte|char](
   if not subgroupCheck(sig_or_proof.point):
     return false
   # 4. If KeyValidate(PK) is INVALID, return INVALID
+  # We assumes PK is not 0
   if not subgroupCheck(publicKey.point):
     return false
   let Q = hashToG2(message, domainSepTag)
@@ -331,7 +392,9 @@ func popProve*(secretKey: SecretKey): ProofOfPossession =
   # 4. R = SK * Q
   # 5. proof = point_to_signature(R)
   # 6. return proof
-  let pubkey = privToPub(secretKey)
+  var pubkey {.noInit.}: PublicKey
+  let ok {.used.} = pubkey.publicFromSecret(secretKey)
+  assert ok, "The secret key is INVALID, it should be initialized non-zero with keyGen or derive_child_secretKey"
   result = popProve(secretKey, pubkey)
 
 func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
@@ -351,6 +414,11 @@ func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
 func sign*[T: byte|char](secretKey: SecretKey, message: openarray[T]): Signature =
   ## Computes a signature
   ## from a secret key and a message
+  ##
+  ## The SecretKey MUST be directly created via
+  ## `keyGen` or `derive_child_secretKey`
+  ## or deserialized from `fromBytes` or `fromHex`.
+  ## This ensures the precondition that it's not a zero key.
   result.point = secretKey.coreSign(message, DST)
 
 func verify*[T: byte|char](
@@ -364,6 +432,11 @@ func verify*[T: byte|char](
   ##
   ## Compared to the IETF spec API, it is modified to
   ## enforce proper usage of the proof-of-possession
+  ##
+  ## The PublicKey MUST be directly created via
+  ## `publicFromPrivate`
+  ## or deserialized from `fromBytes` or `fromHex`.
+  ## This ensures the precondition that it's not a zero key.
   if not publicKey.popVerify(proof):
     return false
   return publicKey.coreVerify(message, signature, DST)
@@ -379,6 +452,11 @@ func verify*[T: byte|char](
   ## The proof-of-possession MUST be verified before calling this function.
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
+  ##
+  ## The PublicKey MUST be directly created via
+  ## `publicFromPrivate`
+  ## or deserialized from `fromBytes` or `fromHex`.
+  ## This ensures the precondition that it's not a zero key.
   return publicKey.coreVerify(message, signature, DST)
 
 func aggregateVerify*(

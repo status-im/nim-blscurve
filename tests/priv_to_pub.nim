@@ -19,11 +19,13 @@ echo "----------------------------------\n"
 
 proc test_sk_to_pk(seckey, pubkey: string) =
 
-  var sk{.noInit.}: SecretKey
+  var
+    sk{.noInit.}: SecretKey
+    pk{.noInit.}: PublicKey
   let ok = sk.fromHex(seckey)
   doAssert ok
-  let pk = sk.privToPub()
-
+  let ok2 = pk.publicFromSecret(sk)
+  doAssert ok2
   doAssert pk.toHex() == pubkey, "\ncomputed: " & pk.toHex() & "\nexpected: " & pubkey & '\n'
   echo "SUCCESS"
 

@@ -48,7 +48,7 @@ else:
     SecretKey, PublicKey, Signature, ProofOfPossession,
     AggregateSignature,
     `==`,
-    init, aggregate, finish,
+    init, aggregate, finish, aggregateAll,
     sign, verify, aggregateVerify, fastAggregateVerify,
-    privToPub,
+    publicFromSecret, isZero,
     fromHex, fromBytes, toHex, serialize, exportRaw

@@ -56,7 +56,7 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
       # The cast is a workaround for private field access
       BIG_384_dmod(cast[ptr BIG_384](secretKey.addr)[], dseckey, CURVE_Order)
 
-    if bool cast[ptr BIG_384](secretKey.addr)[].BIG_384_iszilch():
+    if secretKey.isZero():
       salt = sha256.digest(salt0)
     else:
       return true
@@ -120,11 +120,13 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   if ikm.len < 32:
     return false
 
-  let ok = secretKey.hkdf_mod_r(ikm, key_info)
+  var ok = secretKey.hkdf_mod_r(ikm, key_info)
   if not ok:
     return false
 
   #  4. xP = x * P
   #  6. PK = point_to_pubkey(xP)
-  publicKey = privToPub(secretKey)
+  ok = publicKey.publicFromSecret(secretKey)
+  if not ok:
+    return false
   return true
