@@ -154,7 +154,7 @@ proc blst_fr_eucl_inverse*(ret: var blst_fr, a: blst_fr)
 proc blst_fr_from_uint64*(ret: var blst_fr, a: array[4, uint64])
 proc blst_uint64_from_fr*(ret: var array[4, uint64], a: blst_fr)
 proc blst_fr_from_scalar*(ret: var blst_fr; a: blst_scalar)
-proc blst_scalar_from_fr(ret: var blst_scalar, a: blst_fr)
+proc blst_scalar_from_fr*(ret: var blst_scalar, a: blst_fr)
 
 # BLS12-381-specific Fp operations (Modulo BLS12-381 prime)
 proc blst_fp_add*(ret: var blst_fp; a: blst_fp; b: blst_fp)
@@ -213,14 +213,14 @@ proc blst_p1_mult*(dst: var blst_p1; p: blst_p1; scalar: blst_scalar; nbits: uin
 proc blst_p1_cneg*(p: var blst_p1; cbit: uint)
 proc blst_p1_to_affine*(dst: var blst_p1_affine; src: blst_p1)
 proc blst_p1_from_affine*(dst: var blst_p1; src: blst_p1_affine)
-proc blst_p1_on_curve(p: blst_p1): CTBool
-proc blst_p1_is_equal(a: blst_p1, b: blst_p1): CTBool
-proc blst_p1_is_inf(a: blst_p1): CTBool
+proc blst_p1_on_curve*(p: blst_p1): CTBool
+proc blst_p1_is_equal*(a: blst_p1, b: blst_p1): CTBool
+proc blst_p1_is_inf*(a: blst_p1): CTBool
 proc blst_p1_affine_on_curve*(p: blst_p1_affine): CTBool
 proc blst_p1_affine_in_g1*(p: blst_p1_affine): CTBool
 proc blst_p1_affine_is_equal*(a: blst_p1_affine; b: blst_p1_affine): CTBool
-proc blst_p1_affine_is_inf(a: blst_p1_affine): CTBool
-proc blst_p1_generator(): ptr blst_p1
+proc blst_p1_affine_is_inf*(a: blst_p1_affine): CTBool
+proc blst_p1_generator*(): ptr blst_p1
 
 # BLS12-381-specific G2 operations.
 proc blst_p2_add*(dst: var blst_p2; a: blst_p2; b: blst_p2)
@@ -232,14 +232,14 @@ proc blst_p2_mult*(dst: var blst_p2; p: blst_p2; scalar: blst_scalar; nbits: uin
 proc blst_p2_cneg*(p: var blst_p2; cbit: uint)
 proc blst_p2_to_affine*(dst: var blst_p2_affine; src: blst_p2)
 proc blst_p2_from_affine*(dst: var blst_p2; src: blst_p2_affine)
-proc blst_p2_on_curve(p: blst_p2): bool
-proc blst_p2_is_equal(a: blst_p2, b: blst_p2): bool
-proc blst_p2_is_inf(a: blst_p2): bool
+proc blst_p2_on_curve*(p: blst_p2): bool
+proc blst_p2_is_equal*(a: blst_p2, b: blst_p2): bool
+proc blst_p2_is_inf*(a: blst_p2): bool
 proc blst_p2_affine_on_curve*(p: blst_p2_affine): CTBool
 proc blst_p2_affine_in_g2*(p: blst_p2_affine): CTBool
 proc blst_p2_affine_is_equal*(a: blst_p2_affine; b: blst_p2_affine): CTBool
-proc blst_p2_affine_is_inf(a: blst_p2_affine): bool
-proc blst_p2_generator(): ptr blst_p2
+proc blst_p2_affine_is_inf*(a: blst_p2_affine): bool
+proc blst_p2_generator*(): ptr blst_p2
 
 # Hash-to-curve operations.
 proc blst_map_to_g1*(dst: var blst_p1; u: blst_fp; v: blst_fp)

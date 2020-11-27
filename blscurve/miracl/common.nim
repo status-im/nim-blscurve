@@ -629,7 +629,7 @@ proc toBytes*(point: ECP2_BLS12381, res: var openarray[byte]): bool =
   ## ``false`` otherwise.
   if len(res) >= MODBYTES_384 * 2:
     var x, y: FP2_BLS12381
-    var x0, x1, y0: BIG_384
+    var x0, x1: BIG_384
     if point.get(x, y) == -1:
       zeroMem(addr res[0], MODBYTES_384 * 2)
       res[0] = res[0] or (1'u8 shl 7) or (1'u8 shl 6)
