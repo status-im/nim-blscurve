@@ -413,7 +413,7 @@ func isogeny_map_G2(xp, yp: FP2_BLS12381): ECP2_BLS12381 =
   let onCurve = bool ECP2_BLS12381_set(addr result, unsafeAddr x, unsafeAddr y)
   assert onCurve
 
-func mapToCurveG2(u: FP2_BLS12381): ECP2_BLS12381 =
+func mapToCurveG2*(u: FP2_BLS12381): ECP2_BLS12381 =
   ## Map a field element FP2 to the G2 curve of BLS12-381
   ## using the simplified SWU method for pairing-friendly curves
   ##
@@ -429,7 +429,7 @@ func mapToCurveG2(u: FP2_BLS12381): ECP2_BLS12381 =
   # 3-isogeny map P'(x', y') to G2 with coordinate P(x, y)
   result = isogeny_map_G2(pointPrime.x, pointPrime.y)
 
-func clearCofactor(P: var ECP2_BLS12381) =
+func clearCofactor*(P: var ECP2_BLS12381) =
   ## From any point on the elliptic curve of G2 of BLS12-381
   ## Obtain a point in the G2 subgroup
   ##

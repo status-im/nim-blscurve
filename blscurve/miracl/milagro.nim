@@ -216,7 +216,7 @@ proc ECP_BLS12381_rhs*(r, x: ptr FP_BLS12381) {.milagro_func.}
 proc ECP_BLS12381_setx*(p: ptr ECP_BLS12381, x: BIG_384, s: cint): cint {.
      milagro_func.}
 proc ECP_BLS12381_neg*(p: ptr ECP_BLS12381) {.milagro_func.}
-proc ECP_BLS12381_map2point*(p: var ECP_BLS12381, h: ptr FP_BLS12381) {.
+proc ECP_BLS12381_map2point*(p: ptr ECP_BLS12381, h: ptr FP_BLS12381) {.
      milagro_func.}
 proc ECP_BLS12381_set*(p: ptr ECP_BLS12381, x, y: BIG_384): cint {.milagro_func.}
 
@@ -286,6 +286,7 @@ proc FP2_BLS12381_equals*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381): cint {.
 proc FP12_BLS12381_equals*(x: ptr FP12_BLS12381, y: ptr FP12_BLS12381): cint {.
      milagro_func.}
 proc FP12_BLS12381_isunity*(x: ptr FP12_BLS12381): cint {.milagro_func.}
+proc FP12_BLS12381_mul*(x: ptr FP12_BLS12381, y: ptr FP12_BLS12381) {.milagro_func.}
 
 # Debug
 proc FP2_BLS12381_output*(x: ptr FP2_BLS12381) {.sideeffect, milagro_func.}
