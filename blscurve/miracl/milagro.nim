@@ -259,6 +259,10 @@ proc FP_BLS12381_norm*(x: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_neg*(r: ptr FP_BLS12381, a: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_equals*(x: ptr FP_BLS12381, y: ptr FP_BLS12381): cint {.
      milagro_func.}
+proc FP_BLS12381_mul*(x, y, z: ptr FP_BLS12381) {.milagro_func.}
+proc FP_BLS12381_add*(x, y, z: ptr FP_BLS12381) {.milagro_func.}
+proc FP_BLS12381_inv*(x, y, z: ptr FP_BLS12381) {.milagro_func.}
+proc FP_BLS12381_cmove*(x, y: ptr FP_BLS12381, s: cint) {.milagro_func.}
 
 proc FP2_BLS12381_inv*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381) {.milagro_func.}
 proc FP2_BLS12381_iszilch*(x: ptr FP2_BLS12381): cint {.milagro_func.}
