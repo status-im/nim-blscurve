@@ -216,6 +216,10 @@ proc ECP_BLS12381_rhs*(r, x: ptr FP_BLS12381) {.milagro_func.}
 proc ECP_BLS12381_setx*(p: ptr ECP_BLS12381, x: BIG_384, s: cint): cint {.
      milagro_func.}
 proc ECP_BLS12381_neg*(p: ptr ECP_BLS12381) {.milagro_func.}
+proc ECP_BLS12381_map2point*(p: ptr ECP_BLS12381, h: ptr FP_BLS12381) {.
+     milagro_func.}
+proc ECP_BLS12381_set*(p: ptr ECP_BLS12381, x, y: BIG_384): cint {.milagro_func.}
+proc ECP_BLS12381_cfp*(p: ptr ECP_BLS12381) {.milagro_func.}
 
 proc ECP2_BLS12381_isinf*(p: ptr ECP2_BLS12381): cint {.milagro_func.}
 proc ECP2_BLS12381_inf*(p: ptr ECP2_BLS12381) {.milagro_func.}
@@ -241,10 +245,14 @@ proc ECP2_BLS12381_set*(p: ptr ECP2_BLS12381, x: ptr FP2_BLS12381,
                       y: ptr FP2_BLS12381): cint {.milagro_func.}
 proc ECP2_BLS12381_rhs*(r: ptr FP2_BLS12381, x: ptr FP2_BLS12381) {.
      milagro_func.}
+proc ECP2_BLS12381_map2point*(p: ptr ECP2_BLS12381, h: ptr FP2_BLS12381) {.
+     milagro_func.}
+proc ECP2_BLS12381_cfp*(p: ptr ECP2_BLS12381) {.milagro_func.}
 
 proc FP_BLS12381_iszilch*(x: ptr FP_BLS12381): cint {.milagro_func.}
 proc FP_BLS12381_redc*(x: BIG_384, y: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_nres*(y: ptr FP_BLS12381, x: BIG_384) {.milagro_func.}
+proc FP_BLS12381_sqr*(w: ptr FP_BLS12381, x: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_qr*(x, sqrt_hint: ptr FP_BLS12381): cint {.milagro_func.}
 proc FP_BLS12381_sqrt*(r, a, sqrt_hint: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_reduce*(x: ptr FP_BLS12381) {.milagro_func.}
@@ -253,6 +261,10 @@ proc FP_BLS12381_norm*(x: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_neg*(r: ptr FP_BLS12381, a: ptr FP_BLS12381) {.milagro_func.}
 proc FP_BLS12381_equals*(x: ptr FP_BLS12381, y: ptr FP_BLS12381): cint {.
      milagro_func.}
+proc FP_BLS12381_mul*(x, y, z: ptr FP_BLS12381) {.milagro_func.}
+proc FP_BLS12381_add*(x, y, z: ptr FP_BLS12381) {.milagro_func.}
+proc FP_BLS12381_inv*(x, y, z: ptr FP_BLS12381) {.milagro_func.}
+proc FP_BLS12381_cmove*(x, y: ptr FP_BLS12381, s: cint) {.milagro_func.}
 
 proc FP2_BLS12381_inv*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381) {.milagro_func.}
 proc FP2_BLS12381_iszilch*(x: ptr FP2_BLS12381): cint {.milagro_func.}
@@ -280,6 +292,7 @@ proc FP2_BLS12381_equals*(x: ptr FP2_BLS12381, y: ptr FP2_BLS12381): cint {.
 proc FP12_BLS12381_equals*(x: ptr FP12_BLS12381, y: ptr FP12_BLS12381): cint {.
      milagro_func.}
 proc FP12_BLS12381_isunity*(x: ptr FP12_BLS12381): cint {.milagro_func.}
+proc FP12_BLS12381_mul*(x: ptr FP12_BLS12381, y: ptr FP12_BLS12381) {.milagro_func.}
 
 # Debug
 proc FP2_BLS12381_output*(x: ptr FP2_BLS12381) {.sideeffect, milagro_func.}

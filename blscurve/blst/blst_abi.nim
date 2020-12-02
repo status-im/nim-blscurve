@@ -154,7 +154,7 @@ proc blst_fr_eucl_inverse*(ret: var blst_fr, a: blst_fr)
 proc blst_fr_from_uint64*(ret: var blst_fr, a: array[4, uint64])
 proc blst_uint64_from_fr*(ret: var array[4, uint64], a: blst_fr)
 proc blst_fr_from_scalar*(ret: var blst_fr; a: blst_scalar)
-proc blst_scalar_from_fr(ret: var blst_scalar, a: blst_fr)
+proc blst_scalar_from_fr*(ret: var blst_scalar, a: blst_fr)
 
 # BLS12-381-specific Fp operations (Modulo BLS12-381 prime)
 proc blst_fp_add*(ret: var blst_fp; a: blst_fp; b: blst_fp)
@@ -213,14 +213,15 @@ proc blst_p1_mult*(dst: var blst_p1; p: blst_p1; scalar: blst_scalar; nbits: uin
 proc blst_p1_cneg*(p: var blst_p1; cbit: uint)
 proc blst_p1_to_affine*(dst: var blst_p1_affine; src: blst_p1)
 proc blst_p1_from_affine*(dst: var blst_p1; src: blst_p1_affine)
-proc blst_p1_on_curve(p: blst_p1): CTBool
-proc blst_p1_is_equal(a: blst_p1, b: blst_p1): CTBool
-proc blst_p1_is_inf(a: blst_p1): CTBool
+proc blst_p1_on_curve*(p: blst_p1): CTBool
+proc blst_p1_in_g1*(p: blst_p1): CTBool
+proc blst_p1_is_equal*(a: blst_p1, b: blst_p1): CTBool
+proc blst_p1_is_inf*(a: blst_p1): CTBool
 proc blst_p1_affine_on_curve*(p: blst_p1_affine): CTBool
 proc blst_p1_affine_in_g1*(p: blst_p1_affine): CTBool
 proc blst_p1_affine_is_equal*(a: blst_p1_affine; b: blst_p1_affine): CTBool
-proc blst_p1_affine_is_inf(a: blst_p1_affine): CTBool
-proc blst_p1_generator(): ptr blst_p1
+proc blst_p1_affine_is_inf*(a: blst_p1_affine): CTBool
+proc blst_p1_generator*(): ptr blst_p1
 
 # BLS12-381-specific G2 operations.
 proc blst_p2_add*(dst: var blst_p2; a: blst_p2; b: blst_p2)
@@ -232,14 +233,15 @@ proc blst_p2_mult*(dst: var blst_p2; p: blst_p2; scalar: blst_scalar; nbits: uin
 proc blst_p2_cneg*(p: var blst_p2; cbit: uint)
 proc blst_p2_to_affine*(dst: var blst_p2_affine; src: blst_p2)
 proc blst_p2_from_affine*(dst: var blst_p2; src: blst_p2_affine)
-proc blst_p2_on_curve(p: blst_p2): bool
-proc blst_p2_is_equal(a: blst_p2, b: blst_p2): bool
-proc blst_p2_is_inf(a: blst_p2): bool
+proc blst_p2_on_curve*(p: blst_p2): CTBool
+proc blst_p2_in_g2*(p: blst_p2): CTBool
+proc blst_p2_is_equal*(a: blst_p2, b: blst_p2): CTBool
+proc blst_p2_is_inf*(a: blst_p2): CTBool
 proc blst_p2_affine_on_curve*(p: blst_p2_affine): CTBool
 proc blst_p2_affine_in_g2*(p: blst_p2_affine): CTBool
 proc blst_p2_affine_is_equal*(a: blst_p2_affine; b: blst_p2_affine): CTBool
-proc blst_p2_affine_is_inf(a: blst_p2_affine): bool
-proc blst_p2_generator(): ptr blst_p2
+proc blst_p2_affine_is_inf*(a: blst_p2_affine): CTBool
+proc blst_p2_generator*(): ptr blst_p2
 
 # Hash-to-curve operations.
 proc blst_map_to_g1*(dst: var blst_p1; u: blst_fp; v: blst_fp)
@@ -338,11 +340,30 @@ proc blst_pairing_aggregate_pk_in_g2*[T,U: byte|char](
                                      signature: ptr blst_p1_affine;
                                      msg: openArray[T];
                                      aug: openArray[U]): BLST_ERROR
+proc blst_pairing_chk_n_aggr_pk_in_g2*[T,U: byte|char](
+                                     ctx: var blst_pairing,
+                                     PK: ptr blst_p2_affine,
+                                     pk_grpchk: bool,
+                                     signature: ptr blst_p1_affine,
+                                     sig_grpchk: bool,
+                                     msg: openArray[T],
+                                     aug: openArray[U]
+                                     ): BLST_ERROR
 proc blst_pairing_mul_n_aggregate_pk_in_g2*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p2_affine;
                                      sig: ptr blst_p1_affine;
-                                     scalar: limb_t; nbits: uint,
+                                     scalar: blst_scalar, nbits: uint,
+                                     msg: openArray[T];
+                                     aug: openArray[U]
+                                     ): BLST_ERROR
+proc blst_pairing_chk_n_mul_n_aggr_pk_in_g2*[T,U: byte|char](
+                                     ctx: var blst_pairing,
+                                     PK: ptr blst_p2_affine,
+                                     pk_grpchk: bool,
+                                     signature: ptr blst_p1_affine,
+                                     sig_grpchk: bool,
+                                     scalar: blst_scalar, nbits: uint,
                                      msg: openArray[T];
                                      aug: openArray[U]
                                      ): BLST_ERROR
@@ -352,13 +373,32 @@ proc blst_pairing_aggregate_pk_in_g1*[T,U: byte|char](
                                      signature: ptr blst_p2_affine;
                                      msg: openArray[T];
                                      aug: openArray[U]): BLST_ERROR
+proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
+                                     ctx: var blst_pairing,
+                                     PK: ptr blst_p1_affine,
+                                     pk_grpchk: bool,
+                                     signature: ptr blst_p2_affine,
+                                     sig_grpchk: bool,
+                                     msg: openArray[T],
+                                     aug: openArray[U]
+                                     ): BLST_ERROR
 proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p1_affine;
                                      sig: ptr blst_p2_affine;
                                      hash: blst_p2_affine;
-                                     scalar: limb_t; nbits: uint,
+                                     scalar: blst_scalar, nbits: uint,
                                      msg: openArray[T];
+                                     aug: openArray[U]
+                                     ): BLST_ERROR
+proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](
+                                     ctx: var blst_pairing,
+                                     PK: ptr blst_p1_affine,
+                                     pk_grpchk: bool,
+                                     signature: ptr blst_p2_affine,
+                                     sig_grpchk: bool,
+                                     scalar: blst_scalar, nbits: uint,
+                                     msg: openArray[T],
                                      aug: openArray[U]
                                      ): BLST_ERROR
 proc blst_pairing_merge*(ctx: var blst_pairing; ctx1: blst_pairing): BLST_ERROR

@@ -121,6 +121,14 @@ proc norm*(a: var FP2_BLS12381) {.inline.} =
   ## Normalize FP2 field number.
   FP2_BLS12381_norm(addr a)
 
+proc sqr*(x: FP_BLS12381): FP_BLS12381 {.inline.} =
+  ## Retruns ``x ^ 2``.
+  FP_BLS12381_sqr(addr result, unsafeAddr x)
+
+proc rhs*(x: FP_BLS12381): FP_BLS12381 {.inline.} =
+  ## Returns ``x ^ 3 + b``.
+  ECP_BLS12381_rhs(addr result, unsafeAddr x)
+
 proc sqr*(x: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Retruns ``x ^ 2``.
   FP2_BLS12381_sqr(addr result, unsafeAddr x)
@@ -546,7 +554,7 @@ proc generator1*(): ECP_BLS12381 {.inline.} =
 proc generator2*(): ECP2_BLS12381 {.inline.} =
   ECP2_BLS12381_generator(addr result)
 
-proc isOnCurve*(x: FP2_BLS12381, y: FP2_BLS12381): bool =
+proc isOnCurve*(x, y: FP_BLS12381 or FP2_BLS12381): bool =
   ## Returns ``true`` if point is on curve or points to infinite.
   if x.iszilch() and y.iszilch():
     result = true
@@ -621,7 +629,7 @@ proc toBytes*(point: ECP2_BLS12381, res: var openarray[byte]): bool =
   ## ``false`` otherwise.
   if len(res) >= MODBYTES_384 * 2:
     var x, y: FP2_BLS12381
-    var x0, x1, y0: BIG_384
+    var x0, x1: BIG_384
     if point.get(x, y) == -1:
       zeroMem(addr res[0], MODBYTES_384 * 2)
       res[0] = res[0] or (1'u8 shl 7) or (1'u8 shl 6)

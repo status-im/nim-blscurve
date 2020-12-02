@@ -98,7 +98,7 @@ include ./bls_sig_io
 
 # Primitives
 # ----------------------------------------------------------------------
-func subgroupCheck(P: GroupG1 or GroupG2): bool =
+func subgroupCheck*(P: GroupG1 or GroupG2): bool =
   ## Checks that a point `P`
   ## is actually in the subgroup G1/G2 of the BLS Curve
   var rP = P
