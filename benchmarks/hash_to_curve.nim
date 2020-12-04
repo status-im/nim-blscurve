@@ -8,30 +8,46 @@
 # those terms.
 
 import
-  # Internals
-  ../blscurve/[common, milagro, hash_to_curve],
-  # Bench
+  std/random,
+  ../blscurve,
   ./bench_templates
+
+when BLS_BACKEND == BLST:
+  import
+    ../blscurve/blst/blst_abi
+else:
+  import
+    ../blscurve/miracl/[common, milagro],
+    ../blscurve/miracl/hash_to_curve
 
 # ############################################################
 #
 #             Benchmark of Hash to G2 of BLS12-381
-#           Using Draft #5 of IETF spec (HKDF-based)
+#                  Using Draft #9 of IETF spec
 #
 # ############################################################
-# https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-05#appendix-C.3
+# https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-09#appendix-H.10
 
 proc benchHashToG2*(iters: int) =
   const dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
   let msg = "msg"
 
-  var point: ECP2_BLS12381
+  when BLS_BACKEND == BLST:
+    var P: blst_p2
+    var Paff: blst_p2_affine
 
-  bench("Hash to G2 (Draft #5)", iters):
-    point = hashToG2(msg, dst)
+    bench("Hash to G2 (Draft #9) + affine conversion", iters):
+      P.blst_hash_to_g2(
+        msg,
+        dst,
+        aug = ""
+      )
+      Paff.blst_p2_to_affine(P)
+  else:
+    var point: ECP2_BLS12381
 
+    bench("Hash to G2 (Draft #9)", iters):
+      point = hashToG2(msg, dst)
 
 when isMainModule:
-  echo "⚠️ Warning: using draft v5 of IETF Hash-To-Curve (HKDF-based)."
-  echo "            This is an outdated draft.\n\n"
   benchHashToG2(1000)
