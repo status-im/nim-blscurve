@@ -16,7 +16,14 @@
 #   approach, since the size of (PK_1, ..., PK_n, signature) is
 #   dominated by the public keys even for small n.
 
-# We expose the same API as nim-blscurve
+# We expose the same API as MIRACL
+#
+# Design:
+# - We check public keys and signatures at deserialization
+#   - non-zero
+#   - in the correct subgroup
+#   The primitives called assume that input are already subgroup-checked
+#   and so do not call "KeyValidate" again in verification procs.
 
 import
   # Status libraries
@@ -167,6 +174,8 @@ func fromBytes*(
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
     obj.scalar.blst_scalar_from_bendian(pa[])
   if obj.vec_is_zero():
+    return false
+  if not obj.scalar.blst_sk_check().bool:
     return false
   return true
 

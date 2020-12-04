@@ -140,6 +140,7 @@ proc blst_bendian_from_scalar*(ret: var array[32, byte]; a: blst_scalar)
 proc blst_scalar_from_lendian*(ret: var blst_scalar; a: array[32, byte])
 proc blst_lendian_from_scalar*(ret: var array[32, byte]; a: blst_scalar)
 proc blst_scalar_fr_check*(a: blst_scalar): CTBool
+proc blst_sk_check*(a: blst_scalar): CTBool
 
 # BLS12-381-specific Fr operations (Modulo curve order)
 proc blst_fr_add*(ret: var blst_fr; a: blst_fr; b: blst_fr)
