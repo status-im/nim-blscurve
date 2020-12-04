@@ -31,14 +31,15 @@ task test, "Run all tests":
   # Internal BLS API - IETF standard
   # test "", "tests/hash_to_curve_v7.nim"
 
-  # Public BLS API - IETF standard / Ethereum2.0 v0.12.x
+  # Public BLS API - IETF standard / Ethereum2.0 v1.0.0
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/eth2_vectors.nim"
   # key Derivation - EIP 2333
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/eip2333_key_derivation.nim"
   # Secret key to pubkey
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/priv_to_pub.nim"
 
-  when sizeof(int) == 8 and (defined(arm64) or defined(amd64)):
+  when defined(arm64) or defined(arm) or
+       defined(amd64) or defined(i386):
     test "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
     test "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
     test "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"

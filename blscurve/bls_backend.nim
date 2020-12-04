@@ -20,18 +20,23 @@ type BlsBackendKind* = enum
   BLST
   Miracl
 
-when BLS_FORCE_BACKEND == "blst" or (
-  BLS_FORCE_BACKEND == "auto" and
-    sizeof(int) == 8 and
-    (defined(arm64) or (
-      defined(amd64) and
-      gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0))
+const AutoSelectBLST = BLS_FORCE_BACKEND == "auto" and (
+  defined(arm64) or defined(arm) or
+  defined(amd64) or defined(i386)
+)
+# Theoretically the BLST library has a fallback for any platform
+# but it is missing https://github.com/supranational/blst/issues/46
+
+when (BLS_FORCE_BACKEND == "blst" or AutoSelectBLST) and (
+  gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0
   ):
-  # BLST supports: x86_64 and ARM64
+  # BLST supports: x86 and ARM 32 and 64 bits
   # and has optimized SHA256 routines for x86_64 CPU with SSE3
+  # It also assumes that all ARM CPUs are Neon instructions capable for SHA256
   const BLS_BACKEND* = BLST
-elif BLS_FORCE_BACKEND == "auto" and defined(amd64):
+elif BLS_FORCE_BACKEND == "blst" or AutoSelectBLST:
   # CPU doesn't support SSE3 which is used in optimized SHA256
+  # BLST_PORTABLE is a no-op on ARM
   const BLS_BACKEND* = BLST
   {.passC: "-D__BLST_PORTABLE__".}
 else:
