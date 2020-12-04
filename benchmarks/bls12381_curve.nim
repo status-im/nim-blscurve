@@ -115,7 +115,7 @@ when BLS_BACKEND == BLST:
       ikm[0] = 0x12
       discard ikm.keygen(pk, sk)
       (cast[blst_p1_affine](pk), cast[blst_scalar](sk))
-    let msg = "msg"
+    let msg = "Mr F was here"
     const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
     # Signing
@@ -177,7 +177,7 @@ else:
       ikm[0] = 0x12
       discard ikm.keygen(pk, sk)
       (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
-    let msg = "msg"
+    let msg = "Mr F was here"
     const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
     # Signing
@@ -206,7 +206,7 @@ else:
       ikm[0] = 0x12
       discard ikm.keygen(pk, sk)
       (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
-    let msg = "msg"
+    let msg = "Mr F was here"
     const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
     # Signing

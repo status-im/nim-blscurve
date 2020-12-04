@@ -30,7 +30,7 @@ else:
 
 proc benchHashToG2*(iters: int) =
   const dst = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-  let msg = "msg"
+  let msg = "Mr F was here"
 
   when BLS_BACKEND == BLST:
     var P: blst_p2
