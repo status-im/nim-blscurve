@@ -8,13 +8,16 @@
 # those terms.
 
 import
-  # Internals
-  ../blscurve/common,
-  ../blscurve/milagro,
-  ../blscurve/hash_to_curve,
-  # Bench
-  ./bench_templates,
-  ./keygen
+  ../blscurve,
+  ./bench_templates
+
+when BLS_BACKEND == BLST:
+  import
+    ../blscurve/blst/blst_abi
+else:
+  import
+    ../blscurve/miracl/[common, milagro],
+    ../blscurve/miracl/hash_to_curve
 
 # ############################################################
 #
@@ -57,7 +60,13 @@ proc benchECAddG2*(iters: int) =
 proc benchPairingViaDoublePairing*(iters: int) =
   ## Builtin Milagro Double-Pairing implementation
   # Ideally we don't depend on the bls_signature_scheme but it's much simpler
-  let (pubkey, seckey) = newKeyPair()
+  let (pubkey, seckey) = block:
+    var pk: PublicKey
+    var sk: SecretKey
+    var ikm: array[32, byte]
+    ikm[0] = 0x12
+    discard ikm.keygen(pk, sk)
+    (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
   let msg = "msg"
   const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
@@ -79,7 +88,13 @@ proc benchPairingViaMultiPairing*(iters: int) =
   ## MultiPairing implementation
   ## Using deferred Miller loop + Final Exponentiation
   # Ideally we don't depend on the bls_signature_scheme but it's much simpler
-  let (pubkey, seckey) = newKeyPair()
+  let (pubkey, seckey) = block:
+    var pk: PublicKey
+    var sk: SecretKey
+    var ikm: array[32, byte]
+    ikm[0] = 0x12
+    discard ikm.keygen(pk, sk)
+    (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
   let msg = "msg"
   const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
 
