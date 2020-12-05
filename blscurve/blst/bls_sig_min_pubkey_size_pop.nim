@@ -139,6 +139,9 @@ func fromBytes*(
       return false
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
     result = obj.point.blst_p2_uncompress(pa[]) == BLST_SUCCESS
+  # Infinity signatures are allowed if we receive an empty aggregated signature
+  if result:
+    result = bool obj.point.blst_p2_affine_in_g2()
 
 func fromBytes*(
        obj: var PublicKey,
@@ -155,8 +158,11 @@ func fromBytes*(
       return false
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
     result = obj.point.blst_p1_uncompress(pa[]) == BLST_SUCCESS
-  if obj.vec_is_zero():
-    return false
+  # Infinity public keys are not allowed
+  if result:
+    result = not bool obj.point.blst_p1_affine_is_inf()
+  if result:
+    result = bool obj.point.blst_p1_affine_in_g1()
 
 func fromBytes*(
        obj: var SecretKey,
@@ -352,6 +358,36 @@ func coreVerify[T: byte|char](
     aug = ""
   )
 
+{.push stacktrace:off.} # blst_pairing + stacktrace = stackoverflow
+func coreVerifyNoGroupCheck[T: byte|char](
+       publicKey: PublicKey,
+       message: openarray[T],
+       sig_or_proof: Signature or ProofOfPossession,
+       domainSepTag: static string): bool {.noinline.} =
+  ## Check that a signature (or proof-of-possession) is valid
+  ## for a message (or serialized publickey) under the provided public key
+  ## This assumes that the Public Key and Signatures
+  ## have been pre group checked (likely on deserialization)
+  var ctx{.noInit.}: blst_pairing
+  ctx.blst_pairing_init(
+    hash_or_encode = kHash,
+    domainSepTag
+  )
+  let ok = BLST_SUCCESS == ctx.blst_pairing_chk_n_aggr_pk_in_g1(
+    publicKey.point.unsafeAddr,
+    pk_grpchk = false, # Already grouped checked
+    sig_or_proof.point.unsafeAddr,
+    sig_grpchk = false, # Already grouped checked
+    message,
+    aug = ""
+  )
+  if not ok:
+    return false
+
+  ctx.blst_pairing_commit()
+  result = bool ctx.blst_pairing_finalverify(nil)
+{.pop.}
+
 type
   ContextCoreAggregateVerify = object
     # Streaming API for Aggregate verification to handle both SoA and AoS data layout
@@ -379,10 +415,12 @@ func update[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
        message: openarray[T]): bool {.inline.} =
-  result = BLST_SUCCESS == ctx.c.blst_pairing_aggregate_pk_in_g1(
-    PK = publicKey.point.unsafeAddr,
+  result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
+    publicKey.point.unsafeAddr,
+    pk_grpchk = false, # Already grouped checked
     signature = nil,
-    msg = message,
+    sig_grpchk = false, # Already grouped checked
+    message,
     aug = ""
   )
 
@@ -417,9 +455,11 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggrega
   # use a Miller loop internally and Miller loops are **very** costly.
 
   when signature is Signature:
-    result = BLST_SUCCESS == ctx.c.blst_pairing_aggregate_pk_in_g1(
+    result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
       PK = nil,
-      signature = signature.point.unsafeAddr,
+      pk_grpchk = false, # Already grouped checked
+      signature.point.unsafeAddr,
+      sig_grpchk = false, # Already grouped checked
       msg = "",
       aug = ""
     )
@@ -427,9 +467,11 @@ func finish(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggrega
     block:
       var sig{.noInit.}: blst_p2_affine
       sig.blst_p2_to_affine(signature.point)
-      result = BLST_SUCCESS == ctx.c.blst_pairing_aggregate_pk_in_g1(
+      result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
         PK = nil,
-        signature = sig,
+        pk_grpchk = false, # Already grouped checked
+        sig.point.unsafeAddr,
+        sig_grpchk = false, # Already grouped checked
         msg = "",
         aug = ""
       )
@@ -503,7 +545,7 @@ func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
   # 9. If C1 == C2, return VALID, else return INVALID
   var pk{.noInit.}: array[48, byte]
   pk.blst_p1_affine_compress(publicKey.point)
-  result = coreVerify(publicKey, pk, proof, DST_POP)
+  result = coreVerifyNoGroupCheck(publicKey, pk, proof, DST_POP)
 
 func sign*[T: byte|char](secretKey: SecretKey, message: openarray[T]): Signature =
   ## Computes a signature
@@ -523,7 +565,7 @@ func verify*[T: byte|char](
   ## enforce proper usage of the proof-of-possession
   if not publicKey.popVerify(proof):
     return false
-  return publicKey.coreVerify(message, signature, DST)
+  return publicKey.coreVerifyNoGroupCheck(message, signature, DST)
 
 func verify*[T: byte|char](
        publicKey: PublicKey,
@@ -536,13 +578,13 @@ func verify*[T: byte|char](
   ## The proof-of-possession MUST be verified before calling this function.
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
-  return publicKey.coreVerify(message, signature, DST)
+  return publicKey.coreVerifyNoGroupCheck(message, signature, DST)
 
 func aggregateVerify*(
         publicKeys: openarray[PublicKey],
         proofs: openarray[ProofOfPossession],
         messages: openarray[string or seq[byte]],
-        signature: Signature): bool =
+        signature: Signature): bool {.noInline.} =
   ## Check that an aggregated signature over several (publickey, message) pairs
   ## returns `true` if the signature is valid, `false` otherwise.
   ##
@@ -554,16 +596,14 @@ func aggregateVerify*(
   if not(publicKeys.len >= 1):
     return false
 
-  # TODO: un-ref (stack smashing)
-  var ctx{.noInit.}: ref ContextCoreAggregateVerify
-  new ctx
+  var ctx{.noInit.}: ContextCoreAggregateVerify
 
-  ctx[].init(DST)
+  ctx.init(DST)
   for i in 0 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
       return false
-    ctx[].update(publicKeys[i], messages[i])
-  return ctx[].finish(signature)
+    ctx.update(publicKeys[i], messages[i])
+  return ctx.finish(signature)
 
 func aggregateVerify*(
         publicKeys: openarray[PublicKey],
@@ -581,17 +621,14 @@ func aggregateVerify*(
   if not(publicKeys.len >= 1):
     return false
 
+  var ctx{.noInit.}: ContextCoreAggregateVerify
 
-  # TODO: un-ref (stack smashing)
-  var ctx{.noInit.}: ref ContextCoreAggregateVerify
-  new ctx
-
-  ctx[].init(DST)
+  ctx.init(DST)
   for i in 0 ..< publicKeys.len:
-    result = ctx[].update(publicKeys[i], messages[i])
+    result = ctx.update(publicKeys[i], messages[i])
     if not result:
       return
-  return ctx[].finish(signature)
+  return ctx.finish(signature)
 
 func aggregateVerify*[T: string or seq[byte]](
         publicKey_msg_pairs: openarray[tuple[publicKey: PublicKey, message: T]],
@@ -606,16 +643,14 @@ func aggregateVerify*[T: string or seq[byte]](
   if not(publicKey_msg_pairs.len >= 1):
     return false
 
-  # TODO: un-ref (stack smashing)
-  var ctx{.noInit.}: ref ContextCoreAggregateVerify
-  new ctx
+  var ctx{.noInit.}: ContextCoreAggregateVerify
 
-  ctx[].init(DST)
+  ctx.init(DST)
   for i in 0 ..< publicKey_msg_pairs.len:
-    result = ctx[].update(publicKey_msg_pairs[i].publicKey, publicKey_msg_pairs[i].message)
+    result = ctx.update(publicKey_msg_pairs[i].publicKey, publicKey_msg_pairs[i].message)
     if not result:
       return
-  return ctx[].finish(signature)
+  return ctx.finish(signature)
 
 func fastAggregateVerify*[T: byte|char](
         publicKeys: openarray[PublicKey],
@@ -647,7 +682,7 @@ func fastAggregateVerify*[T: byte|char](
 
   var aggAffine{.noInit.}: PublicKey
   aggAffine.point.blst_p1_to_affine(aggregate)
-  return coreVerify(aggAffine, message, signature, DST)
+  return coreVerifyNoGroupCheck(aggAffine, message, signature, DST)
 
 func fastAggregateVerify*[T: byte|char](
         publicKeys: openarray[PublicKey],
@@ -676,4 +711,4 @@ func fastAggregateVerify*[T: byte|char](
 
   var aggAffine{.noInit.}: PublicKey
   aggAffine.point.blst_p1_to_affine(aggregate)
-  return coreVerify(aggAffine, message, signature, DST)
+  return coreVerifyNoGroupCheck(aggAffine, message, signature, DST)
