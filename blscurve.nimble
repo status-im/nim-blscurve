@@ -52,8 +52,11 @@ task test, "Run all tests":
         " --verbosity:0 --hints:off --warnings:off" &
         " benchmarks/bench_all.nim"
 
-  when defined(arm64) or defined(arm) or
-       defined(amd64) or defined(i386):
+  when defined(arm64) or defined(amd64):
+    # Bench uses raw BLST primitives that seem to inline asm volatile
+    # They raise "inconsistent operand constraints"
+    # when used directly without module indirection
+    # so we don't bench on 32-bit.
 
     exec "nim c -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
           " --verbosity:0 --hints:off --warnings:off" &
