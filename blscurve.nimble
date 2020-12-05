@@ -47,18 +47,22 @@ task test, "Run all tests":
     # Internal SHA256
     test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
 
-  # # Ensure benchmarks stay relevant. Ignore Windows 32-bit at the moment
-  # if not defined(windows) or not existsEnv"PLATFORM" or getEnv"PLATFORM" == "x64":
-  #   exec "nim c -d:danger --outdir:build -r" &
-  #         " --verbosity:0 --hints:off --warnings:off" &
-  #         " benchmarks/bench_all.nim"
+  # Ensure benchmarks stay relevant.
+  exec "nim c -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
+        " --verbosity:0 --hints:off --warnings:off" &
+        " benchmarks/bench_all.nim"
 
-# TODO: update benchmarks
+  when defined(arm64) or defined(arm) or
+       defined(amd64) or defined(i386):
 
-# task bench, "Run benchmarks":
-#   if not dirExists "build":
-#     mkDir "build"
+    exec "nim c -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
+          " --verbosity:0 --hints:off --warnings:off" &
+          " benchmarks/bench_all.nim"
 
-#   exec "nim c -d:danger --outdir:build -r" &
-#          " --verbosity:0 --hints:off --warnings:off" &
-#          " benchmarks/bench_all.nim"
+task bench, "Run benchmarks":
+  if not dirExists "build":
+    mkDir "build"
+
+  exec "nim c -d:danger --outdir:build -r" &
+         " --verbosity:0 --hints:off --warnings:off" &
+         " benchmarks/bench_all.nim"

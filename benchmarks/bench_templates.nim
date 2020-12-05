@@ -13,6 +13,8 @@ import
   # Standard library
   std/[monotimes, times, strformat, strutils, macros]
 
+from ../blscurve import BLS_BACKEND
+
 # warmup
 proc warmup*() =
   # Warmup - make sure cpu is on max perf
@@ -41,19 +43,15 @@ else:
 
 echo "Optimization level => no optimization: ", not defined(release), " | release: ", defined(release), " | danger: ", defined(danger)
 
-when (sizeof(int) == 4) or defined(use32):
-  echo "⚠️ Warning: using Milagro with 32-bit limbs"
-else:
-  echo "Using Milagro with 64-bit limbs"
-
 when SupportsCPUName:
-  echo "Running on ", cpuName(), "\n\n"
+  echo "Running on ", cpuName(), "\n"
 
 when SupportsGetTicks:
   echo "\n⚠️ Cycles measurements are approximate and use the CPU nominal clock: Turbo-Boost and overclocking will skew them."
   echo "i.e. a 20% overclock will be about 20% off (assuming no dynamic frequency scaling)"
 
-echo "\n=================================================================================================================\n"
+echo "\nBackend: ", $BLS_BACKEND, ", mode: ", if defined(use32): $32 else: $(sizeof(int) * 8), "-bit"
+echo "=================================================================================================================\n"
 
 proc report(op: string, start, stop: MonoTime, startClk, stopClk: int64, iters: int) =
   let ns = inNanoseconds((stop-start) div iters)
