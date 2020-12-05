@@ -44,8 +44,8 @@ task test, "Run all tests":
     test "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
     test "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"
 
-  # Internal SHA256
-  test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
+    # Internal SHA256
+    test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
 
   # Ensure benchmarks stay relevant.
   # TODO, solve "inconsistent operand constraints"
