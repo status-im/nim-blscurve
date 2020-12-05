@@ -44,19 +44,18 @@ task test, "Run all tests":
     test "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
     test "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"
 
-  when defined(arm64) or defined(amd64):
-    # Internal SHA256
-    # The inline ASM in header causes issue on 32-bit tests
-    # so we can only test SHA256 in high-level calls and not directly
-    test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
+  # Internal SHA256
+  test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
 
   # Ensure benchmarks stay relevant.
-  exec "nim c -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
-        " --verbosity:0 --hints:off --warnings:off" &
-        " benchmarks/bench_all.nim"
+  # TODO, solve "inconsistent operand constraints"
+  # on 32-bit for asm volatile, this might be due to
+  # incorrect RDTSC call in benchmark
+  when defined(arm64) or defined(amd64):
+    exec "nim c -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
+          " --verbosity:0 --hints:off --warnings:off" &
+          " benchmarks/bench_all.nim"
 
-  when defined(arm64) or defined(arm) or
-       defined(amd64) or defined(i386):
     exec "nim c -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
           " --verbosity:0 --hints:off --warnings:off" &
           " benchmarks/bench_all.nim"
