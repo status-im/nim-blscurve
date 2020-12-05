@@ -20,12 +20,7 @@ type BlsBackendKind* = enum
   BLST
   Miracl
 
-const AutoSelectBLST = BLS_FORCE_BACKEND == "auto" and (
-  defined(arm64) or defined(arm) or
-  defined(amd64) or defined(i386)
-)
-# Theoretically the BLST library has a fallback for any platform
-# but it is missing https://github.com/supranational/blst/issues/46
+const AutoSelectBLST = BLS_FORCE_BACKEND == "auto"
 
 when (BLS_FORCE_BACKEND == "blst" or AutoSelectBLST) and (
   gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0
