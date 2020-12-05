@@ -120,7 +120,42 @@ type
     x*: blst_fp2
     y*: blst_fp2
 
-  blst_pairing* {.incompleteStruct, blst.} = object
+type
+  AggregatedSignature {.union.} = object
+    e1: blst_p1
+    e2: blst_p2
+
+  blst_pairing* = object
+    # "blst_pairing" in header is defined as
+    # an empty struct. This forces usage on the heap
+    # through pointer.
+    # We want to use the true definition in aggregate.c
+    # to allow stack allocation.
+    # Since the definition is private to aggregate.c
+    # we have to rewrite it in Nim.
+    #
+    #ifndef N_MAX
+    # define N_MAX 8
+    #endif
+    # typedef union { POINTonE1 e1; POINTonE2 e2; } AggregatedSignature;
+    # typedef struct {
+    #     unsigned int ctrl;
+    #     unsigned int nelems;
+    #     const void *DST;
+    #     size_t DST_len;
+    #     vec384fp12 GT;
+    #     AggregatedSignature AggrSign;
+    #     POINTonE2_affine Q[N_MAX];
+    #     POINTonE1_affine P[N_MAX];
+    # } PAIRING;
+    ctrl: cuint
+    nelems: cuint
+    DST: pointer
+    DST_len: csize_t
+    GT: blst_fp12
+    AggrSign: AggregatedSignature
+    Q: array[8, blst_p2_affine]
+    P: array[8, blst_p1_affine]
 
 var
   # Generators
