@@ -8,13 +8,17 @@
 # those terms.
 
 import
-  # Internals
-  ../blscurve/common,
-  ../blscurve/milagro,
-  ../blscurve/hash_to_curve,
-  # Bench
-  ./bench_templates,
-  ./keygen
+  std/random,
+  ../blscurve,
+  ./bench_templates
+
+when BLS_BACKEND == BLST:
+  import
+    ../blscurve/blst/blst_abi
+else:
+  import
+    ../blscurve/miracl/[common, milagro],
+    ../blscurve/miracl/hash_to_curve
 
 # ############################################################
 #
@@ -23,79 +27,202 @@ import
 #
 # ############################################################
 
+var benchRNG = initRand(0xFACADE)
 
 proc benchScalarMultG1*(iters: int) =
-  var x = generator1()
-  var scal: BIG_384
-  random(scal)
+  when BLS_BACKEND == BLST:
+    var x{.noInit.}: blst_p1
+    x.blst_p1_from_affine(BLS12_381_G1) # init from generator
 
-  bench("Scalar multiplication G1", iters):
-    x.mul(scal)
+    var scal{.noInit.}: array[32, byte]
+    for val in scal.mitems:
+      val = byte benchRNG.rand(0xFF)
+
+    var scalar{.noInit.}: blst_scalar
+    scalar.blst_scalar_from_bendian(scal)
+
+    bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
+      x.blst_p1_mult(x, scalar, 255)
+  else:
+    var x = generator1()
+    var scal: BIG_384
+    random(scal)
+    scal.BIG_384_mod(CURVE_Order)
+
+    bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
+      x.mul(scal)
 
 proc benchScalarMultG2*(iters: int) =
-  var x = generator2()
-  var scal: BIG_384
-  random(scal)
+  when BLS_BACKEND == BLST:
+    var x{.noInit.}: blst_p2
+    x.blst_p2_from_affine(BLS12_381_G2) # init from generator
 
-  bench("Scalar multiplication G2", iters):
-    x.mul(scal)
+    var scal{.noInit.}: array[32, byte]
+    for val in scal.mitems:
+      val = byte benchRNG.rand(0xFF)
+
+    var scalar{.noInit.}: blst_scalar
+    scalar.blst_scalar_from_bendian(scal)
+
+    bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
+      x.blst_p2_mult(x, scalar, 255)
+  else:
+    var x = generator2()
+    var scal: BIG_384
+    random(scal)
+    scal.BIG_384_mod(CURVE_Order)
+
+    bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
+      x.mul(scal)
 
 proc benchECAddG1*(iters: int) =
-  var x = generator1()
-  var y = generator1()
+  when BLS_BACKEND == BLST:
+    var x{.noInit.}, y{.noInit.}: blst_p1
+    x.blst_p1_from_affine(BLS12_381_G1) # init from generator
+    y = x
 
-  bench("EC add G1", iters):
-    x.add(y)
+    bench("EC add G1 (constant-time)", iters):
+      x.blst_p1_add_or_double(x, y)
+  else:
+    var x = generator1()
+    var y = generator1()
+
+    bench("EC add G1 (constant-time)", iters):
+      x.add(y)
 
 proc benchECAddG2*(iters: int) =
-  var x = generator2()
-  var y = generator2()
+  when BLS_BACKEND == BLST:
+    var x{.noInit.}, y{.noInit.}: blst_p2
+    x.blst_p2_from_affine(BLS12_381_G2) # init from generator
+    y = x
 
-  bench("EC add G2", iters):
-    x.add(y)
+    bench("EC add G2 (constant-time)", iters):
+      x.blst_p2_add_or_double(x, y)
+  else:
+    var x = generator2()
+    var y = generator2()
 
-proc benchPairingViaDoublePairing*(iters: int) =
-  ## Builtin Milagro Double-Pairing implementation
-  # Ideally we don't depend on the bls_signature_scheme but it's much simpler
-  let (pubkey, seckey) = newKeyPair()
-  let msg = "msg"
-  const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+    bench("EC add G2 (constant-time)", iters):
+      x.add(y)
 
-  # Signing
-  var sig = hashToG2(msg, domainSepTag)
-  sig.mul(seckey)
+when BLS_BACKEND == BLST:
 
-  # Verification
-  let generator = generator1()
-  let Q = hashToG2(msg, domainSepTag)
-  # Pairing: e(Q, xP) == e(R, P)
-  bench("Pairing (Milagro builtin double pairing)", iters):
-    let valid = doublePairing(
-      Q, pubkey,
-      sig, generator
+  proc benchBLSTPairing*(iters: int) =
+    let (pubkey, seckey) = block:
+      var pk: PublicKey
+      var sk: SecretKey
+      var ikm: array[32, byte]
+      ikm[0] = 0x12
+      discard ikm.keygen(pk, sk)
+      (cast[blst_p1_affine](pk), cast[blst_scalar](sk))
+    let msg = "Mr F was here"
+    const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+
+    # Signing
+    var sig = block:
+      var sig {.noInit.}: blst_p2_affine
+      var s {.noInit.}: blst_p2
+      s.blst_hash_to_g2(
+        msg,
+        domainSepTag,
+        aug = ""
+      )
+      s.blst_sign_pk_in_g1(s, seckey)
+      sig.blst_p2_to_affine(s)
+      sig
+
+    # Verification
+    let ctx = createU(blst_pairing) # Heap to avoid stack smashing
+    ctx[].blst_pairing_init(
+      hash_or_encode = kHash,
+      domainSepTag
+    )
+    doAssert BLST_SUCCESS == ctx[].blst_pairing_aggregate_pk_in_g1(
+      PK = pubkey.unsafeAddr,
+      signature = nil,
+      msg,
+      aug = ""
+    )
+    doAssert BLST_SUCCESS == ctx[].blst_pairing_aggregate_pk_in_g1(
+      PK = nil,
+      signature = sig.unsafeAddr,
+      msg = "",
+      aug = ""
     )
 
-proc benchPairingViaMultiPairing*(iters: int) =
-  ## MultiPairing implementation
-  ## Using deferred Miller loop + Final Exponentiation
-  # Ideally we don't depend on the bls_signature_scheme but it's much simpler
-  let (pubkey, seckey) = newKeyPair()
-  let msg = "msg"
-  const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+    # Cache the benchmarking context, there will be a ~8MB copy overhead (context size)
+    let ctxSave = createU(blst_pairing)
+    ctxSave[] = ctx[]
 
-  # Signing
-  var sig = hashToG2(msg, domainSepTag)
-  sig.mul(seckey)
+    ctx[].blst_pairing_commit()                     # Miller loop
+    let valid = ctx[].blst_pairing_finalVerify(nil) # Final Exponentiation
+    doAssert bool valid
 
-  # Verification
-  let generator = generator1()
-  let Q = hashToG2(msg, domainSepTag)
-  # Pairing: e(Q, xP) == e(R, P)
-  bench("Pairing (Multi-Pairing with delayed Miller and Exp)", iters):
-    let valid = multiPairing(
-      Q, pubkey,
-      sig, generator
-    )
+    # Pairing: e(Q, xP) == e(R, P)
+    bench("Pairing (Miller loop + Final Exponentiation)", iters):
+      ctx[] = ctxSave[]
+      ctx[].blst_pairing_commit()                     # Miller loop
+      let valid = ctx[].blst_pairing_finalVerify(nil) # Final Exponentiation
+      # doAssert bool valid
+
+else:
+
+  proc benchMiraclPairingViaDoublePairing*(iters: int) =
+    ## Builtin Miracl Double-Pairing implementation
+    # Ideally we don't depend on the bls_signature_scheme but it's much simpler
+    let (pubkey, seckey) = block:
+      var pk: PublicKey
+      var sk: SecretKey
+      var ikm: array[32, byte]
+      ikm[0] = 0x12
+      discard ikm.keygen(pk, sk)
+      (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
+    let msg = "Mr F was here"
+    const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+
+    # Signing
+    var sig = hashToG2(msg, domainSepTag)
+    sig.mul(seckey)
+
+    # Verification
+    let generator = generator1()
+    let Q = hashToG2(msg, domainSepTag)
+    # Pairing: e(Q, xP) == e(R, P)
+    bench("Pairing (Milagro builtin double pairing)", iters):
+      let valid = doublePairing(
+        Q, pubkey,
+        sig, generator
+      )
+      # doAssert valid
+
+  proc benchMiraclPairingViaMultiPairing*(iters: int) =
+    ## MultiPairing implementation
+    ## Using deferred Miller loop + Final Exponentiation
+    # Ideally we don't depend on the bls_signature_scheme but it's much simpler
+    let (pubkey, seckey) = block:
+      var pk: PublicKey
+      var sk: SecretKey
+      var ikm: array[32, byte]
+      ikm[0] = 0x12
+      discard ikm.keygen(pk, sk)
+      (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
+    let msg = "Mr F was here"
+    const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
+
+    # Signing
+    var sig = hashToG2(msg, domainSepTag)
+    sig.mul(seckey)
+
+    # Verification
+    let generator = generator1()
+    let Q = hashToG2(msg, domainSepTag)
+    # Pairing: e(Q, xP) == e(R, P)
+    bench("Pairing (Multi-Pairing with delayed Miller and Exp)", iters):
+      let valid = multiPairing(
+        Q, pubkey,
+        sig, generator
+      )
+      # doAssert valid
 
 when isMainModule:
   benchScalarMultG1(1000)
@@ -103,5 +230,8 @@ when isMainModule:
   benchEcAddG1(1000)
   benchEcAddG2(1000)
 
-  benchPairingViaDoublePairing(1000)
-  benchPairingViaMultiPairing(1000)
+  when BLS_BACKEND == BLST:
+    benchBLSTPairing(1000)
+  else:
+    benchMiraclPairingViaDoublePairing(1000)
+    benchMiraclPairingViaMultiPairing(1000)

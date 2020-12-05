@@ -36,7 +36,8 @@ when (BLS_FORCE_BACKEND == "blst" or AutoSelectBLST) and (
   const BLS_BACKEND* = BLST
 elif BLS_FORCE_BACKEND == "blst" or AutoSelectBLST:
   # CPU doesn't support SSE3 which is used in optimized SHA256
-  # BLST_PORTABLE is a no-op on ARM
+  # On ARM, BLST_PORTABLE will prevent use builtin SHA256
+  # which is unsupported by Raspberry Pi, detection via (__ARM_FEATURE_CRYPTO)
   const BLS_BACKEND* = BLST
   {.passC: "-D__BLST_PORTABLE__".}
 else:
