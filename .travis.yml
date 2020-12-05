@@ -43,7 +43,7 @@ script:
   # Temporary patch for https://github.com/supranational/blst/issues/46#issuecomment-738939501
   - pushd vendor/blst
   - git fetch https://github.com/dot-asm/blst no-asm-as-command-line
-  - git cherry-pick 8e37f9e14306f39ae5417cd223112b5d20656d49
+  - git -c user.name=Nobody -c user.email=nobody@example.com cherry-pick 8e37f9e14306f39ae5417cd223112b5d20656d49
   - popd
 
   - nimble test
