@@ -140,9 +140,9 @@ func aggregateVerify*(
   if not(publicKeys.len >= 1):
     return false
 
-  var ctx{.noInit.}: ContextCoreAggregateVerify
+  var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
 
-  ctx.init(DST)
+  ctx.init()
   for i in 0 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
       return false
