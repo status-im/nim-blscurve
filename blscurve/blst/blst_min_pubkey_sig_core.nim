@@ -32,13 +32,6 @@ import
   # Internals
   ./blst_lowlevel
 
-# Batch verification
-import
-  # Scalar blinding
-  ./sha256_abi,
-  # Parallelism
-  ../openmp
-
 # TODO: Consider keeping the compressed keys/signatures in memory
 #       to divide mem usage by 2
 #       i.e. use the staging "pk2" variants like
