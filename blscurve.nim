@@ -7,9 +7,9 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-const BLS_ETH2_SPEC* = "v1.0.0-rc0"
+const BLS_ETH2_SPEC* = "v1.0.0"
 import
-  blscurve/bls_backend,
+  blscurve/bls_public_exports,
   blscurve/keygen_eip2333
 
-export bls_backend, keygen_eip2333
+export bls_public_exports, keygen_eip2333
