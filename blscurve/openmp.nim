@@ -20,6 +20,11 @@ when defined(openmp):
 
   proc omp_set_num_threads*(x: cint) {.omp.}
   proc omp_get_num_threads*(): cint {.omp.}
+    ## Returns the number of threads assigned to this region
+    ##
+    ## Warning, this will always return 1 in a non-parallel region
+    ## use `omp_get_max_threads` to get the number of threads
+    ## available in a serial portion of the code.
   proc omp_get_max_threads*(): cint {.omp.} # This takes hyperthreading into account
   proc omp_get_thread_num*(): cint {.omp.}
   proc omp_set_nested*(x: cint) {.omp.}
@@ -28,6 +33,11 @@ when defined(openmp):
 else:
   template omp_set_num_threads*(x: cint) = discard
   template omp_get_num_threads*(): cint = 1
+    ## Returns the number of threads assigned to this region
+    ##
+    ## Warning, this will always return 1 in a non-parallel region
+    ## use `omp_get_max_threads` to get the number of threads
+    ## available in a serial portion of the code.
   template omp_get_max_threads*(): cint = 1
   template omp_get_thread_num*(): cint = 0
   template omp_set_nested*(x: cint) = discard

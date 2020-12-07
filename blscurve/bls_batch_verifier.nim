@@ -115,6 +115,8 @@ func incl*[HashLen: static int](
     message: message
   )
 
+  return true
+
 # Serial Batch Verifier
 # ----------------------------------------------------------------------
 
@@ -158,10 +160,11 @@ func batchVerifySerial*(
 
 func toPtrUncheckedArray[T](s: seq[T]): ptr UncheckedArray[T] {.inline.} =
   {.pragma: restrict, codegenDecl: "$# __restrict $#".}
-  let ident{.restrict.} = cast[
+  let p{.restrict.} = cast[
     ptr UncheckedArray[T]](
       s[0].unsafeAddr()
   )
+  return p
 
 func accumPairingLines[HashLen](
        sigsets: ptr UncheckedArray[SignatureSet[HashLen]],
@@ -234,7 +237,7 @@ func dacPairing[HashLen](
   # and for Ethereum we would at least have 6 sets:
   # - block proposals signatures
   # - randao reveal signatures
-  # - proposser slashings signatures
+  # - proposer slashings signatures
   # - attester slashings signatures
   # - attestations signatures
   # - validator exits signatures
@@ -319,7 +322,7 @@ proc batchVerifyParallel*(
   if numSets == 0:
     return false
 
-  let numBatches = min(numSets, omp_get_num_threads().uint32)
+  let numBatches = min(numSets, omp_get_max_threads().uint32)
 
   # Stage 0: Accumulators - setLen for noinit of seq
   batcher.batchContexts.setLen(numBatches.int)
@@ -336,10 +339,11 @@ proc batchVerifyParallel*(
   omp_parallel:
     let threadID = omp_get_thread_num()
 
-    contextsPtr[threadID].init(
-      secureRandomBytes,
-      threadSepTag = cast[array[sizeof(cint), byte]](threadID)
-    )
+    if threadID.uint32 < numBatches:
+      contextsPtr[threadID].init(
+        secureRandomBytes,
+        threadSepTag = cast[array[sizeof(cint), byte]](threadID)
+      )
 
     omp_single:
       ok = dacPairing(setsPtr, contextsPtr, numBatches,
