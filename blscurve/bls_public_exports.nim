@@ -27,3 +27,6 @@ export
 when BLS_BACKEND == BLST:
   import ./blst/sha256_abi
   export sha256_abi
+
+  import ./bls_batch_verifier
+  export bls_batch_verifier

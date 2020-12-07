@@ -28,7 +28,7 @@ import bls_backend
 # Compared to the spec API are modified
 # to enforce usage of the proof-of-posession (as recommended)
 
-const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+const DST* = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 
 func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =

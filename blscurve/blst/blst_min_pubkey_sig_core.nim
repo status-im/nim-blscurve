@@ -32,6 +32,9 @@ import
   # Internals
   ./blst_lowlevel
 
+# Batch verification - scalar blinding
+import ./sha256_abi
+
 # TODO: Consider keeping the compressed keys/signatures in memory
 #       to divide mem usage by 2
 #       i.e. use the staging "pk2" variants like
@@ -378,3 +381,157 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
 
   ctx.commit()
   result = bool ctx.finalVerify()
+
+# Parallelized Batch Verifier primitives
+# ----------------------------------------------------------------------
+#
+# Ultimately this can be merged with the internal ContextCoreAggregateVerify
+# but:
+# - The previous code was audited
+# - For now we only support BLST
+#   though MIRACL is straightforward, context merge is just a FP12 multiplication
+#   since GT is a multiplicative group.
+# - we need to hold cryptographycally secure
+#   random bytes to protect against forged signatures
+#   that would not pass non-aggregated verification
+#   via random scalar blinding
+#   https://ethresear.ch/t/fast-verification-of-multiple-bls-signatures/5407/14
+#
+#
+# Tradeoffs:
+# - Adds:
+#   - a blinding multiplication on G2
+#   - a blinding mul on G1 or Fp
+# - Saves:
+#   - Only 1 Miller Loop per thread (50% pairing)
+#   - Only 1 Final Exponentiation per batch (50% pairing cost)
+#
+# Assuming blinding muls cost 60% of a pairing (worst case with 255-bit blinding)
+# verifying 3 signatures would have a base cost of 300
+# Batched single threaded the cost would be
+# 60*3 (blinding 255-bit) + 50 (Miller) + 50 (final exp) = 280
+#
+# With 64-bit blinding and ~20% overhead
+# (not 15% because no endomorphism acceleration with 64-bit)
+# 20*3 (blinding 64-bit) + 50 (Miller) + 50 (final exp) = 160
+#
+# If split on 2 cores, the critical path is
+# 20*2 (blinding 64-bit) + 50 (Miller) + 50 (final exp) = 140
+#
+# If split on 3 cores, the critical path is
+# 20*1 (blinding 64-bit) + 50 (Miller) + 50 (final exp) = 120
+
+type
+  ContextMultiAggregateVerify*[DomainSepTag: static string] = object
+    ## A context for multi signature verification
+    ##
+    ## This context holds a secure blinding scalar,
+    ## it does not use secret data but it is necessary
+    ## to have data not in the control of an attacker
+    ## to prevent forging valid aggregated signatures
+    ## from 2 invalid individual signatures using
+    ## the bilinearity property of pairings.
+    ## https://ethresear.ch/t/fast-verification-of-multiple-bls-signatures/5407/14
+    c: blst_pairing
+    secureBlinding: array[32, byte]
+
+func init*[T: char|byte](
+       ctx: var ContextMultiAggregateVerify,
+       secureRandomBytes: array[32, byte],
+       threadSepTag: openarray[T]
+     ) {.inline.} =
+  ## initialize a multi-signature aggregate verification context
+  ## This requires cryptographically secure random bytes
+  ## to defend against forged signatures that would not
+  ## verify individually but would verify while aggregated
+  ## https://ethresear.ch/t/fast-verification-of-multiple-bls-signatures/5407/14
+  ##
+  ## An optional thread separation tag can be added
+  ## so that from a single source of randomness
+  ## each thread is seeded with a different state when
+  ## used in a multithreading context
+  ctx.c.blst_pairing_init(
+    hash_or_encode = kHash,
+    ctx.DomainSepTag
+  ) # C1 = 1 (identity element)
+
+  ctx.secureBlinding = secureRandomBytes
+
+func update*[T: char|byte](
+         ctx: var ContextMultiAggregateVerify,
+         publicKey: PublicKey,
+         message: openarray[T],
+         signature: Signature
+       ): bool {.inline.} =
+  ## Add a (public key, message, signature) triplet
+  ## to a ContextMultiAggregateVerify context
+  ##
+  ## Assumes that the public key and signature
+  ## have been group checked and that the public key is not infinity
+
+  # The derivation of a secure scalar
+  # MUST not output 0.
+  # HKDF mod R for EIP2333 is suitable.
+  # We can also consider using something
+  # hardware-accelerated like AES.
+  #
+  # However the curve order r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+  # is 255 bits and 255-bit scalar mul on G2
+  # costs 43% of a pairing and on G1 20%,
+  # and we need to multiply both the signature
+  # and the public key or message.
+  # This blinding scheme would have a lot overhead
+  # for single threaded.
+  #
+  # As we don't protect secret data here
+  # and only want extra data not in possession of the attacker
+  # we only use a 1..<2^64 random blinding factor.
+  # We assume that the attacker cannot resubmit 2^64 times
+  # forged public keys and signatures.
+  # Discussion https://ethresear.ch/t/fast-verification-of-multiple-bls-signatures/5407
+
+  # We only use the first 8 bytes for blinding
+  # but use the full 32 bytes to derive new random scalar
+  const blindingBits = 64
+  var blindingScalar {.noInit.}: blst_scalar
+  block: # Warning: Rolling my own crypto
+    let blindingAsU64 = cast[ptr uint64](ctx.secureBlinding.addr)
+    let blindingAsArray = cast[ptr array[32, byte]](ctx.secureBlinding.addr)
+
+    ctx.secureBlinding.bls_sha256_digest(ctx.secureBlinding)
+    while blindingAsU64[] == 0:
+      # Ensure that the least significant bytes are non-zero
+      ctx.secureBlinding.bls_sha256_digest(ctx.secureBlinding)
+    blindingScalar.blst_scalar_from_lendian(blindingAsArray[])
+
+  result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_mul_n_aggr_pk_in_g1(
+    publicKey.point.unsafeAddr,
+    pk_grpchk = false, # Already grouped checked
+    signature.point.unsafeAddr,
+    sig_grpchk = false, # Already grouped checked
+    scalar = blindingScalar,
+    nbits = blindingBits, # Use only the first 64 bits for blinding
+    message,
+    aug = ""
+  )
+
+func commit*(ctx: var ContextMultiAggregateVerify) {.inline.} =
+  ## Consolidate all init/update operations done so far
+  ## This is a very expensive operation
+  ## This MUST be done:
+  ## - before merging 2 pairing contexts (for example when distributing computation)
+  ## - before finalVerify
+  ctx.c.blst_pairing_commit()
+
+func merge*(
+       ctx_into: var ContextMultiAggregateVerify,
+       ctx_from: sink ContextMultiAggregateVerify): bool {.inline.} =
+  ## Merge 2 ContextMultiAggregateVerify contexts
+  ## This MUST be preceded by "commit" on each ContextMultiAggregateVerify
+  ## There shouldn't be a use-case where ``ctx_from`` is reused afterwards
+  ## hence it is marked as sink.
+  return BLST_SUCCESS == ctx_into.c.blst_pairing_merge(ctx_from.c)
+
+func finalVerify*(ctx: var ContextMultiAggregateVerify): bool {.inline.} =
+  ## Verify a whole batch of (PublicKey, message, Signature) triplets.
+  result = bool ctx.c.blst_pairing_finalverify(nil)
