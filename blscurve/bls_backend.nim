@@ -45,16 +45,8 @@ else:
   const BLS_BACKEND* = Miracl
 
 when BLS_BACKEND == BLST:
-  import ./blst/bls_sig_min_pubkey_size_pop, ./blst/sha256_abi
-  export bls_sig_min_pubkey_size_pop, sha256_abi
+  import ./blst/blst_min_pubkey_sig_core
+  export blst_min_pubkey_sig_core
 else:
-  import
-    ./miracl/bls_signature_scheme
-  export
-    SecretKey, PublicKey, Signature, ProofOfPossession,
-    AggregateSignature,
-    `==`,
-    init, aggregate, finish, aggregateAll,
-    sign, verify, aggregateVerify, fastAggregateVerify,
-    publicFromSecret, isZero,
-    fromHex, fromBytes, toHex, serialize, exportRaw
+  import ./miracl/miracl_min_pubkey_sig_core
+  export miracl_min_pubkey_sig_core

@@ -4,7 +4,7 @@ import
   # Status
   nimcrypto/[sha2, hash],
   # BLSCurve
-  ../blscurve/bls_backend
+  ../blscurve/bls_public_exports
 
 static: doAssert BLS_BACKEND == BLST
 

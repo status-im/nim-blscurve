@@ -80,7 +80,9 @@ func mul_mont_sparse_256(
 
 # ----------------------------------------------------------------------
 
-func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: string): bool =
+func hkdf_mod_r*[T: char|byte](
+       secretKey: var SecretKey,
+       ikm: openArray[byte], key_info: openarray[T]): bool =
   ## Ethereum 2 EIP-2333, extracts this from the BLS signature schemes
   # 1. salt = "BLS-SIG-KEYGEN-SALT-"
   # 2. SK = 0
@@ -123,8 +125,6 @@ func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: strin
       salt.bls_sha256_digest(salt)
     else:
       return true
-
-
 
 func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var SecretKey): bool =
   ## Generate a (public key, secret key) pair

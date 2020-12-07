@@ -33,7 +33,9 @@ func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
     when obj is PublicKey:
       # KeyValidate
       if obj.point.isInf():
-        result = false
+        return false
+      if not subgroupCheck(obj.point):
+        return false
 
 func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
        obj: var T,
