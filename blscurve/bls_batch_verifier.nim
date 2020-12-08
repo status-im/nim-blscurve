@@ -308,7 +308,6 @@ proc batchVerifyParallel*(
   # Stage 1: Accumulate partial pairings
   checksAndStackTracesOff:
     omp_parallel: # Start the parallel region
-      attachGC()
       let threadID = omp_get_thread_num()
       omp_chunks(numSets, chunkStart, chunkLen):
         # Partition work into even chunks
