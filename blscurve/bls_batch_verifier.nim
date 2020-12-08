@@ -49,6 +49,7 @@ type
 
     # Per-batch contexts for multithreaded batch verification
     batchContexts: seq[ContextMultiAggregateVerify[DST]]
+    updateResults: seq[tuple[ok: bool, padCacheLine: array[64, byte]]]
 
 func init*(T: type BatchedBLSVerifier): T {.inline.} =
   ## Initialize or reinitialize a batchedBLS Verifier
@@ -152,165 +153,131 @@ func batchVerifySerial*(
 
 # Parallelized Batch Verifier
 # ----------------------------------------------------------------------
+# Parallel pairing computation requires the following steps
+#
+# Assuming we have N (public key, message, signature) triplets to verify
+# on P processor/threads.
+# We want B batches with B = P
+# Each processing W work items with W = N/B or N/B + 1
+#
+# Step 0: Initialize a context per parallel batch.
+# Step 1: Compute partial pairings, W work items per thread.
+# Step 2: Merge the B partial pairings
+#
+# For step 2 we have 2 strategies.
+# Strategy A: a simple linear merge
+# ```
+# for i in 1 ..< N:
+#   contexts[0].merge(contexts[i])
+# ```
+# which requires B operations.
+# In that case we can get away with just a simple parallel for loop.
+# and a serial linear merge for step 2
+#
+# Strategy B: A divide-and-conquer algorithm
+# We binary split the merge until we hit the base case:
+# ```
+# contexts[i].merge(contexts[i+1])
+# ```
+#
+# As pairing merge (Fp12 multiplication) is costly
+# (~10000 CPU cycles on Skylake-X with ADCX/ADOX instructions)
+# and for Ethereum we would at least have 6 sets:
+# - block proposals signatures
+# - randao reveal signatures
+# - proposer slashings signatures
+# - attester slashings signatures
+# - attestations signatures
+# - validator exits signatures
+# not counting deposits signatures which may be invalid
+# The merging would be 60k cycles if linear
+# or 10k * log2(6) = 30k cycles if divide-and-conquer on 6+ cores
+# Note that as the tree processing progresses, less threads are required
+# for full parallelism so even with less than 6 cores, the speedup should be important.
+# But on the other side, it's hard to utilize all cores of a high-core count machine.
+#
+# Note 1: a pairing is about 3400k cycles so the optimization is only noticeable
+# when we do multi-block batches,
+# for example batching 20 blocks would require 1200k cycles for a linear merge.
+#
+# Note 2: Skylake-X is a very recent family, with bigint instructions MULX/ADCX/ADOX,
+# multiply everything by 2~3 on a Raspberry Pi
+# and scale by core frequency.
+#
+# Note 3: 3000 cycles is 1ms at 3GHz.
 
-# No Nim checks in OpenMP multithreading land, failure allocates an exception.
-# No stacktraces either.
-# Also use uint instead of int to ensure no range checks.
-{.push stacktrace:off, checks: off.}
-
-func toPtrUncheckedArray[T](s: seq[T]): ptr UncheckedArray[T] {.inline.} =
-  {.pragma: restrict, codegenDecl: "$# __restrict $#".}
-  let p{.restrict.} = cast[
-    ptr UncheckedArray[T]](
-      s[0].unsafeAddr()
-  )
-  return p
-
-func accumPairingLines[HashLen](
-       sigsets: ptr UncheckedArray[SignatureSet[HashLen]],
-       contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
-       batchID: uint32,
-       subsetStart: uint32,
-       subsetStopEx: uint32): bool =
-  ## Accumulate pairing lines
-  ## subsetStopEx is iteration stopping index, non-inclusive
-  ## Assumes that contexts[batchID] is valid.
-  ## Assumes that sigsets[subsetStart..<subsetStopEx] is valid
-  for i in subsetStart ..< subsetStopEx:
-    let ok = contexts[batchID].update(
-        sigsets[i].pubkey,
-        sigsets[i].message,
-        sigsets[i].signature
-      )
-    if not ok:
-      return false
-
-  contexts[batchID].commit()
-
-func dacPairing[HashLen](
-       sigsets: ptr UncheckedArray[SignatureSet[HashLen]],
-       contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
-       numBatches: uint32,
-       batchID: uint32,
-       subsetStart: uint32,
-       subsetStopEx: uint32
-     ): bool =
-  ## Distribute pairing computation using a recursive divide-and-conquer (DAC) algorithm
+template checksAndStackTracesOff(body: untyped): untyped =
+  ## No Nim checks in OpenMP multithreading land, failure allocates an exception.
+  ## No stacktraces either.
+  ## Also use uint instead of int to ensure no range checks.
   ##
-  ## Returns false if at least one partial pairing `update` failed.
-  ## ⚠️ : We use 0-based indexing for the tree splitting
-  ##                  root at 0    root at 1
-  ## Left child        ix*2 + 1     ix*2
-  ## Right child       ix*2 + 2     ix*2 + 1
-  ## Parent            (ix-1)/2     ix/2
-  #
-  # Rationale for divide and conquer.
-  # Parallel pairing computation requires the following steps
-  #
-  # Assuming we have N (public key, message, signature) triplets to verify
-  # on P processor/threads.
-  # We want B batches with B = P
-  # Each processing W work items with W = N/B or N/B + 1
-  #
-  # Step 0: Initialize a context per parallel batch.
-  # Step 1: Compute partial pairings, W work items per thread.
-  # Step 2: Merge the B partial pairings
-  #
-  # For step 2 we have 2 strategies.
-  # Strategy A: a simple linear merge
-  # ```
-  # for i in 1 ..< N:
-  #   contexts[0].merge(contexts[i])
-  # ```
-  # which requires B operations.
-  # In that case we can get away with just a simple parallel for loop.
-  # and a serial linear merge for step 2
-  #
-  # Strategy B: A divide-and-conquer algorithm
-  # We binary split the merge until we hit the base case:
-  # ```
-  # contexts[i].merge(contexts[i+1])
-  # ```
-  #
-  # As pairing merge (Fp12 multiplication) is costly
-  # (~10000 CPU cycles on Skylake-X with ADCX/ADOX instructions)
-  # and for Ethereum we would at least have 6 sets:
-  # - block proposals signatures
-  # - randao reveal signatures
-  # - proposer slashings signatures
-  # - attester slashings signatures
-  # - attestations signatures
-  # - validator exits signatures
-  # not counting deposits signatures which may be invalid
-  # The merging would be 60k cycles if linear
-  # or 10k * log2(6) = 30k cycles if divide-and-conquer on 6+ cores
-  # Note that as the tree processing progresses, less threads are required
-  # for full parallelism so even with less than 6 cores, the speedup should be important.
-  #
-  # Hence we prefer strategy B. It would also be easier to port to a simple threadpool
-  # which doesn't support parallel for loop but do support plain task spawning.
-  #
-  # That said a pairing is about 3400k cycles so the optimization is only noticeable
-  # when we do multi-block batches,
-  # for example batching 20 blocks would require 1200k cycles for a linear merge.
-  #
-  # Since we use divide-and-conquer for step 2, we might as well use it for step 1 as well
-  # which would also allow us to remove synchronization barriers between step 1 and 2.
-  # - 1 for the master thread to check ctx.update(...) results and early return
-  # - 1 to ensure that the contextPtr array is fully updated before starting merge
-  #
-  # Note: Skylake-X is a very recent family, with bigint instructions MULX/ADCX/ADOX,
-  # multiply everything by 2~3 on a Raspberry Pi
-  # and scale by core frequency.
-  # 3000 cycles is 1ms at 3GHz.
+  ## For debugging a parallel OpenMP region, put "attachGC"
+  ## as the first statement after "omp_parallel"
+  ## Then you can echo strings and reenable stacktraces
+  {.push stacktrace:off, checks: off.}
+  body
+  {.pop.}
 
-  # Overflow check: numBatches and so batchID*2+2 are capped by number of threads
-  template left(batchID: uint32): uint32 = 2*batchID+1
-  template right(batchID: uint32): uint32 = 2*batchID+2
+checksAndStackTracesOff:
+  func toPtrUncheckedArray[T](s: seq[T]): ptr UncheckedArray[T] {.inline.} =
+    {.pragma: restrict, codegenDecl: "$# __restrict $#".}
+    let p{.restrict.} = cast[
+      ptr UncheckedArray[T]](
+        s[0].unsafeAddr()
+    )
+    return p
 
-  let mid = (subsetStopEx+subsetStart) shr 1
+  func accumPairingLines[HashLen](
+        sigsets: ptr UncheckedArray[SignatureSet[HashLen]],
+        contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
+        batchID: uint32,
+        subsetStart: uint32,
+        subsetStopEx: uint32): bool =
+    ## Accumulate pairing lines
+    ## subsetStopEx is iteration stopping index, non-inclusive
+    ## Assumes that contexts[batchID] is valid.
+    ## Assumes that sigsets[subsetStart..<subsetStopEx] is valid
+    for i in subsetStart ..< subsetStopEx:
+      let ok = contexts[batchID].update(
+          sigsets[i].pubkey,
+          sigsets[i].message,
+          sigsets[i].signature
+        )
+      if not ok:
+        return false
 
-  if subsetStopEx-subsetStart <= 1 or batchID.left >= numBatches:
-    # Can't split or no need to split anymore
-    # as there is more work than hardware threads/batches
-    # and it's better to accumulate as much as possible in partial pairings
-    # as merge cost is non-trivial (10k to 20k cycles).
-    # So we want 1 merge per thread and no more.
-    let ok = accumPairingLines(sigsets, contexts,
-                               batchID, subsetStart, subsetStopEx)
-    if not ok:
-      return false
+    contexts[batchID].commit()
     return true
-  elif batchID.right >= numBatches:
-    # No need to split, there is no right subtree
-    # We directly accumulate in the current batch context
-    let ok = accumPairingLines(sigsets, contexts,
-                               batchID, subsetStart, mid)
-    if not ok:
-      return false
-    return true
-  else:
-    # Split in half, distribute the right and work on the left
-    var leftOk, rightOk = true
-    omp_task"":
-      rightOk = dacPairing(sigsets, contexts, numBatches,
-                           batchID.right(), mid, subsetStopEx)
-    leftOk = dacPairing(sigsets, contexts, numBatches,
-                        batchID.left(), subsetStart, mid)
+
+  func reducePartialPairings(
+        contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
+        start, stopEx: uint32): bool =
+    ## Parallel logarithmic reduction of partial pairings
+    ## start->stopEx describes an exclusive range
+    ## of contexts to reduce.
+    # Rationale for using a more complex parallel logarithmic reduction
+    # rather than a serial for loop
+    # is in comments at the start of the Parallelized Batch Verifier Section.
+    let mid = (start + stopEx) shr 1
+    if stopEx-start == 1:
+      # Odd number of batches
+      return true
+    elif stopEx-start == 2:
+      # Leaf node
+      let ok = contexts[start].merge(contexts[stopEx-1])
+      return ok
+
+    var leftOk{.exportC.}, rightOk{.exportC.} = false
+    omp_task"shared(leftOk)": # Subtree puts partial reduction in "first"
+      leftOk = reducePartialPairings(contexts, start, mid)
+    omp_task"shared(rightOk)": # Subtree puts partial reduction in "mid"
+      rightOk = reducePartialPairings(contexts, mid, stopEx)
 
     # Wait for all subtrees
     omp_taskwait()
     if not leftOk or not rightOk:
       return false
-    # Merge left and right
-    let mergeOk = contexts[batchID.left()].merge(contexts[batchID.right()])
-    if not mergeOk:
-      return false
-    # Update our own pairing context - 3+MB copy
-    contexts[batchID] = contexts[batchID.left()]
-    return true
-
-{.pop.}
+    return contexts[start].merge(contexts[mid])
 
 proc batchVerifyParallel*(
        batcher: var BatchedBLSVerifier,
@@ -322,10 +289,13 @@ proc batchVerifyParallel*(
   if numSets == 0:
     return false
 
+  # TODO: tuning, is 1 set per thread worth it?
+  # or do we need a minimum like 2 per thread?
   let numBatches = min(numSets, omp_get_max_threads().uint32)
 
   # Stage 0: Accumulators - setLen for noinit of seq
   batcher.batchContexts.setLen(numBatches.int)
+  batcher.updateResults.setLen(numBatches.int)
 
   # No stacktrace, exception
   # or anything that require a GC in a parallel section
@@ -333,25 +303,49 @@ proc batchVerifyParallel*(
   # Hence we use raw ptr UncheckedArray instead of seq
   let contextsPtr = batcher.batchContexts.toPtrUncheckedArray()
   let setsPtr = batcher.sets.toPtrUncheckedArray()
+  let updateResultsPtr = batcher.updateResults.toPtrUncheckedArray()
 
-  var ok: bool
-  {.push stacktrace:off, checks:off.}
-  omp_parallel:
-    let threadID = omp_get_thread_num()
+  # Stage 1: Accumulate partial pairings
+  checksAndStackTracesOff:
+    omp_parallel: # Start the parallel region
+      attachGC()
+      let threadID = omp_get_thread_num()
+      omp_chunks(numSets, chunkStart, chunkLen):
+        # Partition work into even chunks
+        # Each thread receives a different start+len to process
+        # chunkStart and chunkLen are set per-thread by the template
+        contextsPtr[threadID].init(
+          secureRandomBytes,
+          threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
+        )
 
-    if threadID.uint32 < numBatches:
-      contextsPtr[threadID].init(
-        secureRandomBytes,
-        threadSepTag = cast[array[sizeof(cint), byte]](threadID)
-      )
+        updateResultsPtr[threadID].ok =
+          accumPairingLines(
+            setsPtr, contextsPtr,
+            threadID.uint32,
+            chunkStart.uint32, uint32(chunkStart+chunkLen)
+          )
 
-    omp_single:
-      ok = dacPairing(setsPtr, contextsPtr, numBatches,
-                      batchID = 0, subsetStart = 0, subsetStopEx = numSets)
-  {.pop.}
+  for i in 0 ..< batcher.updateResults.len:
+    if not updateResultsPtr[i].ok:
+      return false
 
-  if not ok:
-    return false
+  # Stage 2: Reduce partial pairings
+  when false: # linear merge
+    for i in 1 ..< numBatches:
+      let ok = contextsPtr[0].merge(contextsPtr[i])
+      if not ok:
+        return false
+
+  else: # parallel logarithmic merge
+    var ok = false
+    checksAndStackTracesOff:
+      omp_parallel: # Start the parallel region
+        omp_single: # A single thread should create the master task
+          ok = reducePartialPairings(contextsPtr, start = 0, stopEx = numBatches)
+
+    if not ok:
+      return false
 
   return batcher.batchContexts[0].finalVerify()
 
@@ -374,7 +368,7 @@ proc batchVerify*(
   ## The blinding scheme also assumes that the attacker cannot
   ## resubmit 2^64 times forged (publickey, message, signature) triplets
   ## against the same `secureRandomBytes`
-  if min(batcher.sets.len.uint32, omp_get_num_threads().uint32) >= 2:
+  if min(batcher.sets.len.uint32, omp_get_max_threads().uint32) >= 12:
     batcher.batchVerifyParallel(secureRandomBytes)
   else:
     batcher.batchVerifySerial(secureRandomBytes)

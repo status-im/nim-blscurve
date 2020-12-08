@@ -135,10 +135,10 @@ template omp_chunks*(
   # a base_chunk_size of 40/12 = 3 so work on the first 11 threads
   # will be 3 * 11 = 33, and the remainder 7 on the last thread.
   let
-    nb_chunks = omp_get_num_threads()
+    nb_chunks = omp_get_num_threads().uint32
     base_chunk_size = omp_size div nb_chunks
     remainder = omp_size mod nb_chunks
-    thread_id = omp_get_thread_num()
+    thread_id = omp_get_thread_num().uint32
 
   # Instead of dividing 40 work items on 12 cores into:
   # 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 7 = 3*11 + 7 = 40

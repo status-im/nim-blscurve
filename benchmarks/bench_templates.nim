@@ -53,6 +53,9 @@ when SupportsGetTicks:
 echo "\nBackend: ", $BLS_BACKEND, ", mode: ", if defined(use32): $32 else: $(sizeof(int) * 8), "-bit"
 echo "=".repeat(132) & '\n'
 
+proc separator*() =
+  echo "-".repeat(132)
+
 proc report(op: string, start, stop: MonoTime, startClk, stopClk: int64, iters: int) =
   let ns = inNanoseconds((stop-start) div iters)
   let throughput = 1e9 / float64(ns)
