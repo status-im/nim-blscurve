@@ -11,8 +11,15 @@ git:
 
 matrix:
   include:
-    - os: linux
-      compiler: gcc
+    # Due to Travis new pricing we want to dedicate the resources we have
+    # for ARM64 testing, hence Linux/Mac on AMD are commented out
+    # https://blog.travis-ci.com/2020-11-02-travis-ci-new-billing
+
+    # - os: linux
+    #   compiler: gcc
+    # - os: osx
+    #   compiler: clang
+
     - dist: bionic
       # Bionic to avoid git failure "fatal: unknown date format unix"
       compiler: gcc
@@ -23,8 +30,7 @@ matrix:
         - ARCH=powerpc64el
         - CHANNEL=devel
       compiler: gcc
-    - os: osx
-      compiler: clang
+
 
 install:
   # build nim from our own branch - this to avoid the day-to-day churn and
