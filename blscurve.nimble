@@ -45,13 +45,13 @@ task test, "Run all tests":
   # Internal SHA256
   test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
 
-    # batch verification
-    test "-d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
+  # batch verification
+  test "-d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
 
-    # No OpenMP in default Clang on Mac
-    when not defined(macosx):
-      # Parallel batch verification
-      test "-d:openmp -d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
+  # No OpenMP in default Clang on Mac
+  when not defined(macosx):
+    # Parallel batch verification
+    test "-d:openmp -d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
 
   # Ensure benchmarks stay relevant.
   # TODO, solve "inconsistent operand constraints"
