@@ -90,7 +90,7 @@ func incl*[HashLen: static int](
        public_keys: openarray[PublicKey],
        message: array[HashLen, byte],
        signature: Signature
-     ): bool {.inline.} =
+     ): bool =
   ## Include a (array of public keys, message, signature) triplet
   ## to the batch for verification.
   ##

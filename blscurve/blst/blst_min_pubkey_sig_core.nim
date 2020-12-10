@@ -447,7 +447,7 @@ func init*[T: char|byte](
        ctx: var ContextMultiAggregateVerify,
        secureRandomBytes: array[32, byte],
        threadSepTag: openarray[T]
-     ) {.inline.} =
+     ) =
   ## initialize a multi-signature aggregate verification context
   ## This requires cryptographically secure random bytes
   ## to defend against forged signatures that would not
@@ -463,19 +463,22 @@ func init*[T: char|byte](
     ctx.DomainSepTag
   ) # C1 = 1 (identity element)
 
-  var mixer: BLST_SHA256_CTX
-  mixer.init()
-  mixer.update(secureRandomBytes)
-  mixer.update(threadSepTag)
-
-  ctx.secureBlinding.finalize(mixer)
+  if threadSepTag.len > 0:
+    ctx.secureBlinding.bls_sha256_digest(
+      secureRandomBytes,
+      threadSepTag
+    )
+  else:
+    ctx.secureBlinding.bls_sha256_digest(
+      secureRandomBytes
+    )
 
 func update*[T: char|byte](
          ctx: var ContextMultiAggregateVerify,
          publicKey: PublicKey,
          message: openarray[T],
          signature: Signature
-       ): bool {.inline.} =
+       ): bool =
   ## Add a (public key, message, signature) triplet
   ## to a ContextMultiAggregateVerify context
   ##
