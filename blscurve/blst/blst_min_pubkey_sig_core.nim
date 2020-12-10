@@ -463,7 +463,12 @@ func init*[T: char|byte](
     ctx.DomainSepTag
   ) # C1 = 1 (identity element)
 
-  ctx.secureBlinding = secureRandomBytes
+  var mixer: BLST_SHA256_CTX
+  mixer.init()
+  mixer.update(secureRandomBytes)
+  mixer.update(threadSepTag)
+
+  ctx.secureBlinding.finalize(mixer)
 
 func update*[T: char|byte](
          ctx: var ContextMultiAggregateVerify,
