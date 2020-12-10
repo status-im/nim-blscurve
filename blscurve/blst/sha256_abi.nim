@@ -35,6 +35,13 @@ proc blst_sha256_final(
        ctx: var BLST_SHA256_CTX
      ){.importc: "sha256_final", header: headerPath, cdecl.}
 
+## No Nim checks in OpenMP multithreading land, failure allocates an exception.
+## No stacktraces either.
+## For debugging a parallel OpenMP region, put "attachGC"
+## as the first statement after "omp_parallel"
+## Then you can echo strings and reenable stacktraces
+{.push stacktrace:off, checks: off.}
+
 proc init*(ctx: var BLST_SHA256_CTX) =
   blst_sha256_init(ctx)
 
