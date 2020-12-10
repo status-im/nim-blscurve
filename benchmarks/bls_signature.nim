@@ -103,7 +103,7 @@ when BLS_BACKEND == BLST:
   proc batchVerifyMultiBatchedSerial*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
 
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()
@@ -122,7 +122,7 @@ when BLS_BACKEND == BLST:
   proc batchVerifyMultiBatchedParallel*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
 
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()

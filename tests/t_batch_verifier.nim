@@ -69,14 +69,14 @@ suite "Batch verification " & omp_status():
     let (pubkey, seckey) = keyGen(123)
     let sig = seckey.sign(msg)
 
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
 
     check:
       batcher.incl(pubkey, msg, sig)
       batcher.batchVerify(fakeRandomBytes)
 
   wrappedTest "Verify 2 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
     batcher.inclExample(1, "msg1")
     batcher.inclExample(2, "msg2")
 
@@ -84,7 +84,7 @@ suite "Batch verification " & omp_status():
       batcher.batchVerify(fakeRandomBytes)
 
   wrappedTest "Verify 2^4 - 1 = 15 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
 
     for i in 0 ..< 15:
       batcher.inclExample(i, "msg" & $i)
@@ -93,7 +93,7 @@ suite "Batch verification " & omp_status():
       batcher.batchVerify(fakeRandomBytes)
 
   wrappedTest "Verify 2^4 = 16 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
 
     for i in 0 ..< 16:
       batcher.inclExample(i, "msg" & $i)
@@ -102,7 +102,7 @@ suite "Batch verification " & omp_status():
       batcher.batchVerify(fakeRandomBytes)
 
   wrappedTest "Verify 2^4 + 1 = 17 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
 
     for i in 0 ..< 17:
       batcher.inclExample(i, "msg" & $i)
@@ -118,7 +118,7 @@ suite "Batch verification " & omp_status():
 
     let (pubkey2, seckey2) = keyGen(2)
 
-    var batcher = init(BatchedBLSVerifier[32])
+    var batcher = init(BatchedBLSVerifier)
 
     check:
       batcher.incl(pubkey1, msg1, sig1)

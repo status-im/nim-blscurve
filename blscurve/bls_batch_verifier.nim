@@ -31,7 +31,7 @@ import
 # for Milagro/Miracl, this wouldn't need to be in the BLST specific file
 
 type
-  SignatureSet[HashLen: static int] = object
+  SignatureSet = object
     ## A (Public Key, Message, Signature) triplet
     ## that will be batch verified.
     ## This should not hold GC-ed memory
@@ -40,12 +40,12 @@ type
     ## is the output of a fixed size hash function.
     signature: Signature
     pubkey: PublicKey
-    message: array[HashLen, byte]
+    message: array[32, byte]
 
-  BatchedBLSVerifier*[HashLen: static int] = object
+  BatchedBLSVerifier* = object
     ## A type to batch BLS multi signatures (aggregated or individual)
     ## verification using multiple cores if compiled with OpenMP
-    sets: seq[SignatureSet[HashLen]]
+    sets: seq[SignatureSet]
 
     # Per-batch contexts for multithreaded batch verification
     batchContexts: seq[ContextMultiAggregateVerify[DST]]
@@ -53,42 +53,41 @@ type
 
 func init*(T: type BatchedBLSVerifier): T {.inline.} =
   ## Initialize or reinitialize a batchedBLS Verifier
-  # Impl: A BatchedBLSVerifier still MUST be zero-init
-  # otherwise the sequences fields
-  # like capacity and reserve memory will be wrong.
-  result.sets.setLen(0)
-  result.batchContexts.setLen(0)
+  discard # default initialization
 
 func clear*(batcher: var BatchedBLSVerifier) {.inline.} =
   ## Initialize or reinitialize a batchedBLS Verifier
   batcher.sets.setLen(0)
   batcher.batchContexts.setLen(0)
 
-func incl*[HashLen: static int](
-       batcher: var BatchedBLSVerifier[HashLen],
+func incl*(
+       batcher: var BatchedBLSVerifier,
        public_key: PublicKey,
-       message: array[HashLen, byte],
+       message: array[32, byte],
        signature: Signature
      ): bool {.inline.} =
   ## Include a (public key, message, signature) triplet
   ## to the batch for verification.
   ##
-  ## Always return true
+  ## Always return true, as it assumes subgroup checks
+  ## and infinity checks were done prior.
+  ## This might change in the future via an optinal check parameter
+  ## so the return value should be checked
   ##
   ## The proof-of-possession MUST be verified before calling this function.
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
-  batcher.sets.add SignatureSet[HashLen](
+  batcher.sets.add SignatureSet(
     signature: signature,
     pubkey: public_key,
     message: message
   )
   return true
 
-func incl*[HashLen: static int](
-       batcher: var BatchedBLSVerifier[HashLen],
+func incl*(
+       batcher: var BatchedBLSVerifier,
        public_keys: openarray[PublicKey],
-       message: array[HashLen, byte],
+       message: array[32, byte],
        signature: Signature
      ): bool =
   ## Include a (array of public keys, message, signature) triplet
@@ -228,8 +227,8 @@ checksAndStackTracesOff:
     )
     return p
 
-  func accumPairingLines[HashLen](
-        sigsets: ptr UncheckedArray[SignatureSet[HashLen]],
+  func accumPairingLines(
+        sigsets: ptr UncheckedArray[SignatureSet],
         contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
         batchID: uint32,
         subsetStart: uint32,
