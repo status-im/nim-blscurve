@@ -291,8 +291,6 @@ proc batchVerifyParallel*(
     # Spec precondition
     return false
 
-  # TODO: tuning, is 1 set per thread worth it?
-  # or do we need a minimum like 2 per thread?
   let numBatches = min(numSets, omp_get_max_threads().uint32)
 
   # Stage 0: Accumulators - setLen for noinit of seq

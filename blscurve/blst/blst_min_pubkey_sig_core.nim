@@ -516,6 +516,12 @@ func update*[T: char|byte](
     aug = ""
   )
 
+## No Nim checks in OpenMP multithreading land, failure allocates an exception.
+## No stacktraces either.
+## For debugging a parallel OpenMP region, put "attachGC"
+## as the first statement after "omp_parallel"
+## Then you can echo strings and reenable stacktraces
+{.push stacktrace:off, checks: off.}
 func commit*(ctx: var ContextMultiAggregateVerify) {.inline.} =
   ## Consolidate all init/update operations done so far
   ## This is a very expensive operation
@@ -532,6 +538,7 @@ func merge*(
   ## There shouldn't be a use-case where ``ctx_from`` is reused afterwards
   ## hence it is marked as sink.
   return BLST_SUCCESS == ctx_into.c.blst_pairing_merge(ctx_from.c)
+{.pop.}
 
 func finalVerify*(ctx: var ContextMultiAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
