@@ -32,9 +32,9 @@ separator()
 
 when BLS_BACKEND == BLST:
   # Simulate Block verification
-  batchVerifyMulti(numSigs = 6, iters = 10)
-  batchVerifyMultiBatchedSerial(numSigs = 6, iters = 6)
-  batchVerifyMultiBatchedParallel(numSigs = 6, iters = 1)
+  batchVerifyMulti(numSigs = 6, iters = 100)
+  batchVerifyMultiBatchedSerial(numSigs = 6, iters = 100)
+  batchVerifyMultiBatchedParallel(numSigs = 6, iters = 100)
   separator()
 
   # Simulate 10 blocks verification

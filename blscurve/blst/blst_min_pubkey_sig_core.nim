@@ -178,6 +178,7 @@ template genAggregatorProcedures(
     ## Returns false if `elems` is the empty array
     ## and true otherwise
     if len(elems) == 0:
+      # Spec precondition
       return false
     var agg{.noInit.}: Aggregate
     agg.init(elems[0])

@@ -138,6 +138,7 @@ func aggregateVerify*(
   if publicKeys.len != proofs.len or publicKeys != messages.len:
     return false
   if not(publicKeys.len >= 1):
+    # Spec precondition
     return false
 
   var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
@@ -164,6 +165,7 @@ func aggregateVerify*(
   if publicKeys.len != messages.len:
     return false
   if not(publicKeys.len >= 1):
+    # Spec precondition
     return false
 
   var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
@@ -185,6 +187,7 @@ func aggregateVerify*[T: string or seq[byte]](
   ## to enforce correct usage.
   # Note: we can't have tuple of openarrays until openarrays are first-class value types
   if not(publicKey_msg_pairs.len >= 1):
+    # Spec precondition
     return false
 
   var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
@@ -212,6 +215,7 @@ func fastAggregateVerify*[T: byte|char](
   # 5. PK = point_to_pubkey(aggregate)
   # 6. return CoreVerify(PK, message, signature)
   if publicKeys.len == 0:
+    # Spec precondition
     return false
   if not publicKeys[0].popVerify(proofs[0]):
     return false
@@ -245,6 +249,7 @@ func fastAggregateVerify*[T: byte|char](
   # 5. PK = point_to_pubkey(aggregate)
   # 6. return CoreVerify(PK, message, signature)
   if publicKeys.len == 0:
+    # Spec precondition
     return false
 
   var aggAffine{.noInit.}: PublicKey

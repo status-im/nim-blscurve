@@ -127,6 +127,7 @@ func batchVerifySerial*(
      ): bool =
   ## Single-threaded batch verification
   if batcher.sets.len == 0:
+    # Spec precondition
     return false
 
   var ctx {.noInit.}: ContextMultiAggregateVerify[DST]
@@ -287,6 +288,7 @@ proc batchVerifyParallel*(
   ## Requires OpenMP 3.0 (GCC 4.4, 2008)
   let numSets = batcher.sets.len.uint32
   if numSets == 0:
+    # Spec precondition
     return false
 
   # TODO: tuning, is 1 set per thread worth it?
@@ -330,7 +332,7 @@ proc batchVerifyParallel*(
       return false
 
   # Stage 2: Reduce partial pairings
-  when false: # linear merge
+  if numBatches < 4: # linear merge
     for i in 1 ..< numBatches:
       let ok = contextsPtr[0].merge(contextsPtr[i])
       if not ok:
@@ -367,7 +369,7 @@ proc batchVerify*(
   ## The blinding scheme also assumes that the attacker cannot
   ## resubmit 2^64 times forged (publickey, message, signature) triplets
   ## against the same `secureRandomBytes`
-  if min(batcher.sets.len.uint32, omp_get_max_threads().uint32) >= 12:
+  if batcher.sets.len >= 3:
     batcher.batchVerifyParallel(secureRandomBytes)
   else:
     batcher.batchVerifySerial(secureRandomBytes)
