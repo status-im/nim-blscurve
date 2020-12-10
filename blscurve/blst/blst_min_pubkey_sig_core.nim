@@ -520,7 +520,7 @@ func update*[T: char|byte](
       ctx.secureBlinding.bls_sha256_digest(ctx.secureBlinding)
     blindingScalar.blst_scalar_from_lendian(blindingAsArray[])
 
-  result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_mul_n_aggr_pk_in_g1(
+  BLST_SUCCESS == ctx.c.blst_pairing_chk_n_mul_n_aggr_pk_in_g1(
     publicKey.point.unsafeAddr,
     pk_grpchk = false, # Already grouped checked
     signature.point.unsafeAddr,
