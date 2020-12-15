@@ -42,7 +42,7 @@ type
     pubkey: PublicKey
     message: array[32, byte]
 
-  BatchedBLSVerifier* = object
+  BatchedBLSVerifierCache* = object
     ## A type to batch BLS multi signatures (aggregated or individual)
     ## verification using multiple cores if compiled with OpenMP
     sets: seq[SignatureSet]
@@ -51,41 +51,39 @@ type
     batchContexts: seq[ContextMultiAggregateVerify[DST]]
     updateResults: seq[tuple[ok: bool, padCacheLine: array[64, byte]]]
 
-func init*(T: type BatchedBLSVerifier): T {.inline.} =
+func init*(T: type BatchedBLSVerifierCache): T {.inline.} =
   ## Initialize or reinitialize a batchedBLS Verifier
   discard # default initialization
 
-func clear*(batcher: var BatchedBLSVerifier) {.inline.} =
+func clear*(batcher: var BatchedBLSVerifierCache) {.inline.} =
   ## Initialize or reinitialize a batchedBLS Verifier
   batcher.sets.setLen(0)
   batcher.batchContexts.setLen(0)
 
-func incl*(
-       batcher: var BatchedBLSVerifier,
+func add*(
+       batcher: var BatchedBLSVerifierCache,
        public_key: PublicKey,
        message: array[32, byte],
        signature: Signature
-     ): bool {.inline.} =
+     ) {.inline.} =
   ## Include a (public key, message, signature) triplet
   ## to the batch for verification.
   ##
-  ## Always return true, as it assumes subgroup checks
+  ## Assumes subgroup checks
   ## and infinity checks were done prior.
-  ## This might change in the future via an optinal check parameter
-  ## so the return value should be checked
+  ## This is currently guaranteed
+  ## on deserialization of public keys and signatures.
   ##
   ## The proof-of-possession MUST be verified before calling this function.
-  ## It is recommended to use the overload that accepts a proof-of-possession
-  ## to enforce correct usage.
+  ## For Eth2, the public key must correspond to a valid deposit.
   batcher.sets.add SignatureSet(
     signature: signature,
     pubkey: public_key,
     message: message
   )
-  return true
 
-func incl*(
-       batcher: var BatchedBLSVerifier,
+func add*(
+       batcher: var BatchedBLSVerifierCache,
        public_keys: openarray[PublicKey],
        message: array[32, byte],
        signature: Signature
@@ -99,9 +97,13 @@ func incl*(
   ## Returns false if no public keys are passed
   ## Returns true otherwise
   ##
+  ## Assumes subgroup checks
+  ## and infinity checks were done prior.
+  ## This is currently guaranteed
+  ## on deserialization of public keys and signatures.
+  ##
   ## The proof-of-possession MUST be verified before calling this function.
-  ## It is recommended to use the overload that accepts a proof-of-possession
-  ## to enforce correct usage.
+  ## For Eth2, the public key must correspond to a valid deposit.
   if publicKeys.len == 0:
     return false
 
@@ -121,7 +123,7 @@ func incl*(
 # ----------------------------------------------------------------------
 
 func batchVerifySerial*(
-       batcher: BatchedBLSVerifier,
+       batcher: BatchedBLSVerifierCache,
        secureRandomBytes: array[32, byte]
      ): bool =
   ## Single-threaded batch verification
@@ -129,11 +131,9 @@ func batchVerifySerial*(
     # Spec precondition
     return false
 
-  var ctx {.noInit.}: ContextMultiAggregateVerify[DST]
-  ctx.init(
-    secureRandomBytes,
-    threadSepTag = ""
-  )
+  batcher.batchContexts.setLen(1)
+  template ctx: untyped = batcher.batchContexts[0]
+  ctx.init()
 
   # Accumulate line functions
   for i in 0 ..< batcher.sets.len:
@@ -204,7 +204,7 @@ func batchVerifySerial*(
 # multiply everything by 2~3 on a Raspberry Pi
 # and scale by core frequency.
 #
-# Note 3: 3000 cycles is 1ms at 3GHz.
+# Note 3: 3M cycles is 1ms at 3GHz.
 
 template checksAndStackTracesOff(body: untyped): untyped =
   ## No Nim checks in OpenMP multithreading land, failure allocates an exception.
@@ -280,7 +280,7 @@ checksAndStackTracesOff:
     return contexts[start].merge(contexts[mid])
 
 proc batchVerifyParallel*(
-       batcher: var BatchedBLSVerifier,
+       batcher: var BatchedBLSVerifierCache,
        secureRandomBytes: array[32, byte]
      ): bool {.sideeffect.} =
   ## Multithreaded batch verification
@@ -351,7 +351,7 @@ proc batchVerifyParallel*(
 # ----------------------------------------------------------------------
 
 proc batchVerify*(
-       batcher: var BatchedBLSVerifier,
+       batcher: var BatchedBLSVerifierCache,
        secureRandomBytes: array[32, byte]
      ): bool =
   ## Verify all signatures in batch at once.

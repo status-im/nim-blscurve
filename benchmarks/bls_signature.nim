@@ -50,7 +50,6 @@ proc benchVerify*(iters: int) =
 
   bench("BLS verification", iters):
     let valid = pk.verify(msg, sig)
-    # doAssert valid
 
 proc keyGen(): tuple[pk: PublicKey, sk: SecretKey] =
   var ikm: array[32, byte]
@@ -81,7 +80,6 @@ proc benchFastAggregateVerify*(numKeys, iters: int) =
 
   bench("BLS agg verif of 1 msg by " & $numKeys & " pubkeys", iters):
     let valid = validators.fastAggregateVerify(msg, finalSig)
-    # doAssert valid
 
 when BLS_BACKEND == BLST:
   proc batchVerifyMulti*(numSigs, iters: int) =
@@ -117,7 +115,6 @@ when BLS_BACKEND == BLST:
     bench("Serial batch verify " & $numSigs & " msgs by "& $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
       let ok = batcher.batchVerifySerial(secureBlindingBytes)
-      # doAssert ok
 
   proc batchVerifyMultiBatchedParallel*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
@@ -136,7 +133,6 @@ when BLS_BACKEND == BLST:
     bench("Parallel batch verify of " & $numSigs & " msgs by " & $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
       let ok = batcher.batchVerifyParallel(secureBlindingBytes)
-      # doAssert ok
 
 when isMainModule:
   benchSign(1000)
