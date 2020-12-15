@@ -123,7 +123,7 @@ func add*(
 # ----------------------------------------------------------------------
 
 func batchVerifySerial*(
-       batcher: BatchedBLSVerifierCache,
+       batcher: var BatchedBLSVerifierCache,
        secureRandomBytes: array[32, byte]
      ): bool =
   ## Single-threaded batch verification
@@ -133,7 +133,7 @@ func batchVerifySerial*(
 
   batcher.batchContexts.setLen(1)
   template ctx: untyped = batcher.batchContexts[0]
-  ctx.init()
+  batcher.batchContexts[0].init(secureRandomBytes, "")
 
   # Accumulate line functions
   for i in 0 ..< batcher.sets.len:

@@ -101,13 +101,13 @@ when BLS_BACKEND == BLST:
   proc batchVerifyMultiBatchedSerial*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
 
-    var batcher = init(BatchedBLSVerifier)
+    var batcher = init(BatchedBLSVerifierCache)
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()
       var hashedMsg: array[32, byte]
       hashedMsg.bls_sha256_digest("msg" & $i)
-      doAssert batcher.incl(pk, hashedMsg, sk.sign(hashedMsg))
+      batcher.add(pk, hashedMsg, sk.sign(hashedMsg))
 
     var secureBlindingBytes: array[32, byte]
     secureBlindingBytes.bls_sha256_digest("Mr F was here")
@@ -119,13 +119,13 @@ when BLS_BACKEND == BLST:
   proc batchVerifyMultiBatchedParallel*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
 
-    var batcher = init(BatchedBLSVerifier)
+    var batcher = init(BatchedBLSVerifierCache)
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()
       var hashedMsg: array[32, byte]
       hashedMsg.bls_sha256_digest("msg" & $i)
-      doAssert batcher.incl(pk, hashedMsg, sk.sign(hashedMsg))
+      batcher.add(pk, hashedMsg, sk.sign(hashedMsg))
 
     var secureBlindingBytes: array[32, byte]
     secureBlindingBytes.bls_sha256_digest("Mr F was here")
