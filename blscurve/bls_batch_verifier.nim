@@ -31,116 +31,60 @@ import
 # for Milagro/Miracl, this wouldn't need to be in the BLST specific file
 
 type
-  SignatureSet = object
+  SignatureSet* = tuple[pubkey: PublicKey, message: array[32, byte], signature: Signature]
     ## A (Public Key, Message, Signature) triplet
     ## that will be batch verified.
-    ## This should not hold GC-ed memory
-    ## as this would complexify multithreading.
-    ## Consequently this assumes that message
+    ##
+    ## `pubkey` can be an aggregate publickey (via `aggregateAll`)
+    ## if `signature` is the corresponding AggregateSignature
+    ## on the same `message`
+    ##
+    ## This assumes that `message`
     ## is the output of a fixed size hash function.
-    signature: Signature
-    pubkey: PublicKey
-    message: array[32, byte]
+    ##
+    ## `pubkey` and `signature` are assumed to be grouped checked
+    ## which is guaranteed at deserialization from bytes or hex
 
   BatchedBLSVerifierCache* = object
-    ## A type to batch BLS multi signatures (aggregated or individual)
-    ## verification using multiple cores if compiled with OpenMP
-    sets: seq[SignatureSet]
+    ## This types hold temporary contexts
+    ## to batch BLS multi signatures (aggregated or individual)
+    ## verification.
+    ## As the contexts are heavy, they can be reused
 
     # Per-batch contexts for multithreaded batch verification
     batchContexts: seq[ContextMultiAggregateVerify[DST]]
     updateResults: seq[tuple[ok: bool, padCacheLine: array[64, byte]]]
 
-func init*(T: type BatchedBLSVerifierCache): T {.inline.} =
-  ## Initialize or reinitialize a batchedBLS Verifier
-  discard # default initialization
-
-func clear*(batcher: var BatchedBLSVerifierCache) {.inline.} =
-  ## Initialize or reinitialize a batchedBLS Verifier
-  batcher.sets.setLen(0)
-  batcher.batchContexts.setLen(0)
-
-func add*(
-       batcher: var BatchedBLSVerifierCache,
-       public_key: PublicKey,
-       message: array[32, byte],
-       signature: Signature
-     ) {.inline.} =
-  ## Include a (public key, message, signature) triplet
-  ## to the batch for verification.
-  ##
-  ## Assumes subgroup checks
-  ## and infinity checks were done prior.
-  ## This is currently guaranteed
-  ## on deserialization of public keys and signatures.
-  ##
-  ## The proof-of-possession MUST be verified before calling this function.
-  ## For Eth2, the public key must correspond to a valid deposit.
-  batcher.sets.add SignatureSet(
-    signature: signature,
-    pubkey: public_key,
-    message: message
-  )
-
-func add*(
-       batcher: var BatchedBLSVerifierCache,
-       public_keys: openarray[PublicKey],
-       message: array[32, byte],
-       signature: Signature
-     ): bool =
-  ## Include a (array of public keys, message, signature) triplet
-  ## to the batch for verification.
-  ##
-  ## All public keys sign the same message
-  ## and signature is their aggregated signature
-  ##
-  ## Returns false if no public keys are passed
-  ## Returns true otherwise
-  ##
-  ## Assumes subgroup checks
-  ## and infinity checks were done prior.
-  ## This is currently guaranteed
-  ## on deserialization of public keys and signatures.
-  ##
-  ## The proof-of-possession MUST be verified before calling this function.
-  ## For Eth2, the public key must correspond to a valid deposit.
-  if publicKeys.len == 0:
-    return false
-
-  var aggAffine{.noInit.}: PublicKey
-  if not aggAffine.aggregateAll(publicKeys):
-    return false
-
-  batcher.sets.add SignatureSet(
-    signature: signature,
-    pubkey: aggAffine,
-    message: message
-  )
-
-  return true
-
 # Serial Batch Verifier
 # ----------------------------------------------------------------------
 
 func batchVerifySerial*(
-       batcher: var BatchedBLSVerifierCache,
+       cache: var BatchedBLSVerifierCache,
+       input: openArray[SignatureSet],
        secureRandomBytes: array[32, byte]
      ): bool =
   ## Single-threaded batch verification
-  if batcher.sets.len == 0:
+  ## This will verify all the inputs (PublicKey, message, Signature) triplets
+  ##  at once and return true if verification is successful.
+  ## If unsuccessful:
+  ## - The input was empty
+  ## - One or more of the inputs was invalid on aggregation
+  ## - One or more of the inputs had an invalid signature
+  ## If knowing which input was problematic is required, they must be checked one by one.
+  if input.len == 0:
     # Spec precondition
     return false
 
-  batcher.batchContexts.setLen(1)
-  template ctx: untyped = batcher.batchContexts[0]
-  batcher.batchContexts[0].init(secureRandomBytes, "")
+  cache.batchContexts.setLen(1)
+  template ctx: untyped = cache.batchContexts[0]
+  cache.batchContexts[0].init(secureRandomBytes, "")
 
   # Accumulate line functions
-  for i in 0 ..< batcher.sets.len:
+  for i in 0 ..< input.len:
     let ok = ctx.update(
-      batcher.sets[i].pubkey,
-      batcher.sets[i].message,
-      batcher.sets[i].signature
+      input[i].pubkey,
+      input[i].message,
+      input[i].signature
     )
     if not ok:
       return false
@@ -150,6 +94,23 @@ func batchVerifySerial*(
 
   # Final exponentiation
   return ctx.finalVerify()
+
+func batchVerifySerial*(
+       input: openArray[SignatureSet],
+       secureRandomBytes: array[32, byte]
+     ): bool =
+  ## Single-threaded batch verification
+  ## This will verify all the inputs (PublicKey, message, Signature) triplets
+  ##  at once and return true if verification is successful.
+  ## If unsuccessful:
+  ## - The input was empty
+  ## - One or more of the inputs was invalid on aggregation
+  ## - One or more of the inputs had an invalid signature
+  ## If knowing which input was problematic is required, they must be checked one by one.
+
+  # Don't {.noinit.} this or seq capacity will be != 0.
+  var batcher: BatchedBLSVerifierCache
+  return batcher.batchVerifySerial(input, secureRandomBytes)
 
 # Parallelized Batch Verifier
 # ----------------------------------------------------------------------
@@ -219,7 +180,7 @@ template checksAndStackTracesOff(body: untyped): untyped =
   {.pop.}
 
 checksAndStackTracesOff:
-  func toPtrUncheckedArray[T](s: seq[T]): ptr UncheckedArray[T] {.inline.} =
+  func toPtrUncheckedArray[T](s: openarray[T]): ptr UncheckedArray[T] {.inline.} =
     {.pragma: restrict, codegenDecl: "$# __restrict $#".}
     let p{.restrict.} = cast[
       ptr UncheckedArray[T]](
@@ -280,12 +241,20 @@ checksAndStackTracesOff:
     return contexts[start].merge(contexts[mid])
 
 proc batchVerifyParallel*(
-       batcher: var BatchedBLSVerifierCache,
+       cache: var BatchedBLSVerifierCache,
+       input: openArray[SignatureSet],
        secureRandomBytes: array[32, byte]
      ): bool {.sideeffect.} =
   ## Multithreaded batch verification
-  ## Requires OpenMP 3.0 (GCC 4.4, 2008)
-  let numSets = batcher.sets.len.uint32
+  ## If multithreaded with -d:openmp requires OpenMP 3.0 (GCC 4.4, 2008)
+  ## This will verify all the inputs (PublicKey, message, Signature) triplets
+  ##  at once and return true if verification is successful.
+  ## If unsuccessful:
+  ## - The input was empty
+  ## - One or more of the inputs was invalid on aggregation
+  ## - One or more of the inputs had an invalid signature
+  ## If knowing which input was problematic is required, they must be checked one by one.
+  let numSets = input.len.uint32
   if numSets == 0:
     # Spec precondition
     return false
@@ -293,16 +262,16 @@ proc batchVerifyParallel*(
   let numBatches = min(numSets, omp_get_max_threads().uint32)
 
   # Stage 0: Accumulators - setLen for noinit of seq
-  batcher.batchContexts.setLen(numBatches.int)
-  batcher.updateResults.setLen(numBatches.int)
+  cache.batchContexts.setLen(numBatches.int)
+  cache.updateResults.setLen(numBatches.int)
 
   # No stacktrace, exception
   # or anything that require a GC in a parallel section
   # otherwise "attachGC()" is needed in the parallel prologue
   # Hence we use raw ptr UncheckedArray instead of seq
-  let contextsPtr = batcher.batchContexts.toPtrUncheckedArray()
-  let setsPtr = batcher.sets.toPtrUncheckedArray()
-  let updateResultsPtr = batcher.updateResults.toPtrUncheckedArray()
+  let contextsPtr = cache.batchContexts.toPtrUncheckedArray()
+  let setsPtr = input.toPtrUncheckedArray()
+  let updateResultsPtr = cache.updateResults.toPtrUncheckedArray()
 
   # Stage 1: Accumulate partial pairings
   checksAndStackTracesOff:
@@ -324,7 +293,7 @@ proc batchVerifyParallel*(
             chunkStart.uint32, uint32(chunkStart+chunkLen)
           )
 
-  for i in 0 ..< batcher.updateResults.len:
+  for i in 0 ..< cache.updateResults.len:
     if not updateResultsPtr[i].ok:
       return false
 
@@ -345,13 +314,32 @@ proc batchVerifyParallel*(
     if not ok:
       return false
 
-  return batcher.batchContexts[0].finalVerify()
+  return cache.batchContexts[0].finalVerify()
+
+proc batchVerifyParallel*(
+       input: openArray[SignatureSet],
+       secureRandomBytes: array[32, byte]
+     ): bool =
+  ## Multithreaded batch verification
+  ## If multithreaded (with -d:openmp) requires OpenMP 3.0 (GCC 4.4, 2008)
+  ## This will verify all the inputs (PublicKey, message, Signature) triplets
+  ##  at once and return true if verification is successful.
+  ## If unsuccessful:
+  ## - The input was empty
+  ## - One or more of the inputs was invalid on aggregation
+  ## - One or more of the inputs had an invalid signature
+  ## If knowing which input was problematic is required, they must be checked one by one.
+
+  # Don't {.noinit.} this or seq capacity will be != 0.
+  var batcher: BatchedBLSVerifierCache
+  return batcher.batchVerifyParallel(input, secureRandomBytes)
 
 # Autoselect Batch Verifier
 # ----------------------------------------------------------------------
 
 proc batchVerify*(
-       batcher: var BatchedBLSVerifierCache,
+       cache: var BatchedBLSVerifierCache,
+       input: openArray[SignatureSet],
        secureRandomBytes: array[32, byte]
      ): bool =
   ## Verify all signatures in batch at once.
@@ -366,7 +354,31 @@ proc batchVerify*(
   ## The blinding scheme also assumes that the attacker cannot
   ## resubmit 2^64 times forged (publickey, message, signature) triplets
   ## against the same `secureRandomBytes`
-  if batcher.sets.len >= 3:
-    batcher.batchVerifyParallel(secureRandomBytes)
+  when defined(openmp):
+    if input.len >= 3:
+      return cache.batchVerifyParallel(input, secureRandomBytes)
+    else:
+      return cache.batchVerifySerial(input, secureRandomBytes)
   else:
-    batcher.batchVerifySerial(secureRandomBytes)
+    return cache.batchVerifySerial(input, secureRandomBytes)
+
+proc batchVerify*(
+       input: openArray[SignatureSet],
+       secureRandomBytes: array[32, byte]
+     ): bool =
+  ## Verify all signatures in batch at once.
+  ## Returns true if all signatures are correct
+  ## Returns false if there is at least one incorrect signature
+  ##
+  ## This requires securely generated random bytes
+  ## for scalar blinding
+  ## to defend against forged signatures that would not
+  ## verify individually but would verify while aggregated.
+  ##
+  ## The blinding scheme also assumes that the attacker cannot
+  ## resubmit 2^64 times forged (publickey, message, signature) triplets
+  ## against the same `secureRandomBytes`
+
+  # Don't {.noinit.} this or seq capacity will be != 0.
+  var batcher: BatchedBLSVerifierCache
+  return batcher.batchVerify(input, secureRandomBytes)

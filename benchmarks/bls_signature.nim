@@ -101,38 +101,41 @@ when BLS_BACKEND == BLST:
   proc batchVerifyMultiBatchedSerial*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
 
-    var batcher = init(BatchedBLSVerifierCache)
+    var batch: seq[SignatureSet]
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()
       var hashedMsg: array[32, byte]
       hashedMsg.bls_sha256_digest("msg" & $i)
-      batcher.add(pk, hashedMsg, sk.sign(hashedMsg))
+      batch.add((pk, hashedMsg, sk.sign(hashedMsg)))
 
     var secureBlindingBytes: array[32, byte]
     secureBlindingBytes.bls_sha256_digest("Mr F was here")
 
+    var cache: BatchedBLSVerifierCache
+
     bench("Serial batch verify " & $numSigs & " msgs by "& $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
-      let ok = batcher.batchVerifySerial(secureBlindingBytes)
+      let ok = cache.batchVerifySerial(batch, secureBlindingBytes)
 
   proc batchVerifyMultiBatchedParallel*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
 
-    var batcher = init(BatchedBLSVerifierCache)
+    var batch: seq[SignatureSet]
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()
       var hashedMsg: array[32, byte]
       hashedMsg.bls_sha256_digest("msg" & $i)
-      batcher.add(pk, hashedMsg, sk.sign(hashedMsg))
+      batch.add((pk, hashedMsg, sk.sign(hashedMsg)))
 
+    var cache: BatchedBLSVerifierCache
     var secureBlindingBytes: array[32, byte]
     secureBlindingBytes.bls_sha256_digest("Mr F was here")
 
     bench("Parallel batch verify of " & $numSigs & " msgs by " & $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
-      let ok = batcher.batchVerifyParallel(secureBlindingBytes)
+      let ok = cache.batchVerifyParallel(batch, secureBlindingBytes)
 
 when isMainModule:
   benchSign(1000)
