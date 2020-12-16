@@ -28,7 +28,7 @@ import bls_backend
 # Compared to the spec API are modified
 # to enforce usage of the proof-of-posession (as recommended)
 
-const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+const DST* = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 const DST_POP = "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
 
 func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
@@ -138,6 +138,7 @@ func aggregateVerify*(
   if publicKeys.len != proofs.len or publicKeys != messages.len:
     return false
   if not(publicKeys.len >= 1):
+    # Spec precondition
     return false
 
   var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
@@ -164,6 +165,7 @@ func aggregateVerify*(
   if publicKeys.len != messages.len:
     return false
   if not(publicKeys.len >= 1):
+    # Spec precondition
     return false
 
   var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
@@ -185,6 +187,7 @@ func aggregateVerify*[T: string or seq[byte]](
   ## to enforce correct usage.
   # Note: we can't have tuple of openarrays until openarrays are first-class value types
   if not(publicKey_msg_pairs.len >= 1):
+    # Spec precondition
     return false
 
   var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
@@ -212,6 +215,7 @@ func fastAggregateVerify*[T: byte|char](
   # 5. PK = point_to_pubkey(aggregate)
   # 6. return CoreVerify(PK, message, signature)
   if publicKeys.len == 0:
+    # Spec precondition
     return false
   if not publicKeys[0].popVerify(proofs[0]):
     return false
@@ -245,6 +249,7 @@ func fastAggregateVerify*[T: byte|char](
   # 5. PK = point_to_pubkey(aggregate)
   # 6. return CoreVerify(PK, message, signature)
   if publicKeys.len == 0:
+    # Spec precondition
     return false
 
   var aggAffine{.noInit.}: PublicKey

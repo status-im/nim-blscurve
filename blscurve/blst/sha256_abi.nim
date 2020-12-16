@@ -12,6 +12,13 @@ type
     header: headerPath,
     incompleteStruct, byref.} = object
 
+## No Nim checks in OpenMP multithreading land, failure allocates an exception.
+## No stacktraces either.
+## For debugging a parallel OpenMP region, put "attachGC"
+## as the first statement after "omp_parallel"
+## Then you can echo strings and reenable stacktraces
+{.push stacktrace:off, checks: off.}
+
 # We need to make sure that calls go through this file
 # and don't directly use the underlying "sha256_init"
 # otherwise we can't enforce that "vect.h" is imported
@@ -53,4 +60,17 @@ proc bls_sha256_digest*[T: byte|char](
   var ctx{.noInit.}: BLST_SHA256_CTX
   ctx.blst_sha256_init()
   ctx.blst_sha256_update(input)
+  digest.blst_sha256_final(ctx)
+
+proc bls_sha256_digest*[T, U: byte|char](
+       digest: var array[32, byte],
+       input: openarray[T],
+       sepTag: openArray[U]
+     ) =
+  # Workaround linker issue when using init/update/update/finalize
+  # in ContextMultiAggregateVerify.init()
+  var ctx{.noInit.}: BLST_SHA256_CTX
+  ctx.blst_sha256_init()
+  ctx.blst_sha256_update(input)
+  ctx.blst_sha256_update(sepTag)
   digest.blst_sha256_final(ctx)

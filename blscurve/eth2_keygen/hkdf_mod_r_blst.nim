@@ -182,6 +182,9 @@ func keyGen*(ikm: openarray[byte], publicKey: var PublicKey, secretKey: var Secr
   #  6. PK = point_to_pubkey(xP)
   #  7. return (PK, SK)
 
+  if ikm.len < 32:
+    return false
+
   # The cast is a workaround for private field access
   cast[ptr blst_scalar](secretKey.addr)[].blst_keygen(ikm, info = "")
   result = publicKey.publicFromSecret(secretKey)

@@ -45,23 +45,40 @@ task test, "Run all tests":
   # Internal SHA256
   test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
 
+  # batch verification
+  test "-d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
+
+  # No OpenMP in default Clang on Mac
+  when not defined(macosx):
+    # Parallel batch verification
+    test "-d:openmp -d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
+
   # Ensure benchmarks stay relevant.
   # TODO, solve "inconsistent operand constraints"
   # on 32-bit for asm volatile, this might be due to
   # incorrect RDTSC call in benchmark
   when defined(arm64) or defined(amd64):
-    exec "nim c -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
-          " --verbosity:0 --hints:off --warnings:off" &
-          " benchmarks/bench_all.nim"
+    when not defined(macosx):
+      exec "nim c -d:openmp -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
+            " --verbosity:0 --hints:off --warnings:off" &
+            " benchmarks/bench_all.nim"
 
-    exec "nim c -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
-          " --verbosity:0 --hints:off --warnings:off" &
-          " benchmarks/bench_all.nim"
+      exec "nim c -d:openmp -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
+            " --verbosity:0 --hints:off --warnings:off" &
+            " benchmarks/bench_all.nim"
+    else:
+      exec "nim c -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
+            " --verbosity:0 --hints:off --warnings:off" &
+            " benchmarks/bench_all.nim"
+
+      exec "nim c -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
+            " --verbosity:0 --hints:off --warnings:off" &
+            " benchmarks/bench_all.nim"
 
 task bench, "Run benchmarks":
   if not dirExists "build":
     mkDir "build"
 
-  exec "nim c -d:danger --outdir:build -r" &
+  exec "nim c -d:openmp -d:danger --outdir:build -r" &
          " --verbosity:0 --hints:off --warnings:off" &
          " benchmarks/bench_all.nim"
