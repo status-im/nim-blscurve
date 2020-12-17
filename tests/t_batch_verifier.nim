@@ -44,11 +44,11 @@ proc keyGen(seed: uint64): tuple[pubkey: PublicKey, seckey: SecretKey] =
 proc hash[T: byte|char](message: openarray[T]): array[32, byte] {.noInit.}=
   result.bls_sha256_digest(message)
 
-proc addExample(batcher: var BatchedBLSVerifierCache, seed: int, message: string) =
+proc addExample(batch: var seq[SignatureSet], seed: int, message: string) =
   let (pubkey, seckey) = keyGen(seed.uint64)
   let hashed = hash(message)
   let sig = seckey.sign(hashed)
-  batcher.add(pubkey, hashed, sig)
+  batch.add((pubkey, hashed, sig))
 
 # Test strategy
 # As we use a tree algorithm we want to test
@@ -69,46 +69,57 @@ suite "Batch verification " & omp_status():
     let (pubkey, seckey) = keyGen(123)
     let sig = seckey.sign(msg)
 
-    var batcher = init(BatchedBLSVerifierCache)
+    var cache: BatchedBLSVerifierCache
+    var batch: seq[SignatureSet]
 
-    batcher.add(pubkey, msg, sig)
+    batch.add((pubkey, msg, sig))
     check:
-      batcher.batchVerify(fakeRandomBytes)
+      cache.batchVerify(batch, fakeRandomBytes)
+      batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifierCache)
-    batcher.addExample(1, "msg1")
-    batcher.addExample(2, "msg2")
+    var cache: BatchedBLSVerifierCache
+    var batch: seq[SignatureSet]
+
+    batch.addExample(1, "msg1")
+    batch.addExample(2, "msg2")
 
     check:
-      batcher.batchVerify(fakeRandomBytes)
+      cache.batchVerify(batch, fakeRandomBytes)
+      batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 - 1 = 15 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifierCache)
+    var cache: BatchedBLSVerifierCache
+    var batch: seq[SignatureSet]
 
     for i in 0 ..< 15:
-      batcher.addExample(i, "msg" & $i)
+      batch.addExample(i, "msg" & $i)
 
     check:
-      batcher.batchVerify(fakeRandomBytes)
+      cache.batchVerify(batch, fakeRandomBytes)
+      batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 = 16 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifierCache)
+    var cache: BatchedBLSVerifierCache
+    var batch: seq[SignatureSet]
 
     for i in 0 ..< 16:
-      batcher.addExample(i, "msg" & $i)
+      batch.addExample(i, "msg" & $i)
 
     check:
-      batcher.batchVerify(fakeRandomBytes)
+      cache.batchVerify(batch, fakeRandomBytes)
+      batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 + 1 = 17 (pubkey, message, signature) triplets":
-    var batcher = init(BatchedBLSVerifierCache)
+    var cache: BatchedBLSVerifierCache
+    var batch: seq[SignatureSet]
 
     for i in 0 ..< 17:
-      batcher.addExample(i, "msg" & $i)
+      batch.addExample(i, "msg" & $i)
 
     check:
-      batcher.batchVerify(fakeRandomBytes)
+      cache.batchVerify(batch, fakeRandomBytes)
+      batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Wrong signature":
     let msg1 = hash"msg1"
@@ -118,9 +129,11 @@ suite "Batch verification " & omp_status():
 
     let (pubkey2, seckey2) = keyGen(2)
 
-    var batcher = init(BatchedBLSVerifierCache)
+    var cache: BatchedBLSVerifierCache
+    var batch: seq[SignatureSet]
 
-    batcher.add(pubkey1, msg1, sig1)
-    batcher.add(pubkey2, msg2, sig1) # <--- wrong signature
+    batch.add((pubkey1, msg1, sig1))
+    batch.add((pubkey2, msg2, sig1)) # <--- wrong signature
     check:
-      not batcher.batchVerify(fakeRandomBytes)
+      not cache.batchVerify(batch, fakeRandomBytes)
+      not batchVerify(batch, fakeRandomBytes)
