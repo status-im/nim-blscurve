@@ -11,10 +11,10 @@ requires "nim >= 1.0.4",
 
 ### Helper functions
 proc test(env, path: string) =
-  # Compilation language is controlled by BLS_TEST_LANG
+  # Compilation language is controlled by TEST_LANG
   var lang = "c"
-  if existsEnv"BLS_TEST_LANG":
-    lang = getEnv"BLS_TEST_LANG"
+  if existsEnv"TEST_LANG":
+    lang = getEnv"TEST_LANG"
 
   if not dirExists "build":
     mkDir "build"

@@ -214,4 +214,4 @@ jobs:
           export UCPU="$cpu"
           cd nim-blscurve
           nimble install -y --depsOnly
-          nimble test
+          env TEST_LANG="${{ matrix.target.TEST_LANG }}" nimble test
