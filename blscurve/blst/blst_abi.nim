@@ -164,7 +164,10 @@ var
   BLS12_381_G2* {.blst.}: blst_p2_affine
   BLS12_381_NEG_G2* {.blst.}: blst_p2_affine
 
-{.push cdecl, importc, header: headerPath.}
+when defined(cpp):
+  {.push cdecl, importc.}
+else:
+  {.push cdecl, importc, header: headerPath.}
 
 proc blst_scalar_from_uint32*(ret: var blst_scalar; a: array[8, uint32])
 proc blst_uint32_from_scalar*(ret: var array[8, uint32]; a: blst_scalar)
