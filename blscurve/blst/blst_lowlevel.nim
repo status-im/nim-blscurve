@@ -1,5 +1,5 @@
 # Nim-BLST
-# Copyright (c) 2020 Status Research & Development GmbH
+# Copyright (c) 2020-2021 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -22,8 +22,8 @@ when defined(gcc):
   # We can alternatively remove restrict (for the whole n)
   # {.passC: "-Drestrict=".}
 
-{.compile: ".."/".."/"vendor"/"blst"/"build"/"assembly.S".}
-{.compile: ".."/".."/"vendor"/"blst"/"src"/"server.c".}
+{.compile: "../../vendor/blst/build/assembly.S".}
+{.compile: "../../vendor/blst/src/server.c".}
 
 include ./blst_abi
 

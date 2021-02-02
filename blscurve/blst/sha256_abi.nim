@@ -3,8 +3,8 @@
 
 import std/[strutils, os]
 
-const srcPath = currentSourcePath.rsplit(DirSep, 1)[0]/".."/".."/"vendor"/"blst"/"src"
-const headerPath = srcPath/"sha256.h"
+const srcPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/src"
+const headerPath = srcPath & "/sha256.h"
 
 type
   BLST_SHA256_CTX* {.
@@ -30,7 +30,7 @@ type
 # To do this we don't export directly the importc functions
 
 proc vec_zero(ret: pointer, num: csize_t)
-    {.importc, exportc, header: srcPath/"vect.h", nodecl.}
+    {.importc, exportc, header: srcPath & "/vect.h", nodecl.}
 proc blst_sha256_init(ctx: var BLST_SHA256_CTX)
      {.importc: "sha256_init", header: headerPath, cdecl.}
 proc blst_sha256_update[T: byte|char](
