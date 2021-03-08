@@ -25,12 +25,17 @@ proc benchSHA256_blst[T](msg: openarray[T], msgComment: string, iters: int) =
 when isMainModule:
   proc main() =
     block:
-      let msg5MB = newSeqWith(5_000_000, byte rng.rand(255))
-      benchSHA256_nimcrypto(msg5MB, "5MB", 16)
-      benchSHA256_blst(msg5MB, "5MB", 16)
+      let msg32B = newSeqWith(32, byte rng.rand(255))
+      benchSHA256_nimcrypto(msg32B, "32B", 32)
+      benchSHA256_blst(msg32B, "32B", 32)
     block:
       let msg128B = newSeqWith(128, byte rng.rand(255))
       benchSHA256_nimcrypto(msg128B, "128B", 128)
       benchSHA256_blst(msg128B, "128B", 128)
+    block:
+      let msg5MB = newSeqWith(5_000_000, byte rng.rand(255))
+      benchSHA256_nimcrypto(msg5MB, "5MB", 16)
+      benchSHA256_blst(msg5MB, "5MB", 16)
+
 
   main()
