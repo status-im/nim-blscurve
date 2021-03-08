@@ -231,7 +231,7 @@ when isMainModule:
   benchEcAddG2(1000)
 
   when BLS_BACKEND == BLST:
-    benchBLSTPairing(1000)
+    benchBLSTPairing(5000)
   else:
     benchMiraclPairingViaDoublePairing(1000)
     benchMiraclPairingViaMultiPairing(1000)
