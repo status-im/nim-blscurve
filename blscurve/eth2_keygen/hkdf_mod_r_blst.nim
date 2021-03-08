@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018 Status Research & Development GmbH
+# Copyright (c) 2018-2021 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -61,21 +61,21 @@ func limbs_from_be_bytes(
 #endif
 """.}
 
-const srcPath = currentSourcePath.rsplit(DirSep, 1)[0]/".."/".."/"vendor"/"blst"/"src"
+const srcPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/src"
 
 func redc_mont_256(
       ret: var vec256,
       a: vec512,
       p: vec256,
       n0: limb_t
-    ) {.importc, header: srcPath/"vect.h".}
+    ) {.importc, header: srcPath & "/vect.h".}
   # Can use the redcx version with adx support
 
 func mul_mont_sparse_256(
       ret: var vec256,
       a, b, p: vec256,
       n0: limb_t
-    ) {.importc, header: srcPath/"vect.h".}
+    ) {.importc, header: srcPath & "/vect.h".}
   # Can use the mulx version with adx support
 
 # ----------------------------------------------------------------------
