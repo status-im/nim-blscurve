@@ -1,3 +1,5 @@
+mode = ScriptMode.Verbose
+
 packageName   = "blscurve"
 version       = "0.0.1"
 author        = "Status Research & Development GmbH"
@@ -19,7 +21,7 @@ proc test(env, path: string) =
   if not dirExists "build":
     mkDir "build"
   exec "nim " & lang & " " & env &
-    " --outdir:build -r --hints:off --warnings:off " & path
+    " --outdir:build -r --hints:off --warnings:off --skipParentCfg " & path
 
 ### tasks
 task test, "Run all tests":
