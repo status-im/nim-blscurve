@@ -65,10 +65,13 @@ proc getTicks*(): int64 {.inline.} =
     else: # 32-bit x86
       # TODO: Provide a compile-time flag for RDTSCP support
       #       and use it instead of lfence + RDTSC
+      var res: int32
       {.emit: """asm volatile(
         "lfence\n"
         "rdtsc\n"
-        : "=a"(`result`)
+        : "=a"(`res`)
         :
         : "memory"
       );""".}
+      return res
+
