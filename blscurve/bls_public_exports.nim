@@ -16,7 +16,7 @@ export
   `==`,
   init, aggregate, finish, aggregateAll,
   publicFromSecret,
-  fromHex, fromBytes, toHex, serialize, exportRaw
+  fromHex, fromBytes, toHex, serialize, exportRaw, exportUncompressed
 
 import bls_sig_min_pubkey
 
