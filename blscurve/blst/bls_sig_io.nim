@@ -41,43 +41,110 @@ func toHex*(
 
 func fromBytes*(
        obj: var (Signature|ProofOfPossession),
-       raw: openarray[byte] or array[96, byte]
+       raw: array[96, byte] or array[192, byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  const L = 96
-  when raw is array:
-    result = obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
-  else:
-    if raw.len != L:
-      return false
-    let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
-    result = obj.point.blst_p2_uncompress(pa[]) == BLST_SUCCESS
+  result =
+    when raw.len == 96:
+      obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
+    elif raw.len == 192:
+      obj.point.blst_p2_deserialize(raw) == BLST_SUCCESS
+    else: false
+
   # Infinity signatures are allowed if we receive an empty aggregated signature
   if result:
     result = bool obj.point.blst_p2_affine_in_g2()
 
-func fromBytes*(
-       obj: var PublicKey,
-       raw: openarray[byte] or array[48, byte]
+func fromBytesKnownOnCurve*(
+       obj: var (Signature|ProofOfPossession),
+       raw: array[96, byte] or array[192, byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  const L = 48
-  when raw is array:
-    result = obj.point.blst_p1_uncompress(raw) == BLST_SUCCESS
-  else:
-    if raw.len != L:
-      return false
-    let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
-    result = obj.point.blst_p1_uncompress(pa[]) == BLST_SUCCESS
+  ##
+  ## The point is known to be on curve and is not group checked
+  result =
+    when raw.len == 96:
+      obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
+    elif raw.len == 192:
+      obj.point.blst_p2_deserialize(raw) == BLST_SUCCESS
+    else: false
+  # Infinity signatures are allowed if we receive an empty aggregated signature
+
+  # Skipped - Known on curve
+  # if result:
+  #   result = bool obj.point.blst_p2_affine_in_g2()
+
+func fromBytes*(
+       obj: var PublicKey,
+       raw: array[48, byte] or array[96, byte]
+      ): bool {.inline.} =
+  ## Initialize a BLS signature scheme object from
+  ## its raw bytes representation.
+  ## Returns true on success and false otherwise
+  result =
+    when raw.len == 48:
+      obj.point.blst_p1_uncompress(raw) == BLST_SUCCESS
+    elif raw.len == 96:
+      obj.point.blst_p1_deserialize(raw) == BLST_SUCCESS
+    else: false
+
   # Infinity public keys are not allowed
   if result:
     result = not bool obj.point.blst_p1_affine_is_inf()
   if result:
     result = bool obj.point.blst_p1_affine_in_g1()
+
+func fromBytesKnownOnCurve*(
+       obj: var PublicKey,
+       raw: array[48, byte] or array[96, byte]
+      ): bool {.inline.} =
+  ## Initialize a BLS signature scheme object from
+  ## its raw bytes representation.
+  ## Returns true on success and false otherwise
+  result =
+    when raw.len == 48:
+      obj.point.blst_p1_uncompress(raw) == BLST_SUCCESS
+    elif raw.len == 96:
+      obj.point.blst_p1_deserialize(raw) == BLST_SUCCESS
+    else: false
+
+  # Infinity public keys are not allowed
+  if result:
+    result = not bool obj.point.blst_p1_affine_is_inf()
+
+  # Skipped - Known on curve
+  # if result:
+  #   result = bool obj.point.blst_p1_affine_in_g1()
+
+func fromBytes*(
+       obj: var PublicKey,
+       raw: openArray[byte]
+      ): bool {.inline.} =
+  if raw.len == 48:
+    let pa = cast[ptr array[48, byte]](raw[0].unsafeAddr)
+    fromBytes(obj, pa[])
+  elif raw.len == 96:
+    let pa = cast[ptr array[96, byte]](raw[0].unsafeAddr)
+    fromBytes(obj, pa[])
+  else:
+    false
+
+func fromBytes*(
+       obj: var (Signature|ProofOfPossession),
+       raw: openArray[byte]
+      ): bool {.inline.} =
+  if raw.len == 96:
+    let pa = cast[ptr array[96, byte]](raw[0].unsafeAddr)
+    fromBytes(obj, pa[])
+  elif raw.len == 192:
+    let pa = cast[ptr array[192, byte]](raw[0].unsafeAddr)
+    fromBytes(obj, pa[])
+  else:
+    false
 
 func fromBytes*(
        obj: var SecretKey,
@@ -107,18 +174,22 @@ func fromHex*(
   ## Initialize a BLS signature scheme object from
   ## its hex raw bytes representation.
   ## Returns true on a success and false otherwise
-  when obj is SecretKey:
-    const size = 32
-  elif obj is PublicKey:
-    const size = 48
-  elif obj is (Signature or ProofOfPossession):
-    const size = 96
-
   try:
-    let bytes = hexToPaddedByteArray[size](hexStr)
-    return obj.fromBytes(bytes)
-  except:
-    return false
+    when obj is SecretKey:
+      let bytes = hexToPaddedByteArray[32](hexStr)
+      obj.fromBytes(bytes)
+    elif obj is (Signature or ProofOfPossession):
+      let bytes = hexToPaddedByteArray[96](hexStr)
+      obj.fromBytes(bytes)
+    elif obj is PublicKey:
+      if hexStr.len() == 96 * 2:
+        let bytes = hexToPaddedByteArray[96](hexStr)
+        obj.fromBytes(bytes)
+      else:
+        let bytes = hexToPaddedByteArray[48](hexStr)
+        obj.fromBytes(bytes)
+  except ValueError:
+    false
 
 func serialize*(
        dst: var array[32, byte],
@@ -134,8 +205,21 @@ func serialize*(
        obj: PublicKey): bool {.inline.} =
   ## Serialize the input `obj` in raw binary form and write it
   ## in `dst`.
-  ## Returns `true` if the export is succesful, `false` otherwise
+  ## Returns `true` if the export is successful, `false` otherwise
+  ## Note: this overload will serialize to the compressed format most commonly
+  ## used.
   blst_p1_affine_compress(dst, obj.point)
+  return true
+
+func serialize*(
+       dst: var array[96, byte],
+       obj: PublicKey): bool {.inline.} =
+  ## Serialize the input `obj` in raw binary form and write it
+  ## in `dst`.
+  ## Returns `true` if the export is successful, `false` otherwise
+  ## Note: this overload willl serialize to an uncompressed format that is
+  ## faster to deserialize but takes up more space.
+  blst_p1_affine_serialize(dst, obj.point)
   return true
 
 func serialize*(
@@ -143,18 +227,39 @@ func serialize*(
        obj: Signature|ProofOfPossession): bool {.inline.} =
   ## Serialize the input `obj` in raw binary form and write it
   ## in `dst`.
-  ## Returns `true` if the export is succesful, `false` otherwise
+  ## Returns `true` if the export is successful, `false` otherwise
+  ## Note: this overload will serialize to the compressed format most commonly
+  ## used.
   blst_p2_affine_compress(dst, obj.point)
   return true
 
-func exportRaw*(secretKey: SecretKey): array[32, byte] {.inline.}=
+func serialize*(
+       dst: var array[192, byte],
+       obj: Signature|ProofOfPossession): bool {.inline.} =
+  ## Serialize the input `obj` in raw binary form and write it
+  ## in `dst`.
+  ## Returns `true` if the export is successful, `false` otherwise
+  ## Note: this overload willl serialize to an uncompressed format that is
+  ## faster to deserialize but takes up more space.
+  blst_p2_affine_serialize(dst, obj.point)
+  return true
+
+func exportRaw*(secretKey: SecretKey): array[32, byte] {.inline, noinit.}=
   ## Serialize a secret key into its raw binary representation
   discard result.serialize(secretKey)
 
-func exportRaw*(publicKey: PublicKey): array[48, byte] {.inline.}=
-  ## Serialize a public key into its raw binary representation
+func exportRaw*(publicKey: PublicKey): array[48, byte] {.inline, noinit.} =
+  ## Serialize a public key into its raw compressed binary representation
   discard result.serialize(publicKey)
 
-func exportRaw*(signature: Signature): array[96, byte] {.inline.}=
-  ## Serialize a signature into its raw binary representation
+func exportUncompressed*(publicKey: PublicKey): array[96, byte] {.inline, noinit.} =
+  ## Serialize a public key into its raw uncompressed binary representation
+  discard result.serialize(publicKey)
+
+func exportRaw*(signature: Signature): array[96, byte] {.inline, noinit.} =
+  ## Serialize a signature into its raw compressed binary representation
+  discard result.serialize(signature)
+
+func exportUncompressed*(signature: Signature): array[192, byte] {.inline, noinit.} =
+  ## Serialize a signature into its raw compressed binary representation
   discard result.serialize(signature)

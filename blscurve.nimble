@@ -40,6 +40,9 @@ task test, "Run all tests":
   # Secret key to pubkey
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/priv_to_pub.nim"
 
+  # Serialization (blst only for now)
+  test "-d:BLS_FORCE_BACKEND=blst", "tests/serialization.nim"
+
   test "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
   test "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
   test "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"
