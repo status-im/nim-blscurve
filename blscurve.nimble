@@ -6,6 +6,9 @@ author        = "Status Research & Development GmbH"
 description   = "BLS381-12 Curve implementation"
 license       = "Apache License 2.0"
 
+installDirs = @["blscurve", "vendor"]
+installFiles = @["blscurve.nim"]
+
 ### Dependencies
 requires "nim >= 1.0.4",
          "nimcrypto",
