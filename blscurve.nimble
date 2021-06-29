@@ -10,6 +10,7 @@ license       = "Apache License 2.0"
 requires "nim >= 1.0.4",
          "nimcrypto",
          "stew"
+         # taskpools
 
 ### Helper functions
 proc test(env, path: string) =

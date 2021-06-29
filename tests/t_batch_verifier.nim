@@ -9,19 +9,13 @@
 
 import
   # Standard library
-  unittest,
-  # internal
-  ../blscurve/openmp,
+  std/unittest,
+  # Status libraries
+  taskpools,
   # Public API
   ../blscurve
 
 # Tests for batch verification
-# Compile with -d:openmp for parallel tests
-proc omp_status(): string =
-  when defined(openmp):
-    "[Using OpenMP with " & $omp_get_max_threads() & " threads]"
-  else:
-    "[Serial]"
 
 template wrappedTest(desc: string, body: untyped): untyped =
   ## Wrap test in a proc to avoid having globals everywhere
@@ -63,7 +57,9 @@ proc addExample(batch: var seq[SignatureSet], seed: int, message: string) =
 
 let fakeRandomBytes = hash"Mr F was here"
 
-suite "Batch verification " & omp_status():
+suite "Batch verification":
+  var tp = Taskpool.new(numThreads = 4)
+
   wrappedTest "Verify a single (pubkey, message, signature) triplet":
     let msg = hash"message"
     let (pubkey, seckey) = keyGen(123)
@@ -74,8 +70,8 @@ suite "Batch verification " & omp_status():
 
     batch.add((pubkey, msg, sig))
     check:
-      cache.batchVerify(batch, fakeRandomBytes)
-      batchVerify(batch, fakeRandomBytes)
+      tp.batchVerify(cache, batch, fakeRandomBytes)
+      tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2 (pubkey, message, signature) triplets":
     var cache: BatchedBLSVerifierCache
@@ -85,8 +81,8 @@ suite "Batch verification " & omp_status():
     batch.addExample(2, "msg2")
 
     check:
-      cache.batchVerify(batch, fakeRandomBytes)
-      batchVerify(batch, fakeRandomBytes)
+      tp.batchVerify(cache, batch, fakeRandomBytes)
+      tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 - 1 = 15 (pubkey, message, signature) triplets":
     var cache: BatchedBLSVerifierCache
@@ -96,8 +92,8 @@ suite "Batch verification " & omp_status():
       batch.addExample(i, "msg" & $i)
 
     check:
-      cache.batchVerify(batch, fakeRandomBytes)
-      batchVerify(batch, fakeRandomBytes)
+      tp.batchVerify(cache, batch, fakeRandomBytes)
+      tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 = 16 (pubkey, message, signature) triplets":
     var cache: BatchedBLSVerifierCache
@@ -107,8 +103,8 @@ suite "Batch verification " & omp_status():
       batch.addExample(i, "msg" & $i)
 
     check:
-      cache.batchVerify(batch, fakeRandomBytes)
-      batchVerify(batch, fakeRandomBytes)
+      tp.batchVerify(cache, batch, fakeRandomBytes)
+      tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 + 1 = 17 (pubkey, message, signature) triplets":
     var cache: BatchedBLSVerifierCache
@@ -118,8 +114,8 @@ suite "Batch verification " & omp_status():
       batch.addExample(i, "msg" & $i)
 
     check:
-      cache.batchVerify(batch, fakeRandomBytes)
-      batchVerify(batch, fakeRandomBytes)
+      tp.batchVerify(cache, batch, fakeRandomBytes)
+      tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Wrong signature":
     let msg1 = hash"msg1"
@@ -135,5 +131,7 @@ suite "Batch verification " & omp_status():
     batch.add((pubkey1, msg1, sig1))
     batch.add((pubkey2, msg2, sig1)) # <--- wrong signature
     check:
-      not cache.batchVerify(batch, fakeRandomBytes)
-      not batchVerify(batch, fakeRandomBytes)
+      not tp.batchVerify(cache, batch, fakeRandomBytes)
+      not tp.batchVerify(batch, fakeRandomBytes)
+
+  tp.shutdown()

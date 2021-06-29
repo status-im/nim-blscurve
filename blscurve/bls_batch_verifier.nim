@@ -9,21 +9,17 @@
 
 import
   ./bls_backend, ./bls_sig_min_pubkey,
-  ./openmp
+  ./taskpools, parallel_chunks
 
 # BLS Batch Verifier
 # ----------------------------------------------------------------------
-# We use OpenMP here but might want to use a simple threadpool
-# for portability as Mac compiler doesn't ship with OpenMP
-# and while MSVC has OpenMP, it's unsure about Mingw
-#
-# Also as Nim supports for view types and openarray in object fields is experimental
+# Nim supports for view types and openarray in object fields is experimental
 # we collect/copy the inputs in the object for now by copy.
 # instead of accumulating them in a pairing context.
 # Note that a pairing context is 3+MB
 # while we have
-# - publickey = 48B
-# - signature = 96B
+# - publickey = 48B (or 96B uncompressed)
+# - signature = 96B (or 192B uncompressed)
 # - message = 32B (assuming sha256 hashed)
 # hence 176B only
 #
@@ -167,80 +163,69 @@ func batchVerifySerial*(
 #
 # Note 3: 3M cycles is 1ms at 3GHz.
 
-template checksAndStackTracesOff(body: untyped): untyped =
-  ## No Nim checks in OpenMP multithreading land, failure allocates an exception.
-  ## No stacktraces either.
-  ## Also use uint instead of int to ensure no range checks.
-  ##
-  ## For debugging a parallel OpenMP region, put "attachGC"
-  ## as the first statement after "omp_parallel"
-  ## Then you can echo strings and reenable stacktraces
-  {.push stacktrace:off, checks: off.}
-  body
-  {.pop.}
+func toPtrUncheckedArray[T](s: openarray[T]): ptr UncheckedArray[T] {.inline.} =
+  {.pragma: restrict, codegenDecl: "$# __restrict $#".}
+  let p{.restrict.} = cast[
+    ptr UncheckedArray[T]](
+      s[0].unsafeAddr()
+  )
+  return p
 
-checksAndStackTracesOff:
-  func toPtrUncheckedArray[T](s: openarray[T]): ptr UncheckedArray[T] {.inline.} =
-    {.pragma: restrict, codegenDecl: "$# __restrict $#".}
-    let p{.restrict.} = cast[
-      ptr UncheckedArray[T]](
-        s[0].unsafeAddr()
-    )
-    return p
-
-  func accumPairingLines(
-        sigsets: ptr UncheckedArray[SignatureSet],
-        contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
-        batchID: uint32,
-        subsetStart: uint32,
-        subsetStopEx: uint32): bool =
-    ## Accumulate pairing lines
-    ## subsetStopEx is iteration stopping index, non-inclusive
-    ## Assumes that contexts[batchID] is valid.
-    ## Assumes that sigsets[subsetStart..<subsetStopEx] is valid
-    for i in subsetStart ..< subsetStopEx:
-      let ok = contexts[batchID].update(
-          sigsets[i].pubkey,
-          sigsets[i].message,
-          sigsets[i].signature
-        )
-      if not ok:
-        return false
-
-    contexts[batchID].commit()
-    return true
-
-  func reducePartialPairings(
-        contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
-        start, stopEx: uint32): bool =
-    ## Parallel logarithmic reduction of partial pairings
-    ## start->stopEx describes an exclusive range
-    ## of contexts to reduce.
-    # Rationale for using a more complex parallel logarithmic reduction
-    # rather than a serial for loop
-    # is in comments at the start of the Parallelized Batch Verifier Section.
-    let mid = (start + stopEx) shr 1
-    if stopEx-start == 1:
-      # Odd number of batches
-      return true
-    elif stopEx-start == 2:
-      # Leaf node
-      let ok = contexts[start].merge(contexts[stopEx-1])
-      return ok
-
-    var leftOk{.exportC.}, rightOk{.exportC.} = false
-    omp_task"shared(leftOk)": # Subtree puts partial reduction in "first"
-      leftOk = reducePartialPairings(contexts, start, mid)
-    omp_task"shared(rightOk)": # Subtree puts partial reduction in "mid"
-      rightOk = reducePartialPairings(contexts, mid, stopEx)
-
-    # Wait for all subtrees
-    omp_taskwait()
-    if not leftOk or not rightOk:
+func accumPairingLines(
+      sigsets: ptr UncheckedArray[SignatureSet],
+      contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
+      batchID: int,
+      subsetStart: int,
+      subsetStopEx: int): bool =
+  ## Accumulate pairing lines
+  ## subsetStopEx is iteration stopping index, non-inclusive
+  ## Assumes that contexts[batchID] is valid.
+  ## Assumes that sigsets[subsetStart..<subsetStopEx] is valid
+  for i in subsetStart ..< subsetStopEx:
+    let ok = contexts[batchID].update(
+        sigsets[i].pubkey,
+        sigsets[i].message,
+        sigsets[i].signature
+      )
+    if not ok:
       return false
-    return contexts[start].merge(contexts[mid])
+
+  contexts[batchID].commit()
+  return true
+
+proc reducePartialPairings(
+      tp: Taskpool,
+      contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
+      start, stopEx: int): bool =
+  ## Parallel logarithmic reduction of partial pairings
+  ## start->stopEx describes an exclusive range
+  ## of contexts to reduce.
+  # Rationale for using a more complex parallel logarithmic reduction
+  # rather than a serial for loop
+  # is in comments at the start of the Parallelized Batch Verifier Section.
+  let mid = (start + stopEx) shr 1
+  if stopEx-start == 1:
+    # Odd number of batches
+    return true
+  elif stopEx-start == 2:
+    # Leaf node
+    let ok = contexts[start].merge(contexts[stopEx-1])
+    return ok
+
+  # Subtree puts partial reduction in "first"
+  let leftOkFV = tp.spawn reducePartialPairings(tp, contexts, start, mid)
+  # Subtree puts partial reduction in "mid"
+  let rightOkFV = tp.spawn reducePartialPairings(tp, contexts, mid, stopEx)
+
+  # Wait for all subtrees, important: don't shortcut booleans as future/flowvar memory is released on sync
+  let leftOk = sync(leftOkFV)
+  let rightOk = sync(rightOkFV)
+  if not leftOk or not rightOk:
+    return false
+  return contexts[start].merge(contexts[mid])
 
 proc batchVerifyParallel*(
+       tp: Taskpool,
        cache: var BatchedBLSVerifierCache,
        input: openArray[SignatureSet],
        secureRandomBytes: array[32, byte]
@@ -254,16 +239,16 @@ proc batchVerifyParallel*(
   ## - One or more of the inputs was invalid on aggregation
   ## - One or more of the inputs had an invalid signature
   ## If knowing which input was problematic is required, they must be checked one by one.
-  let numSets = input.len.uint32
+  let numSets = input.len
   if numSets == 0:
     # Spec precondition
     return false
 
-  let numBatches = min(numSets, omp_get_max_threads().uint32)
+  let numBatches = min(numSets, tp.numThreads)
 
   # Stage 0: Accumulators - setLen for noinit of seq
-  cache.batchContexts.setLen(numBatches.int)
-  cache.updateResults.setLen(numBatches.int)
+  cache.batchContexts.setLen(numBatches)
+  cache.updateResults.setLen(numBatches)
 
   # No stacktrace, exception
   # or anything that require a GC in a parallel section
@@ -274,24 +259,22 @@ proc batchVerifyParallel*(
   let updateResultsPtr = cache.updateResults.toPtrUncheckedArray()
 
   # Stage 1: Accumulate partial pairings
-  checksAndStackTracesOff:
-    omp_parallel: # Start the parallel region
-      let threadID = omp_get_thread_num()
-      omp_chunks(numSets, chunkStart, chunkLen):
-        # Partition work into even chunks
-        # Each thread receives a different start+len to process
-        # chunkStart and chunkLen are set per-thread by the template
-        contextsPtr[threadID].init(
-          secureRandomBytes,
-          threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
-        )
+  for threadID in 0 ..< tp.numThreads:
+    parallel_chunks(threadID, tp.numThreads, numSets, chunkStart, chunkLen):
+      # Partition work into even chunks
+      # Each thread receives a different start+len to process
+      # chunkStart and chunkLen are set per-thread by the template
+      contextsPtr[threadID].init(
+        secureRandomBytes,
+        threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
+      )
 
-        updateResultsPtr[threadID].ok =
-          accumPairingLines(
-            setsPtr, contextsPtr,
-            threadID.uint32,
-            chunkStart.uint32, uint32(chunkStart+chunkLen)
-          )
+      updateResultsPtr[threadID].ok =
+        accumPairingLines(
+          setsPtr, contextsPtr,
+          threadID,
+          chunkStart, (chunkStart+chunkLen)
+        )
 
   for i in 0 ..< cache.updateResults.len:
     if not updateResultsPtr[i].ok:
@@ -305,18 +288,15 @@ proc batchVerifyParallel*(
         return false
 
   else: # parallel logarithmic merge
-    var ok = false
-    checksAndStackTracesOff:
-      omp_parallel: # Start the parallel region
-        omp_single: # A single thread should create the master task
-          ok = reducePartialPairings(contextsPtr, start = 0, stopEx = numBatches)
+    let ok = tp.spawn reducePartialPairings(tp, contextsPtr, start = 0, stopEx = numBatches)
 
-    if not ok:
+    if not sync(ok):
       return false
 
   return cache.batchContexts[0].finalVerify()
 
 proc batchVerifyParallel*(
+       tp: Taskpool,
        input: openArray[SignatureSet],
        secureRandomBytes: array[32, byte]
      ): bool =
@@ -332,12 +312,13 @@ proc batchVerifyParallel*(
 
   # Don't {.noinit.} this or seq capacity will be != 0.
   var batcher: BatchedBLSVerifierCache
-  return batcher.batchVerifyParallel(input, secureRandomBytes)
+  return tp.batchVerifyParallel(batcher, input, secureRandomBytes)
 
 # Autoselect Batch Verifier
 # ----------------------------------------------------------------------
 
 proc batchVerify*(
+       tp: Taskpool,
        cache: var BatchedBLSVerifierCache,
        input: openArray[SignatureSet],
        secureRandomBytes: array[32, byte]
@@ -356,13 +337,14 @@ proc batchVerify*(
   ## against the same `secureRandomBytes`
   when defined(openmp):
     if input.len >= 3:
-      return cache.batchVerifyParallel(input, secureRandomBytes)
+      return tp.batchVerifyParallel(cache, input, secureRandomBytes)
     else:
       return cache.batchVerifySerial(input, secureRandomBytes)
   else:
     return cache.batchVerifySerial(input, secureRandomBytes)
 
 proc batchVerify*(
+       tp: Taskpool,
        input: openArray[SignatureSet],
        secureRandomBytes: array[32, byte]
      ): bool =
@@ -381,4 +363,4 @@ proc batchVerify*(
 
   # Don't {.noinit.} this or seq capacity will be != 0.
   var batcher: BatchedBLSVerifierCache
-  return batcher.batchVerify(input, secureRandomBytes)
+  return tp.batchVerify(batcher, input, secureRandomBytes)
