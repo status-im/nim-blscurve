@@ -8,7 +8,7 @@
 # those terms.
 
 template parallel_chunks*(
-    numThreads: int,
+    numChunks: int,
     totalSize: int,
     chunkID: int,
     chunkOffset, chunkSize: untyped,
@@ -41,7 +41,7 @@ template parallel_chunks*(
 
   let # Assign inputs to avoid evaluate side-effects twice.
     cID = chunkID
-    nb_chunks = numThreads
+    nb_chunks = numChunks
     size = totalSize
     base_chunk_size = size.int div nb_chunks
     remainder = size.int mod nb_chunks

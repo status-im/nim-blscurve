@@ -267,6 +267,7 @@ when compileOption("threads"):
           secureRandomBytes: ptr array[32, byte],
           chunkID: int,
           chunkStart, chunkLen: int) {.gcsafe, nimcall.}=
+
       contextsPtr[chunkID].init(
         secureRandomBytes[],
         threadSepTag = cast[array[sizeof(chunkID), byte]](chunkID)
@@ -280,7 +281,7 @@ when compileOption("threads"):
         )
 
     for chunkID in 0 ..< numBatches:
-      parallel_chunks(tp.numThreads, numBatches, chunkID, chunkStart, chunkLen):
+      parallel_chunks(numBatches, input.len, chunkID, chunkStart, chunkLen):
         # Partition work into even chunks
         # Each thread receives a different start+len to process
         # chunkStart and chunkLen are set per-thread by the template
