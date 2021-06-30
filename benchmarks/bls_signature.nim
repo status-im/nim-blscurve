@@ -9,6 +9,7 @@
 
 import
   std/random,
+  taskpools,
   ../blscurve,
   ./bench_templates
 
@@ -121,7 +122,9 @@ when BLS_BACKEND == BLST:
   proc batchVerifyMultiBatchedParallel*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
 
+    var tp: Taskpool
     var batch: seq[SignatureSet]
+    tp = Taskpool.new()
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()
@@ -135,25 +138,25 @@ when BLS_BACKEND == BLST:
 
     bench("Parallel batch verify of " & $numSigs & " msgs by " & $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
-      let ok = cache.batchVerifyParallel(batch, secureBlindingBytes)
+      let ok = tp.batchVerifyParallel(cache, batch, secureBlindingBytes)
 
 when isMainModule:
-  benchSign(1000)
-  benchVerify(1000)
-  benchFastAggregateVerify(numKeys = 128, iters = 10)
+  # benchSign(1000)
+  # benchVerify(1000)
+  # benchFastAggregateVerify(numKeys = 128, iters = 10)
 
   when BLS_BACKEND == BLST:
-    # Simulate Block verification
-    batchVerifyMulti(numSigs = 6, iters = 10)
-    batchVerifyMultiBatchedSerial(numSigs = 6, iters = 10)
-    batchVerifyMultiBatchedParallel(numSigs = 6, iters = 10)
+    # # Simulate Block verification
+    # batchVerifyMulti(numSigs = 6, iters = 10)
+    # batchVerifyMultiBatchedSerial(numSigs = 6, iters = 10)
+    # batchVerifyMultiBatchedParallel(numSigs = 6, iters = 10)
 
-    # Simulate 10 blocks verification
-    batchVerifyMulti(numSigs = 60, iters = 10)
-    batchVerifyMultiBatchedSerial(numSigs = 60, iters = 10)
-    batchVerifyMultiBatchedParallel(numSigs = 60, iters = 10)
+    # # Simulate 10 blocks verification
+    # batchVerifyMulti(numSigs = 60, iters = 10)
+    # batchVerifyMultiBatchedSerial(numSigs = 60, iters = 10)
+    # batchVerifyMultiBatchedParallel(numSigs = 60, iters = 10)
 
-    # Simulate 30 blocks verification
-    batchVerifyMulti(numSigs = 180, iters = 10)
-    batchVerifyMultiBatchedSerial(numSigs = 180, iters = 10)
+    # # Simulate 30 blocks verification
+    # batchVerifyMulti(numSigs = 180, iters = 10)
+    # batchVerifyMultiBatchedSerial(numSigs = 180, iters = 10)
     batchVerifyMultiBatchedParallel(numSigs = 180, iters = 10)

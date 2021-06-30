@@ -85,6 +85,6 @@ task bench, "Run benchmarks":
   if not dirExists "build":
     mkDir "build"
 
-  exec "nim c -d:openmp -d:danger --outdir:build -r" &
+  exec "nim c --threads:on -d:danger --outdir:build -r" &
          " --verbosity:0 --hints:off --warnings:off" &
          " benchmarks/bench_all.nim"
