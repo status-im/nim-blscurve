@@ -279,9 +279,8 @@ when compileOption("threads"):
           chunkStart, (chunkStart+chunkLen)
         )
 
-    let numChunks = tp.numThreads
-    for chunkID in 0 ..< numChunks:
-      parallel_chunks(chunkID, numChunks, numSets, chunkStart, chunkLen):
+    for chunkID in 0 ..< numBatches:
+      parallel_chunks(tp.numThreads, numBatches, chunkID, chunkStart, chunkLen):
         # Partition work into even chunks
         # Each thread receives a different start+len to process
         # chunkStart and chunkLen are set per-thread by the template

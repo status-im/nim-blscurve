@@ -8,9 +8,9 @@
 # those terms.
 
 template parallel_chunks*(
-    threadID: int,
     numThreads: int,
     totalSize: int,
+    chunkID: int,
     chunkOffset, chunkSize: untyped,
     body: untyped): untyped =
   ## Parallel balanced chunking algorithm
@@ -40,27 +40,27 @@ template parallel_chunks*(
   # ---> chunks are the same ±1
 
   let # Assign inputs to avoid evaluate side-effects twice.
-    tid = threadID
+    cID = chunkID
     nb_chunks = numThreads
     size = totalSize
     base_chunk_size = size.int div nb_chunks
     remainder = size.int mod nb_chunks
 
   var `chunkOffset`{.inject.}, `chunkSize`{.inject.}: int
-  if tid < remainder:
-    chunk_offset = (base_chunk_size + 1) * tid
+  if cID < remainder:
+    chunk_offset = (base_chunk_size + 1) * cID
     chunk_size = base_chunk_size + 1
   else:
-    chunk_offset = base_chunk_size * tid + remainder
+    chunk_offset = base_chunk_size * cID + remainder
     chunk_size = base_chunk_size
 
   # If the number of threads is greater than the size to split
   # we have
   #   base_chunk_size = 0
   #   remainder = size
-  # hence tID < size will receive one chunk each
+  # hence cID < size will receive one chunk each
   # and we need to skip processing for the extra threads
 
   block:
-    if tid < size.int:
+    if cID < size.int:
       body
