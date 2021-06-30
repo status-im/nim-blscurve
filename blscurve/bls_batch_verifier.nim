@@ -261,8 +261,9 @@ proc batchVerifyParallel*(
          contextsPtr: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
          setsPtr: ptr UncheckedArray[SignatureSet],
          updateResultsPtr: ptr UncheckedArray[tuple[ok: bool, padCacheLine: array[64, byte]]],
+         secureRandomBytes: array[32, byte],
          threadID: int,
-         chunkStart, chunkLen: int) =
+         chunkStart, chunkLen: int) {.gcsafe, nimcall.}=
     contextsPtr[threadID].init(
       secureRandomBytes,
       threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
@@ -280,10 +281,13 @@ proc batchVerifyParallel*(
       # Partition work into even chunks
       # Each thread receives a different start+len to process
       # chunkStart and chunkLen are set per-thread by the template
-      processSingleChunk(
+      tp.spawn processSingleChunk(
         contextsPtr, setsPtr, updateResultsPtr,
+        secureRandomBytes,
         threadID, chunkStart, chunkLen
       )
+
+  tp.syncAll()
 
   for i in 0 ..< cache.updateResults.len:
     if not updateResultsPtr[i].ok:

@@ -141,22 +141,22 @@ when BLS_BACKEND == BLST:
       let ok = tp.batchVerifyParallel(cache, batch, secureBlindingBytes)
 
 when isMainModule:
-  # benchSign(1000)
-  # benchVerify(1000)
-  # benchFastAggregateVerify(numKeys = 128, iters = 10)
+  benchSign(1000)
+  benchVerify(1000)
+  benchFastAggregateVerify(numKeys = 128, iters = 10)
 
   when BLS_BACKEND == BLST:
-    # # Simulate Block verification
-    # batchVerifyMulti(numSigs = 6, iters = 10)
-    # batchVerifyMultiBatchedSerial(numSigs = 6, iters = 10)
-    # batchVerifyMultiBatchedParallel(numSigs = 6, iters = 10)
+    # Simulate Block verification
+    batchVerifyMulti(numSigs = 6, iters = 10)
+    batchVerifyMultiBatchedSerial(numSigs = 6, iters = 10)
+    batchVerifyMultiBatchedParallel(numSigs = 6, iters = 10)
 
-    # # Simulate 10 blocks verification
-    # batchVerifyMulti(numSigs = 60, iters = 10)
-    # batchVerifyMultiBatchedSerial(numSigs = 60, iters = 10)
-    # batchVerifyMultiBatchedParallel(numSigs = 60, iters = 10)
+    # Simulate 10 blocks verification
+    batchVerifyMulti(numSigs = 60, iters = 10)
+    batchVerifyMultiBatchedSerial(numSigs = 60, iters = 10)
+    batchVerifyMultiBatchedParallel(numSigs = 60, iters = 10)
 
-    # # Simulate 30 blocks verification
-    # batchVerifyMulti(numSigs = 180, iters = 10)
-    # batchVerifyMultiBatchedSerial(numSigs = 180, iters = 10)
+    # Simulate 30 blocks verification
+    batchVerifyMulti(numSigs = 180, iters = 10)
+    batchVerifyMultiBatchedSerial(numSigs = 180, iters = 10)
     batchVerifyMultiBatchedParallel(numSigs = 180, iters = 10)
