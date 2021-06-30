@@ -250,31 +250,40 @@ proc batchVerifyParallel*(
   cache.batchContexts.setLen(numBatches)
   cache.updateResults.setLen(numBatches)
 
-  # No stacktrace, exception
-  # or anything that require a GC in a parallel section
-  # otherwise "attachGC()" is needed in the parallel prologue
+  # No GC in a parallel section
   # Hence we use raw ptr UncheckedArray instead of seq
   let contextsPtr = cache.batchContexts.toPtrUncheckedArray()
   let setsPtr = input.toPtrUncheckedArray()
   let updateResultsPtr = cache.updateResults.toPtrUncheckedArray()
 
   # Stage 1: Accumulate partial pairings
+  proc processSingleChunk(
+         contextsPtr: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
+         setsPtr: ptr UncheckedArray[SignatureSet],
+         updateResultsPtr: ptr UncheckedArray[tuple[ok: bool, padCacheLine: array[64, byte]]],
+         threadID: int,
+         chunkStart, chunkLen: int) =
+    contextsPtr[threadID].init(
+      secureRandomBytes,
+      threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
+    )
+
+    updateResultsPtr[threadID].ok =
+      accumPairingLines(
+        setsPtr, contextsPtr,
+        threadID,
+        chunkStart, (chunkStart+chunkLen)
+      )
+
   for threadID in 0 ..< tp.numThreads:
     parallel_chunks(threadID, tp.numThreads, numSets, chunkStart, chunkLen):
       # Partition work into even chunks
       # Each thread receives a different start+len to process
       # chunkStart and chunkLen are set per-thread by the template
-      contextsPtr[threadID].init(
-        secureRandomBytes,
-        threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
+      processSingleChunk(
+        contextsPtr, setsPtr, updateResultsPtr,
+        threadID, chunkStart, chunkLen
       )
-
-      updateResultsPtr[threadID].ok =
-        accumPairingLines(
-          setsPtr, contextsPtr,
-          threadID,
-          chunkStart, (chunkStart+chunkLen)
-        )
 
   for i in 0 ..< cache.updateResults.len:
     if not updateResultsPtr[i].ok:
@@ -286,7 +295,6 @@ proc batchVerifyParallel*(
       let ok = contextsPtr[0].merge(contextsPtr[i])
       if not ok:
         return false
-
   else: # parallel logarithmic merge
     let ok = tp.spawn reducePartialPairings(tp, contextsPtr, start = 0, stopEx = numBatches)
 
