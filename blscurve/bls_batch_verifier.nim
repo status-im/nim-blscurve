@@ -265,29 +265,31 @@ when compileOption("threads"):
           setsPtr: ptr UncheckedArray[SignatureSet],
           updateResultsPtr: ptr UncheckedArray[tuple[ok: bool, padCacheLine: array[64, byte]]],
           secureRandomBytes: ptr array[32, byte],
-          threadID: int,
+          chunkID: int,
           chunkStart, chunkLen: int) {.gcsafe, nimcall.}=
-      contextsPtr[threadID].init(
+      contextsPtr[chunkID].init(
         secureRandomBytes[],
-        threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
+        threadSepTag = cast[array[sizeof(chunkID), byte]](chunkID)
       )
 
-      updateResultsPtr[threadID].ok =
+      updateResultsPtr[chunkID].ok =
         accumPairingLines(
           setsPtr, contextsPtr,
-          threadID,
+          chunkID,
           chunkStart, (chunkStart+chunkLen)
         )
 
-    for threadID in 0 ..< tp.numThreads:
-      parallel_chunks(threadID, tp.numThreads, numSets, chunkStart, chunkLen):
+    let numChunks = tp.numThreads
+    for chunkID in 0 ..< numChunks:
+      parallel_chunks(chunkID, numChunks, numSets, chunkStart, chunkLen):
         # Partition work into even chunks
         # Each thread receives a different start+len to process
         # chunkStart and chunkLen are set per-thread by the template
+
         tp.spawn processSingleChunk(
           contextsPtr, setsPtr, updateResultsPtr,
           secureRandomBytes.unsafeAddr,
-          threadID, chunkStart, chunkLen
+          chunkID, chunkStart, chunkLen
         )
 
     tp.syncAll()
