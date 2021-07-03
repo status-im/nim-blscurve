@@ -136,7 +136,7 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ##   an invalid secretkey in the first place.
   if seckey.vec_is_zero():
     return false
-  if not obj.scalar.blst_sk_check().bool:
+  if not seckey.scalar.blst_sk_check().bool:
     return false
   var pk {.noInit.}: blst_p1
   pk.blst_sk_to_pk_in_g1(seckey.scalar)

@@ -134,7 +134,7 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   if seckey.intVal.isZilch():
     return false
   {.noSideEffect.}:
-    if obj.intVal.cmp(CURVE_Order) != -1:
+    if seckey.intVal.cmp(CURVE_Order) != -1:
       return false
   pubkey.point = generator1()
   pubkey.point.mul(secKey.intVal)
