@@ -60,6 +60,10 @@ type
     ## Long-term storage of this key also requires adequate protection.
     ##
     ## At the moment, the nim-blscurve library does not guarantee such protections
+    ##
+    ## Guarantees:
+    ## - SecretKeys are always created (via hkdf_mod_r) or deserialized (via `fromBytes`)
+    ##   so that SK < BLS12-381 curve order
     intVal: BIG_384
 
   PublicKey* = object
@@ -111,7 +115,10 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## - PK, a public key encoded as an octet string.
   ##
   ## Returns:
-  ## - false is secret key is invalid (SK == 0), true otherwise
+  ## - false is secret key is invalid (SK == 0 or >= BLS12-381 curve order),
+  ##   true otherwise
+  ##   By construction no public API should ever instantiate
+  ##   an invalid secretkey in the first place.
   ##
   ## Side-channel/Constant-time considerations:
   ## The SK content is not revealed unless its value
@@ -121,12 +128,14 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   # 1. xP = SK * P
   # 2. PK = point_to_pubkey(xP)
   # 3. return PK
-
-
+  #
   # Always != 0:
   # keyGen, deriveChild_secretKey, fromHex, fromBytes guarantee that.
   if seckey.intVal.isZilch():
     return false
+  {.noSideEffect.}:
+    if seckey.intVal.cmp(CURVE_Order) != -1:
+      return false
   pubkey.point = generator1()
   pubkey.point.mul(secKey.intVal)
   return true

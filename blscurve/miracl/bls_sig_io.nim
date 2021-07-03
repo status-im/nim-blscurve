@@ -23,11 +23,14 @@ func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
   ## its hex raw bytes representation.
   ## Returns true on a success and false otherwise
   ## For secret key deserialization
-  ## A zero key is invalid
+  ## The key must be 0 < key < CURVE_Order
   when obj is SecretKey:
     result = obj.intVal.fromHex(hexStr)
     if obj.intVal.isZilch():
       return false
+    {.noSideEffect.}:
+      if obj.intVal.cmp(CURVE_Order) != -1:
+        return false
   else:
     result = obj.point.fromHex(hexStr)
     when obj is PublicKey:
@@ -50,6 +53,9 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
     result = obj.intVal.fromBytes(raw)
     if obj.intVal.isZilch():
       return false
+    {.noSideEffect.}:
+      if obj.intVal.cmp(CURVE_Order) != -1:
+        return false
   else:
     result = obj.point.fromBytes(raw)
     when obj is PublicKey:
