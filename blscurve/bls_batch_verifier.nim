@@ -218,11 +218,11 @@ when compileOption("threads"):
     # Subtree puts partial reduction in "first"
     let leftOkFV = tp.spawn reducePartialPairings(tp, contexts, start, mid)
     # Subtree puts partial reduction in "mid"
-    let rightOkFV = tp.spawn reducePartialPairings(tp, contexts, mid, stopEx)
+    let rightOkFV = reducePartialPairings(tp, contexts, mid, stopEx)
 
     # Wait for all subtrees, important: don't shortcut booleans as future/flowvar memory is released on sync
     let leftOk = sync(leftOkFV)
-    let rightOk = sync(rightOkFV)
+    let rightOk = rightOkFV
     if not leftOk or not rightOk:
       return false
     return contexts[start].merge(contexts[mid])
@@ -281,7 +281,7 @@ when compileOption("threads"):
         )
 
     for chunkID in 0 ..< numBatches:
-      parallel_chunks(numBatches, input.len, chunkID, chunkStart, chunkLen):
+      parallel_chunks(numBatches, numSets, chunkID, chunkStart, chunkLen):
         # Partition work into even chunks
         # Each thread receives a different start+len to process
         # chunkStart and chunkLen are set per-thread by the template
@@ -305,9 +305,9 @@ when compileOption("threads"):
         if not ok:
           return false
     else: # parallel logarithmic merge
-      let ok = tp.spawn reducePartialPairings(tp, contextsPtr, start = 0, stopEx = numBatches)
+      let ok = reducePartialPairings(tp, contextsPtr, start = 0, stopEx = numBatches)
 
-      if not sync(ok):
+      if not ok:
         return false
 
     return cache.batchContexts[0].finalVerify()

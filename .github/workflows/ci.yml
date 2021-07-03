@@ -1,5 +1,5 @@
 name: CI
-on: [push, pull_request]
+on: [pull_request] # [push, pull_request]
 
 jobs:
   build:
@@ -174,4 +174,3 @@ jobs:
           nimble install -y stint
           # Run the tests.
           nimble test
-
