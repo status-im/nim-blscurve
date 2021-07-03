@@ -79,3 +79,12 @@ test_sk_to_pk(
   seckey = "47faea55fe00a78306449165c017c9db86411a4c2467b4b89e21323c746406a0",
   pubkey = "a18e29d0185a5a6d19edf052ae098fd2924f579b6dfb4905332b8f4fc78adeb3188ad8315bf279a144be026ac08f3441"
 )
+
+# Ensure that secret keys with key > BLS12-381 curve order cannot be deserialized
+# BLS12-381 curve order is 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+
+block:
+  var sk{.noInit.}: SecretKey
+  doAssert not sk.fromHex("0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
+  doAssert not sk.fromHex("0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000002")
+  echo "SUCCESS - secret keys > curve order are refused"
