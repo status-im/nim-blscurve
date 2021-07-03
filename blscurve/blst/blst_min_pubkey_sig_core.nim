@@ -129,11 +129,14 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## as such {.passC: "-fno-tree-vectorize".}
   ## is automatically added to the compiler flags in blst_lowlevel
   ##
-  ## Assumptions:
-  ## - On creation or deserialization of the `SecretKey` type
-  ##   there was a check to ensure that SK < CurveOrder.
-  ##   see `fromBytes` and `blst_sk_check`
+  ## Returns:
+  ## - false is secret key is invalid (SK == 0 or >= BLS12-381 curve order),
+  ##   true otherwise
+  ##   By construction no public API should ever instantiate
+  ##   an invalid secretkey in the first place.
   if seckey.vec_is_zero():
+    return false
+  if not obj.scalar.blst_sk_check().bool:
     return false
   var pk {.noInit.}: blst_p1
   pk.blst_sk_to_pk_in_g1(seckey.scalar)

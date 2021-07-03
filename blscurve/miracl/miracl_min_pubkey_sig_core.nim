@@ -115,16 +115,14 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## - PK, a public key encoded as an octet string.
   ##
   ## Returns:
-  ## - false is secret key is invalid (SK == 0), true otherwise
+  ## - false is secret key is invalid (SK == 0 or >= BLS12-381 curve order),
+  ##   true otherwise
+  ##   By construction no public API should ever instantiate
+  ##   an invalid secretkey in the first place.
   ##
   ## Side-channel/Constant-time considerations:
   ## The SK content is not revealed unless its value
   ## is exactly 0
-  ##
-  ## Assumptions:
-  ## - On creation or deserialization of the `SecretKey` type
-  ##   there was a check to ensure that SK < CurveOrder.
-  ##   see `fromBytes`/`fromHex`.
   #
   # Procedure:
   # 1. xP = SK * P
@@ -135,6 +133,9 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   # keyGen, deriveChild_secretKey, fromHex, fromBytes guarantee that.
   if seckey.intVal.isZilch():
     return false
+  {.noSideEffect.}:
+    if obj.intVal.cmp(CURVE_Order) != -1:
+      return false
   pubkey.point = generator1()
   pubkey.point.mul(secKey.intVal)
   return true
