@@ -60,6 +60,10 @@ type
     ## Long-term storage of this key also requires adequate protection.
     ##
     ## At the moment, the nim-blscurve library does not guarantee such protections
+    ##
+    ## Guarantees:
+    ## - SecretKeys are always created (via hkdf_mod_r) or deserialized (via `fromBytes`)
+    ##   so that SK < BLS12-381 curve order.
     scalar: blst_scalar
 
   PublicKey* = object
@@ -124,6 +128,11 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## This requires some -O3 compiler optimizations to be off
   ## as such {.passC: "-fno-tree-vectorize".}
   ## is automatically added to the compiler flags in blst_lowlevel
+  ##
+  ## Assumptions:
+  ## - On creation or deserialization of the `SecretKey` type
+  ##   there was a check to ensure that SK < CurveOrder.
+  ##   see `fromBytes` and `blst_sk_check`
   if seckey.vec_is_zero():
     return false
   var pk {.noInit.}: blst_p1

@@ -60,6 +60,10 @@ type
     ## Long-term storage of this key also requires adequate protection.
     ##
     ## At the moment, the nim-blscurve library does not guarantee such protections
+    ##
+    ## Guarantees:
+    ## - SecretKeys are always created (via hkdf_mod_r) or deserialized (via `fromBytes`)
+    ##   so that SK < BLS12-381 curve order
     intVal: BIG_384
 
   PublicKey* = object
@@ -116,13 +120,17 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## Side-channel/Constant-time considerations:
   ## The SK content is not revealed unless its value
   ## is exactly 0
+  ##
+  ## Assumptions:
+  ## - On creation or deserialization of the `SecretKey` type
+  ##   there was a check to ensure that SK < CurveOrder.
+  ##   see `fromBytes`/`fromHex`.
   #
   # Procedure:
   # 1. xP = SK * P
   # 2. PK = point_to_pubkey(xP)
   # 3. return PK
-
-
+  #
   # Always != 0:
   # keyGen, deriveChild_secretKey, fromHex, fromBytes guarantee that.
   if seckey.intVal.isZilch():
