@@ -175,7 +175,7 @@ proc genForgedPair(batch: var seq[SignatureSet],
   let sigp = skp.sign(hash("rekt"))
 
   # Check that the forged signature can be verified when naively aggregated
-  # 1. Create -S'
+  # 1. Create -S'. Note: if P has elliptic affine coordinates (x, y) then -P is (x, -y)
   var neg_sigp = sigp
   let neg_sigp_ptr = cast[ptr blst_p2_affine](neg_sigp.addr)
   neg_sigp_ptr.y.blst_fp2_cneg(neg_sigp_ptr.y, 1)
