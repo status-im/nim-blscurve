@@ -9,8 +9,8 @@ license       = "Apache License 2.0"
 ### Dependencies
 requires "nim >= 1.0.4",
          "nimcrypto",
-         "stew"
-         # taskpools
+         "stew",
+         "https://github.com/status-im/nim-taskpools.git"
 
 ### Helper functions
 proc test(env, path: string) =
