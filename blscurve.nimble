@@ -51,30 +51,32 @@ task test, "Run all tests":
   # Internal SHA256
   test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
 
-  # batch verification
-  test "--threads:on -d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
+  # Windows 32-bit MinGW doesn't support SynchronizationBarrier for nim-taskpools.
+  when not (defined(windows) and sizeof(pointer) == 4):
+    # batch verification
+    test "--threads:on -d:BLS_FORCE_BACKEND=blst", "tests/t_batch_verifier.nim"
 
-  # Ensure benchmarks stay relevant.
-  # TODO, solve "inconsistent operand constraints"
-  # on 32-bit for asm volatile, this might be due to
-  # incorrect RDTSC call in benchmark
-  when defined(arm64) or defined(amd64):
-    when not defined(macosx):
-      exec "nim c --threads:on -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
-            " --verbosity:0 --hints:off --warnings:off" &
-            " benchmarks/bench_all.nim"
+    # Ensure benchmarks stay relevant.
+    # TODO, solve "inconsistent operand constraints"
+    # on 32-bit for asm volatile, this might be due to
+    # incorrect RDTSC call in benchmark
+    when defined(arm64) or defined(amd64):
+      when not defined(macosx):
+        exec "nim c --threads:on -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
+              " --verbosity:0 --hints:off --warnings:off" &
+              " benchmarks/bench_all.nim"
 
-      exec "nim c --threads:on -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
-            " --verbosity:0 --hints:off --warnings:off" &
-            " benchmarks/bench_all.nim"
-    else:
-      exec "nim c --threads:on -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
-            " --verbosity:0 --hints:off --warnings:off" &
-            " benchmarks/bench_all.nim"
+        exec "nim c --threads:on -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
+              " --verbosity:0 --hints:off --warnings:off" &
+              " benchmarks/bench_all.nim"
+      else:
+        exec "nim c --threads:on -d:BLS_FORCE_BACKEND=miracl -d:danger --outdir:build -r" &
+              " --verbosity:0 --hints:off --warnings:off" &
+              " benchmarks/bench_all.nim"
 
-      exec "nim c --threads:on -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
-            " --verbosity:0 --hints:off --warnings:off" &
-            " benchmarks/bench_all.nim"
+        exec "nim c --threads:on -d:BLS_FORCE_BACKEND=blst -d:danger --outdir:build -r" &
+              " --verbosity:0 --hints:off --warnings:off" &
+              " benchmarks/bench_all.nim"
 
 task bench, "Run benchmarks":
   if not dirExists "build":
