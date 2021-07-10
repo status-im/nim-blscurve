@@ -8,22 +8,20 @@
 # those terms.
 
 import
-  ./bls_backend, ./bls_sig_min_pubkey,
-  ./openmp
+  ./bls_backend, ./bls_sig_min_pubkey
+
+when compileOption("threads"):
+  import ./taskpools, parallel_chunks
 
 # BLS Batch Verifier
 # ----------------------------------------------------------------------
-# We use OpenMP here but might want to use a simple threadpool
-# for portability as Mac compiler doesn't ship with OpenMP
-# and while MSVC has OpenMP, it's unsure about Mingw
-#
-# Also as Nim supports for view types and openarray in object fields is experimental
+# Nim supports for view types and openarray in object fields is experimental
 # we collect/copy the inputs in the object for now by copy.
 # instead of accumulating them in a pairing context.
 # Note that a pairing context is 3+MB
 # while we have
-# - publickey = 48B
-# - signature = 96B
+# - publickey = 48B (or 96B uncompressed)
+# - signature = 96B (or 192B uncompressed)
 # - message = 32B (assuming sha256 hashed)
 # hence 176B only
 #
@@ -112,74 +110,62 @@ func batchVerifySerial*(
   var batcher: BatchedBLSVerifierCache
   return batcher.batchVerifySerial(input, secureRandomBytes)
 
-# Parallelized Batch Verifier
-# ----------------------------------------------------------------------
-# Parallel pairing computation requires the following steps
-#
-# Assuming we have N (public key, message, signature) triplets to verify
-# on P processor/threads.
-# We want B batches with B = P
-# Each processing W work items with W = N/B or N/B + 1
-#
-# Step 0: Initialize a context per parallel batch.
-# Step 1: Compute partial pairings, W work items per thread.
-# Step 2: Merge the B partial pairings
-#
-# For step 2 we have 2 strategies.
-# Strategy A: a simple linear merge
-# ```
-# for i in 1 ..< N:
-#   contexts[0].merge(contexts[i])
-# ```
-# which requires B operations.
-# In that case we can get away with just a simple parallel for loop.
-# and a serial linear merge for step 2
-#
-# Strategy B: A divide-and-conquer algorithm
-# We binary split the merge until we hit the base case:
-# ```
-# contexts[i].merge(contexts[i+1])
-# ```
-#
-# As pairing merge (Fp12 multiplication) is costly
-# (~10000 CPU cycles on Skylake-X with ADCX/ADOX instructions)
-# and for Ethereum we would at least have 6 sets:
-# - block proposals signatures
-# - randao reveal signatures
-# - proposer slashings signatures
-# - attester slashings signatures
-# - attestations signatures
-# - validator exits signatures
-# not counting deposits signatures which may be invalid
-# The merging would be 60k cycles if linear
-# or 10k * log2(6) = 30k cycles if divide-and-conquer on 6+ cores
-# Note that as the tree processing progresses, less threads are required
-# for full parallelism so even with less than 6 cores, the speedup should be important.
-# But on the other side, it's hard to utilize all cores of a high-core count machine.
-#
-# Note 1: a pairing is about 3400k cycles so the optimization is only noticeable
-# when we do multi-block batches,
-# for example batching 20 blocks would require 1200k cycles for a linear merge.
-#
-# Note 2: Skylake-X is a very recent family, with bigint instructions MULX/ADCX/ADOX,
-# multiply everything by 2~3 on a Raspberry Pi
-# and scale by core frequency.
-#
-# Note 3: 3M cycles is 1ms at 3GHz.
+when compileOption("threads"):
+  # Parallelized Batch Verifier
+  # ----------------------------------------------------------------------
+  # Parallel pairing computation requires the following steps
+  #
+  # Assuming we have N (public key, message, signature) triplets to verify
+  # on P processor/threads.
+  # We want B batches with B = P
+  # Each processing W work items with W = N/B or N/B + 1
+  #
+  # Step 0: Initialize a context per parallel batch.
+  # Step 1: Compute partial pairings, W work items per thread.
+  # Step 2: Merge the B partial pairings
+  #
+  # For step 2 we have 2 strategies.
+  # Strategy A: a simple linear merge
+  # ```
+  # for i in 1 ..< N:
+  #   contexts[0].merge(contexts[i])
+  # ```
+  # which requires B operations.
+  # In that case we can get away with just a simple parallel for loop.
+  # and a serial linear merge for step 2
+  #
+  # Strategy B: A divide-and-conquer algorithm
+  # We binary split the merge until we hit the base case:
+  # ```
+  # contexts[i].merge(contexts[i+1])
+  # ```
+  #
+  # As pairing merge (Fp12 multiplication) is costly
+  # (~10000 CPU cycles on Skylake-X with ADCX/ADOX instructions)
+  # and for Ethereum we would at least have 6 sets:
+  # - block proposals signatures
+  # - randao reveal signatures
+  # - proposer slashings signatures
+  # - attester slashings signatures
+  # - attestations signatures
+  # - validator exits signatures
+  # not counting deposits signatures which may be invalid
+  # The merging would be 60k cycles if linear
+  # or 10k * log2(6) = 30k cycles if divide-and-conquer on 6+ cores
+  # Note that as the tree processing progresses, less threads are required
+  # for full parallelism so even with less than 6 cores, the speedup should be important.
+  # But on the other side, it's hard to utilize all cores of a high-core count machine.
+  #
+  # Note 1: a pairing is about 3400k cycles so the optimization is only noticeable
+  # when we do multi-block batches,
+  # for example batching 20 blocks would require 1200k cycles for a linear merge.
+  #
+  # Note 2: Skylake-X is a very recent family, with bigint instructions MULX/ADCX/ADOX,
+  # multiply everything by 2~3 on a Raspberry Pi
+  # and scale by core frequency.
+  #
+  # Note 3: 3M cycles is 1ms at 3GHz.
 
-template checksAndStackTracesOff(body: untyped): untyped =
-  ## No Nim checks in OpenMP multithreading land, failure allocates an exception.
-  ## No stacktraces either.
-  ## Also use uint instead of int to ensure no range checks.
-  ##
-  ## For debugging a parallel OpenMP region, put "attachGC"
-  ## as the first statement after "omp_parallel"
-  ## Then you can echo strings and reenable stacktraces
-  {.push stacktrace:off, checks: off.}
-  body
-  {.pop.}
-
-checksAndStackTracesOff:
   func toPtrUncheckedArray[T](s: openarray[T]): ptr UncheckedArray[T] {.inline.} =
     {.pragma: restrict, codegenDecl: "$# __restrict $#".}
     let p{.restrict.} = cast[
@@ -191,9 +177,9 @@ checksAndStackTracesOff:
   func accumPairingLines(
         sigsets: ptr UncheckedArray[SignatureSet],
         contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
-        batchID: uint32,
-        subsetStart: uint32,
-        subsetStopEx: uint32): bool =
+        batchID: int,
+        subsetStart: int,
+        subsetStopEx: int): bool =
     ## Accumulate pairing lines
     ## subsetStopEx is iteration stopping index, non-inclusive
     ## Assumes that contexts[batchID] is valid.
@@ -210,9 +196,10 @@ checksAndStackTracesOff:
     contexts[batchID].commit()
     return true
 
-  func reducePartialPairings(
+  proc reducePartialPairings(
+        tp: Taskpool,
         contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
-        start, stopEx: uint32): bool =
+        start, stopEx: int): bool =
     ## Parallel logarithmic reduction of partial pairings
     ## start->stopEx describes an exclusive range
     ## of contexts to reduce.
@@ -228,157 +215,169 @@ checksAndStackTracesOff:
       let ok = contexts[start].merge(contexts[stopEx-1])
       return ok
 
-    var leftOk{.exportC.}, rightOk{.exportC.} = false
-    omp_task"shared(leftOk)": # Subtree puts partial reduction in "first"
-      leftOk = reducePartialPairings(contexts, start, mid)
-    omp_task"shared(rightOk)": # Subtree puts partial reduction in "mid"
-      rightOk = reducePartialPairings(contexts, mid, stopEx)
+    # Subtree puts partial reduction in "first"
+    let leftOkFV = tp.spawn reducePartialPairings(tp, contexts, start, mid)
+    # Subtree puts partial reduction in "mid"
+    let rightOkFV = reducePartialPairings(tp, contexts, mid, stopEx)
 
-    # Wait for all subtrees
-    omp_taskwait()
+    # Wait for all subtrees, important: don't shortcut booleans as future/flowvar memory is released on sync
+    let leftOk = sync(leftOkFV)
+    let rightOk = rightOkFV
     if not leftOk or not rightOk:
       return false
     return contexts[start].merge(contexts[mid])
 
-proc batchVerifyParallel*(
-       cache: var BatchedBLSVerifierCache,
-       input: openArray[SignatureSet],
-       secureRandomBytes: array[32, byte]
-     ): bool {.sideeffect.} =
-  ## Multithreaded batch verification
-  ## If multithreaded with -d:openmp requires OpenMP 3.0 (GCC 4.4, 2008)
-  ## This will verify all the inputs (PublicKey, message, Signature) triplets
-  ##  at once and return true if verification is successful.
-  ## If unsuccessful:
-  ## - The input was empty
-  ## - One or more of the inputs was invalid on aggregation
-  ## - One or more of the inputs had an invalid signature
-  ## If knowing which input was problematic is required, they must be checked one by one.
-  let numSets = input.len.uint32
-  if numSets == 0:
-    # Spec precondition
-    return false
+  proc batchVerifyParallel*(
+        tp: Taskpool,
+        cache: var BatchedBLSVerifierCache,
+        input: openArray[SignatureSet],
+        secureRandomBytes: array[32, byte]
+      ): bool {.sideeffect.} =
+    ## Multithreaded batch verification
+    ## If multithreaded with -d:openmp requires OpenMP 3.0 (GCC 4.4, 2008)
+    ## This will verify all the inputs (PublicKey, message, Signature) triplets
+    ##  at once and return true if verification is successful.
+    ## If unsuccessful:
+    ## - The input was empty
+    ## - One or more of the inputs was invalid on aggregation
+    ## - One or more of the inputs had an invalid signature
+    ## If knowing which input was problematic is required, they must be checked one by one.
+    let numSets = input.len
+    if numSets == 0:
+      # Spec precondition
+      return false
 
-  let numBatches = min(numSets, omp_get_max_threads().uint32)
+    let numBatches = min(numSets, tp.numThreads)
 
-  # Stage 0: Accumulators - setLen for noinit of seq
-  cache.batchContexts.setLen(numBatches.int)
-  cache.updateResults.setLen(numBatches.int)
+    # Stage 0: Accumulators - setLen for noinit of seq
+    cache.batchContexts.setLen(numBatches)
+    cache.updateResults.setLen(numBatches)
 
-  # No stacktrace, exception
-  # or anything that require a GC in a parallel section
-  # otherwise "attachGC()" is needed in the parallel prologue
-  # Hence we use raw ptr UncheckedArray instead of seq
-  let contextsPtr = cache.batchContexts.toPtrUncheckedArray()
-  let setsPtr = input.toPtrUncheckedArray()
-  let updateResultsPtr = cache.updateResults.toPtrUncheckedArray()
+    # No GC in a parallel section
+    # Hence we use raw ptr UncheckedArray instead of seq
+    let contextsPtr = cache.batchContexts.toPtrUncheckedArray()
+    let setsPtr = input.toPtrUncheckedArray()
+    let updateResultsPtr = cache.updateResults.toPtrUncheckedArray()
 
-  # Stage 1: Accumulate partial pairings
-  checksAndStackTracesOff:
-    omp_parallel: # Start the parallel region
-      let threadID = omp_get_thread_num()
-      omp_chunks(numSets, chunkStart, chunkLen):
+    # Stage 1: Accumulate partial pairings
+    proc processSingleChunk(
+          contextsPtr: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
+          setsPtr: ptr UncheckedArray[SignatureSet],
+          updateResultsPtr: ptr UncheckedArray[tuple[ok: bool, padCacheLine: array[64, byte]]],
+          secureRandomBytes: ptr array[32, byte],
+          chunkID: int,
+          chunkStart, chunkLen: int) {.gcsafe, nimcall.}=
+
+      contextsPtr[chunkID].init(
+        secureRandomBytes[],
+        threadSepTag = cast[array[sizeof(chunkID), byte]](chunkID)
+      )
+
+      updateResultsPtr[chunkID].ok =
+        accumPairingLines(
+          setsPtr, contextsPtr,
+          chunkID,
+          chunkStart, (chunkStart+chunkLen)
+        )
+
+    for chunkID in 0 ..< numBatches:
+      parallel_chunks(numBatches, numSets, chunkID, chunkStart, chunkLen):
         # Partition work into even chunks
         # Each thread receives a different start+len to process
         # chunkStart and chunkLen are set per-thread by the template
-        contextsPtr[threadID].init(
-          secureRandomBytes,
-          threadSepTag = cast[array[sizeof(threadID), byte]](threadID)
+
+        tp.spawn processSingleChunk(
+          contextsPtr, setsPtr, updateResultsPtr,
+          secureRandomBytes.unsafeAddr,
+          chunkID, chunkStart, chunkLen
         )
 
-        updateResultsPtr[threadID].ok =
-          accumPairingLines(
-            setsPtr, contextsPtr,
-            threadID.uint32,
-            chunkStart.uint32, uint32(chunkStart+chunkLen)
-          )
+    tp.syncAll()
 
-  for i in 0 ..< cache.updateResults.len:
-    if not updateResultsPtr[i].ok:
-      return false
+    for i in 0 ..< cache.updateResults.len:
+      if not updateResultsPtr[i].ok:
+        return false
 
-  # Stage 2: Reduce partial pairings
-  if numBatches < 4: # linear merge
-    for i in 1 ..< numBatches:
-      let ok = contextsPtr[0].merge(contextsPtr[i])
+    # Stage 2: Reduce partial pairings
+    if numBatches < 4: # linear merge
+      for i in 1 ..< numBatches:
+        let ok = contextsPtr[0].merge(contextsPtr[i])
+        if not ok:
+          return false
+    else: # parallel logarithmic merge
+      let ok = reducePartialPairings(tp, contextsPtr, start = 0, stopEx = numBatches)
+
       if not ok:
         return false
 
-  else: # parallel logarithmic merge
-    var ok = false
-    checksAndStackTracesOff:
-      omp_parallel: # Start the parallel region
-        omp_single: # A single thread should create the master task
-          ok = reducePartialPairings(contextsPtr, start = 0, stopEx = numBatches)
+    return cache.batchContexts[0].finalVerify()
 
-    if not ok:
-      return false
+  proc batchVerifyParallel*(
+        tp: Taskpool,
+        input: openArray[SignatureSet],
+        secureRandomBytes: array[32, byte]
+      ): bool =
+    ## Multithreaded batch verification
+    ## If multithreaded (with -d:openmp) requires OpenMP 3.0 (GCC 4.4, 2008)
+    ## This will verify all the inputs (PublicKey, message, Signature) triplets
+    ##  at once and return true if verification is successful.
+    ## If unsuccessful:
+    ## - The input was empty
+    ## - One or more of the inputs was invalid on aggregation
+    ## - One or more of the inputs had an invalid signature
+    ## If knowing which input was problematic is required, they must be checked one by one.
 
-  return cache.batchContexts[0].finalVerify()
+    # Don't {.noinit.} this or seq capacity will be != 0.
+    var batcher: BatchedBLSVerifierCache
+    return tp.batchVerifyParallel(batcher, input, secureRandomBytes)
 
-proc batchVerifyParallel*(
-       input: openArray[SignatureSet],
-       secureRandomBytes: array[32, byte]
-     ): bool =
-  ## Multithreaded batch verification
-  ## If multithreaded (with -d:openmp) requires OpenMP 3.0 (GCC 4.4, 2008)
-  ## This will verify all the inputs (PublicKey, message, Signature) triplets
-  ##  at once and return true if verification is successful.
-  ## If unsuccessful:
-  ## - The input was empty
-  ## - One or more of the inputs was invalid on aggregation
-  ## - One or more of the inputs had an invalid signature
-  ## If knowing which input was problematic is required, they must be checked one by one.
+  # Autoselect Batch Verifier
+  # ----------------------------------------------------------------------
 
-  # Don't {.noinit.} this or seq capacity will be != 0.
-  var batcher: BatchedBLSVerifierCache
-  return batcher.batchVerifyParallel(input, secureRandomBytes)
-
-# Autoselect Batch Verifier
-# ----------------------------------------------------------------------
-
-proc batchVerify*(
-       cache: var BatchedBLSVerifierCache,
-       input: openArray[SignatureSet],
-       secureRandomBytes: array[32, byte]
-     ): bool =
-  ## Verify all signatures in batch at once.
-  ## Returns true if all signatures are correct
-  ## Returns false if there is at least one incorrect signature
-  ##
-  ## This requires securely generated random bytes
-  ## for scalar blinding
-  ## to defend against forged signatures that would not
-  ## verify individually but would verify while aggregated.
-  ##
-  ## The blinding scheme also assumes that the attacker cannot
-  ## resubmit 2^64 times forged (publickey, message, signature) triplets
-  ## against the same `secureRandomBytes`
-  when defined(openmp):
-    if input.len >= 3:
-      return cache.batchVerifyParallel(input, secureRandomBytes)
+  proc batchVerify*(
+        tp: Taskpool,
+        cache: var BatchedBLSVerifierCache,
+        input: openArray[SignatureSet],
+        secureRandomBytes: array[32, byte]
+      ): bool =
+    ## Verify all signatures in batch at once.
+    ## Returns true if all signatures are correct
+    ## Returns false if there is at least one incorrect signature
+    ##
+    ## This requires securely generated random bytes
+    ## for scalar blinding
+    ## to defend against forged signatures that would not
+    ## verify individually but would verify while aggregated.
+    ##
+    ## The blinding scheme also assumes that the attacker cannot
+    ## resubmit 2^64 times forged (publickey, message, signature) triplets
+    ## against the same `secureRandomBytes`
+    when defined(openmp):
+      if input.len >= 3:
+        return tp.batchVerifyParallel(cache, input, secureRandomBytes)
+      else:
+        return cache.batchVerifySerial(input, secureRandomBytes)
     else:
       return cache.batchVerifySerial(input, secureRandomBytes)
-  else:
-    return cache.batchVerifySerial(input, secureRandomBytes)
 
-proc batchVerify*(
-       input: openArray[SignatureSet],
-       secureRandomBytes: array[32, byte]
-     ): bool =
-  ## Verify all signatures in batch at once.
-  ## Returns true if all signatures are correct
-  ## Returns false if there is at least one incorrect signature
-  ##
-  ## This requires securely generated random bytes
-  ## for scalar blinding
-  ## to defend against forged signatures that would not
-  ## verify individually but would verify while aggregated.
-  ##
-  ## The blinding scheme also assumes that the attacker cannot
-  ## resubmit 2^64 times forged (publickey, message, signature) triplets
-  ## against the same `secureRandomBytes`
+  proc batchVerify*(
+        tp: Taskpool,
+        input: openArray[SignatureSet],
+        secureRandomBytes: array[32, byte]
+      ): bool =
+    ## Verify all signatures in batch at once.
+    ## Returns true if all signatures are correct
+    ## Returns false if there is at least one incorrect signature
+    ##
+    ## This requires securely generated random bytes
+    ## for scalar blinding
+    ## to defend against forged signatures that would not
+    ## verify individually but would verify while aggregated.
+    ##
+    ## The blinding scheme also assumes that the attacker cannot
+    ## resubmit 2^64 times forged (publickey, message, signature) triplets
+    ## against the same `secureRandomBytes`
 
-  # Don't {.noinit.} this or seq capacity will be != 0.
-  var batcher: BatchedBLSVerifierCache
-  return batcher.batchVerify(input, secureRandomBytes)
+    # Don't {.noinit.} this or seq capacity will be != 0.
+    var batcher: BatchedBLSVerifierCache
+    return tp.batchVerify(batcher, input, secureRandomBytes)

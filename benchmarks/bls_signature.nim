@@ -8,7 +8,8 @@
 # those terms.
 
 import
-  std/random,
+  std/[random, cpuinfo, os, strutils],
+  taskpools,
   ../blscurve,
   ./bench_templates
 
@@ -117,11 +118,14 @@ when BLS_BACKEND == BLST:
     bench("Serial batch verify " & $numSigs & " msgs by "& $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
       let ok = cache.batchVerifySerial(batch, secureBlindingBytes)
+      doAssert ok
 
-  proc batchVerifyMultiBatchedParallel*(numSigs, iters: int) =
+  proc batchVerifyMultiBatchedParallel*(numSigs, iters, nthreads: int) =
     ## Verification of N pubkeys signing for N messages
 
+    var tp: Taskpool
     var batch: seq[SignatureSet]
+    tp = Taskpool.new(numThreads = nthreads)
 
     for i in 0 ..< numSigs:
       let (pk, sk) = keyGen()
@@ -135,7 +139,8 @@ when BLS_BACKEND == BLST:
 
     bench("Parallel batch verify of " & $numSigs & " msgs by " & $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
-      let ok = cache.batchVerifyParallel(batch, secureBlindingBytes)
+      let ok = tp.batchVerifyParallel(cache, batch, secureBlindingBytes)
+      doAssert ok
 
 when isMainModule:
   benchSign(1000)
@@ -143,17 +148,25 @@ when isMainModule:
   benchFastAggregateVerify(numKeys = 128, iters = 10)
 
   when BLS_BACKEND == BLST:
-    # Simulate Block verification
+    var nthreads: int
+    if existsEnv"TP_NUM_THREADS":
+      nthreads = getEnv"TP_NUM_THREADS".parseInt()
+    else:
+      nthreads = countProcessors()
+
+    # Simulate Block verification (at most 6 signatures per block)
     batchVerifyMulti(numSigs = 6, iters = 10)
     batchVerifyMultiBatchedSerial(numSigs = 6, iters = 10)
-    batchVerifyMultiBatchedParallel(numSigs = 6, iters = 10)
+    batchVerifyMultiBatchedParallel(numSigs = 6, iters = 10, nthreads)
 
     # Simulate 10 blocks verification
     batchVerifyMulti(numSigs = 60, iters = 10)
     batchVerifyMultiBatchedSerial(numSigs = 60, iters = 10)
-    batchVerifyMultiBatchedParallel(numSigs = 60, iters = 10)
+    batchVerifyMultiBatchedParallel(numSigs = 60, iters = 10, nthreads)
 
     # Simulate 30 blocks verification
     batchVerifyMulti(numSigs = 180, iters = 10)
     batchVerifyMultiBatchedSerial(numSigs = 180, iters = 10)
-    batchVerifyMultiBatchedParallel(numSigs = 180, iters = 10)
+    batchVerifyMultiBatchedParallel(numSigs = 180, iters = 10, nthreads)
+
+    echo "\nUsing nthreads = ", nthreads, ". The number of threads can be changed with TP_NUM_THREADS environment variable."
