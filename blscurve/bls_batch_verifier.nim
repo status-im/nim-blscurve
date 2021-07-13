@@ -352,7 +352,7 @@ when compileOption("threads"):
     ## The blinding scheme also assumes that the attacker cannot
     ## resubmit 2^64 times forged (publickey, message, signature) triplets
     ## against the same `secureRandomBytes`
-    when defined(openmp):
+    when compileOption("threads"):
       if input.len >= 3:
         return tp.batchVerifyParallel(cache, input, secureRandomBytes)
       else:
