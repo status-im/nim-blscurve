@@ -353,7 +353,7 @@ when compileOption("threads"):
     ## resubmit 2^64 times forged (publickey, message, signature) triplets
     ## against the same `secureRandomBytes`
     when compileOption("threads"):
-      if input.len >= 3:
+      if tp.numThreads > 1 and input.len >= 3:
         return tp.batchVerifyParallel(cache, input, secureRandomBytes)
       else:
         return cache.batchVerifySerial(input, secureRandomBytes)
