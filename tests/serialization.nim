@@ -7,7 +7,26 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-import ../blscurve
+import ../blscurve, std/strutils
+
+# Infinite signatures serialization
+# A signature may be initialized at an infinity point
+# as a first step before aggregation. Inputs
+
+echo "\nZero init signatures is serialized as infinity point"
+echo "----------------------------------\n"
+
+proc test_zero_sig() =
+
+  block:
+    let sig = Signature()
+    doAssert sig.toHex() == "c" & '0'.repeat(191)
+
+  block:
+    let sig = AggregateSignature()
+    doAssert sig.toHex() == "c" & '0'.repeat(191)
+
+test_zero_sig()
 
 # This test ensures that serialization roundtrips work
 
