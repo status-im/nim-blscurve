@@ -135,7 +135,7 @@ func aggregateVerify*(
   ## Compared to the IETF spec API, it is modified to
   ## enforce proper usage of the proof-of-possessions
   # Note: we can't have openarray of openarrays until openarrays are first-class value types
-  if publicKeys.len != proofs.len or publicKeys != messages.len:
+  if publicKeys.len != proofs.len or publicKeys.len != messages.len:
     return false
   if not(publicKeys.len >= 1):
     # Spec precondition
@@ -228,7 +228,7 @@ func fastAggregateVerify*[T: byte|char](
     aggPK.aggregate(publicKeys[i])
 
   var aggAffine{.noInit.}: PublicKey
-  aggAffine.finish(aggAffine)
+  aggAffine.finish(aggPK)
   return coreVerifyNoGroupCheck(aggAffine, message, signature, DST)
 
 func fastAggregateVerify*[T: byte|char](
