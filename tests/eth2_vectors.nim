@@ -187,14 +187,15 @@ testGen(sign, test):
 
   doAssert privkey.ok == expectedSig.ok
   if not privkey.ok or not expectedSig.ok:
-    return
+    echo ("")
+  else:
 
-  let libSig = privKey.val.sign(message.val)
+    let libSig = privKey.val.sign(message.val)
 
-  doAssert libSig == expectedSig.val, block:
-    "\nSignature differs from expected \n" &
-    "   computed: " & libSig.toHex() & "\n" &
-    "   expected: " & expectedSig.val.toHex()
+    doAssert libSig == expectedSig.val, block:
+      "\nSignature differs from expected \n" &
+      "   computed: " & libSig.toHex() & "\n" &
+      "   expected: " & expectedSig.val.toHex()
 
 testGen(verify, test):
   let
@@ -206,25 +207,26 @@ testGen(verify, test):
   if not pubkey.ok:
     # Infinity pubkey and infinity signature
     doAssert not expected.val
-    return
+  
+  else:
 
-  let libValid = pubKey.val.verify(message.val, signature.val)
-
-  doAssert libValid == expected.val, block:
-    "\nVerification differs from expected \n" &
-    "   computed: " & $libValid & "\n" &
-    "   expected: " & $expected.val
-
-  withProof(pubKey.val):
-    let libValid = pubKey.val.verify(proof, message.val, signature.val)
+    let libValid = pubKey.val.verify(message.val, signature.val)
 
     doAssert libValid == expected.val, block:
-      "\nVerification with proof-of-possession differs from expected \n" &
+      "\nVerification differs from expected \n" &
       "   computed: " & $libValid & "\n" &
       "   expected: " & $expected.val
 
-    doAssert not pubKey.val.verify(wrongProof, message.val, signature.val), block:
-      "\nVerification with wrong proof-of-possession succeeded"
+    withProof(pubKey.val):
+      let libValid = pubKey.val.verify(proof, message.val, signature.val)
+
+      doAssert libValid == expected.val, block:
+        "\nVerification with proof-of-possession differs from expected \n" &
+        "   computed: " & $libValid & "\n" &
+        "   expected: " & $expected.val
+
+      doAssert not pubKey.val.verify(wrongProof, message.val, signature.val), block:
+        "\nVerification with wrong proof-of-possession succeeded"
 
 testGen(aggregate, test):
   let sigs = seq[Signature].getFrom(test, Input)
@@ -235,12 +237,13 @@ testGen(aggregate, test):
   if not ok:
     doAssert not expectedAgg.ok
     doAssert sigs.val.len == 0
-    return
 
-  doAssert libAggSig == expectedAgg.val, block:
-    "\nSignature aggregation differs from expected \n" &
-    "   computed: " & libAggSig.toHex() & "\n" &
-    "   expected: " & expectedAgg.val.toHex()
+  else:
+
+    doAssert libAggSig == expectedAgg.val, block:
+      "\nSignature aggregation differs from expected \n" &
+      "   computed: " & libAggSig.toHex() & "\n" &
+      "   expected: " & expectedAgg.val.toHex()
 
 testGen(fast_aggregate_verify, test):
   let
@@ -252,25 +255,26 @@ testGen(fast_aggregate_verify, test):
   if not pubkeys.ok:
     # Infinity pubkey in the mix
     doAssert not expected.val
-    return
 
-  let libValid = pubKeys.val.fastAggregateVerify(message.val, signature.val)
+  else:
 
-  doAssert libValid == expected.val, block:
-    "\nFast Aggregate Verification differs from expected \n" &
-    "   computed: " & $libValid & "\n" &
-    "   expected: " & $expected.val
-    
-  withProofs(pubKeys.val):
-    let libValid = pubKeys.val.fastAggregateVerify(proofs, message.val, signature.val)
+    let libValid = pubKeys.val.fastAggregateVerify(message.val, signature.val)
 
     doAssert libValid == expected.val, block:
-      "\nFast Aggregate Verification with proof-of-possession differs from expected \n" &
+      "\nFast Aggregate Verification differs from expected \n" &
       "   computed: " & $libValid & "\n" &
       "   expected: " & $expected.val
+      
+    withProofs(pubKeys.val):
+      let libValid = pubKeys.val.fastAggregateVerify(proofs, message.val, signature.val)
 
-    doAssert not pubKeys.val.fastAggregateVerify(wrongProofs, message.val, signature.val), block:
-      "\nFast Aggregate Verification with wrong proof-of-possession succeeded"
+      doAssert libValid == expected.val, block:
+        "\nFast Aggregate Verification with proof-of-possession differs from expected \n" &
+        "   computed: " & $libValid & "\n" &
+        "   expected: " & $expected.val
+
+      doAssert not pubKeys.val.fastAggregateVerify(wrongProofs, message.val, signature.val), block:
+        "\nFast Aggregate Verification with wrong proof-of-possession succeeded"
 
 testGen(aggregate_verify, test):
   let
@@ -288,28 +292,29 @@ testGen(aggregate_verify, test):
     # Infinity pubkey in the mix
     doAssert not pubkey_msg_pairs.ok
     doAssert not expected.val
-    return
 
-  doAssert libAoSValid == expected.val, block:
-    "\nAggregate Verification differs from expected \n" &
-    "   computed: " & $libAoSValid & "\n" &
-    "   expected: " & $expected.val
+  else:
 
-  doAssert libSoAValid == expected.val, block:
-    "\nAggregate Verification differs from expected \n" &
-    "   computed: " & $libSoAValid & "\n" &
-    "   expected: " & $expected.val
-
-  withProofs(pubkeys.val):
-    let libValid = pubkeys.val.aggregateVerify(proofs, msgs.val, signature.val)
-
-    doAssert libValid == expected.val, block:
-      "\nAggregate Verification with proof-of-possession differs from expected \n" &
-      "   computed: " & $libValid & "\n" &
+    doAssert libAoSValid == expected.val, block:
+      "\nAggregate Verification differs from expected \n" &
+      "   computed: " & $libAoSValid & "\n" &
       "   expected: " & $expected.val
 
-    doAssert not pubkeys.val.aggregateVerify(wrongProofs, msgs.val, signature.val), block:
-      "\nAggregate Verification with wrong proof-of-possession succeeded"
+    doAssert libSoAValid == expected.val, block:
+      "\nAggregate Verification differs from expected \n" &
+      "   computed: " & $libSoAValid & "\n" &
+      "   expected: " & $expected.val
+
+    withProofs(pubkeys.val):
+      let libValid = pubkeys.val.aggregateVerify(proofs, msgs.val, signature.val)
+
+      doAssert libValid == expected.val, block:
+        "\nAggregate Verification with proof-of-possession differs from expected \n" &
+        "   computed: " & $libValid & "\n" &
+        "   expected: " & $expected.val
+
+      doAssert not pubkeys.val.aggregateVerify(wrongProofs, msgs.val, signature.val), block:
+        "\nAggregate Verification with wrong proof-of-possession succeeded"
 
 suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
   test "[" & BLS_ETH2_SPEC & "] sign(SecretKey, message) -> Signature":
