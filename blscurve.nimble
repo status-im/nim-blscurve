@@ -38,7 +38,7 @@ task test, "Run all tests":
   # test "", "tests/hash_to_curve_v7.nim"
 
   # Serialization
-  test "-d:BLS_FORCE_BACKEND=blst", "tests/serialization.nim"
+  test "-d:BLS_FORCE_BACKEND=miracl", "tests/serialization.nim"
   # Public BLS API - IETF standard / Ethereum2.0 v1.0.0
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/eth2_vectors.nim"
   # key Derivation - EIP 2333
