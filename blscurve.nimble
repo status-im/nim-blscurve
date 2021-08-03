@@ -37,6 +37,8 @@ task test, "Run all tests":
   # Internal BLS API - IETF standard
   # test "", "tests/hash_to_curve_v7.nim"
 
+  # Serialization
+  test "-d:BLS_FORCE_BACKEND=blst", "tests/serialization.nim"
   # Public BLS API - IETF standard / Ethereum2.0 v1.0.0
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/eth2_vectors.nim"
   # key Derivation - EIP 2333
@@ -44,9 +46,7 @@ task test, "Run all tests":
   # Secret key to pubkey
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/priv_to_pub.nim"
 
-  # Serialization (blst only for now)
   test "-d:BLS_FORCE_BACKEND=blst", "tests/serialization.nim"
-
   test "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
   test "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
   test "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"
