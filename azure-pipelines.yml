@@ -169,5 +169,8 @@ steps:
       which gcc
       gcc -v
       git submodule update --init --recursive
+      push tests
+      sh download_ef_bls12381_vectors.sh
+      popd
       nimble test
     displayName: 'Testing the package'

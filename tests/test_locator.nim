@@ -1,20 +1,16 @@
 import
   # Standard library
-  json, strutils, os, streams,
-  # Third party
-  yaml,
+  json, strutils, os,
   # Detect spec version
   ../blscurve
 
 export
   os, json
 
-const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "eth2.0_v1.0.0-rc0_vectors"
+const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "ef-bls12381-vectors-v0.1.0"
 
 proc parseTest*(file: string): JsonNode =
-  var yamlStream = openFileStream(file)
-  defer: yamlStream.close()
-  result = yamlStream.loadToJson()[0]
+  result = json.parseFile(file)
 
 const SkippedTests = [""]
 

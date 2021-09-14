@@ -73,7 +73,7 @@ template withProof(pk: PublicKey, body: untyped): untyped =
     doAssert proof.fromHex(knownProofs[i])
     doAssert wrongProof.fromHex(knownProofs[(i + 1) mod knownProofs.len])
     body
-    
+
 template withProofs(pks: openarray[PublicKey], body: untyped): untyped =
   block:
     var proofs{.inject.}, wrongProofs{.inject.}: seq[ProofOfPossession]
@@ -90,12 +90,12 @@ template withProofs(pks: openarray[PublicKey], body: untyped): untyped =
 template testGen*(name, testJson, body: untyped): untyped =
   ## Generates a test proc
   ## with identifier "test_name"
-  ## The test file is availaible as JsonNode under the
+  ## The test file is available as JsonNode under the
   ## the variable passed as `testJson`
   proc `test _ name`() =
     var count = 0 # Need to fail if walkDir doesn't return anything
     var skipped = 0
-    for dir, file in walkTests(astToStr(name), skipped):
+    for dir, file{.inject.} in walkTests(astToStr(name), skipped):
       echo "       ", astToStr(name), " test: ", file
       let testJson = parseTest(dir / file)
 
@@ -207,7 +207,7 @@ testGen(verify, test):
   if not pubkey.ok:
     # Infinity pubkey and infinity signature
     doAssert not expected.val
-  
+
   else:
 
     let libValid = pubKey.val.verify(message.val, signature.val)
@@ -216,6 +216,11 @@ testGen(verify, test):
       "\nVerification differs from expected \n" &
       "   computed: " & $libValid & "\n" &
       "   expected: " & $expected.val
+
+    if file.startsWith("verifycase_one_privkey"):
+      # Skip proof-of-possession test when
+      # the secret key is 0x1
+      return
 
     withProof(pubKey.val):
       let libValid = pubKey.val.verify(proof, message.val, signature.val)
@@ -264,7 +269,7 @@ testGen(fast_aggregate_verify, test):
       "\nFast Aggregate Verification differs from expected \n" &
       "   computed: " & $libValid & "\n" &
       "   expected: " & $expected.val
-      
+
     withProofs(pubKeys.val):
       let libValid = pubKeys.val.fastAggregateVerify(proofs, message.val, signature.val)
 

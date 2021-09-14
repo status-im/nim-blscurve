@@ -34,10 +34,10 @@ build_script:
   - cd C:\projects\%APPVEYOR_PROJECT_SLUG%
   - nimble install -y
   # testing only
-  - nimble install https://github.com/status-im/NimYAML@#head # Cannot clone upstream https://github.com/flyx/NimYAML/issues/77
   - nimble install stint
 
 test_script:
+  - pushd tests && bash download_ef_bls12381_vectors.sh && popd
   - nimble test
 
 deploy: off
