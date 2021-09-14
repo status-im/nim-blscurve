@@ -45,6 +45,6 @@ script:
   # testing only
   - nimble install stint
   - push tests
-  - sh download_ef_bls12381_vectors.sh
+  - bash download_ef_bls12381_vectors.sh
   - popd
   - nimble test

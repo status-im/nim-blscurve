@@ -172,7 +172,7 @@ jobs:
           # for testing:
           nimble install -y stint
           pushd tests
-          sh download_ef_bls12381_vectors.sh
+          bash download_ef_bls12381_vectors.sh
           popd
           # Run the tests.
           nimble test
