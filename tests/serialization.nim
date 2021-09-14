@@ -13,20 +13,20 @@ import ../blscurve, std/strutils
 # A signature may be initialized at an infinity point
 # as a first step before aggregation. Inputs
 
-echo "\nZero init signatures is serialized as infinity point"
-echo "----------------------------------\n"
+when BLS_BACKEND == BLST:
+  echo "\nZero init signatures is serialized as infinity point"
+  echo "----------------------------------\n"
+  proc test_zero_sig() =
 
-proc test_zero_sig() =
+    block:
+      let sig = Signature()
+      doAssert sig.toHex() == "c" & '0'.repeat(191)
 
-  block:
-    let sig = Signature()
-    doAssert sig.toHex() == "c" & '0'.repeat(191)
+    block:
+      let sig = AggregateSignature()
+      doAssert sig.toHex() == "c" & '0'.repeat(191)
 
-  block:
-    let sig = AggregateSignature()
-    doAssert sig.toHex() == "c" & '0'.repeat(191)
-
-test_zero_sig()
+  test_zero_sig()
 
 # This test ensures that serialization roundtrips work
 
