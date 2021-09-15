@@ -358,9 +358,9 @@ when BLS_BACKEND == BLST and compileOption("threads"):
     let
       expected = bool.getFrom(test, Output)
       # Spec uses pubkeys plural but test vectors are singular ...
-      pubkeys = seq[PublicKey].aggFrom(test, "pubkey")
-      messages = seq[seq[byte]].aggFrom(test, "message")
-      signatures = seq[Signature].aggFrom(test, "signature")
+      pubkeys = seq[PublicKey].aggFrom(test, "pubkeys")
+      messages = seq[seq[byte]].aggFrom(test, "messages")
+      signatures = seq[Signature].aggFrom(test, "signatures")
 
     var tp = Taskpool.new(numThreads = 4)
     var cache: BatchedBLSVerifierCache
