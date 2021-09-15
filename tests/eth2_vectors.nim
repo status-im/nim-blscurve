@@ -411,15 +411,17 @@ suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
     test_fast_aggregate_verify()
   test "[" & BLS_ETH2_SPEC & "] AggregateVerify(openarray[PublicKey, message], Signature) -> bool":
     test_aggregate_verify()
+  test "[" & BLS_ETH2_SPEC & "] Deserialization_G1(PublicKey) -> bool":
+    test_deserialization_G1()
   test "[" & BLS_ETH2_SPEC & "] Deserialization_G2(Signature) -> bool":
     test_deserialization_G2()
 
-  when BLS_BACKEND == BLST:
+  when BLS_BACKEND == BLST and compileOption("threads"):
     test "[" & BLS_ETH2_SPEC & "] BatchVerify(openarray[(PublicKey, message, Signatures)]) -> bool":
       test_batch_verify()
   else:
     echo "  [SKIP] [v1.0.0] BatchVerify(openarray[(PublicKey, message, Signatures)]) -> bool"
-    echo "    Not using BLST backend."
+    echo "    Not using BLST backend or --threads:on"
 
   echo "  [SKIP] [v1.0.0] HashToG2 tests"
   # We skip the hashToG2 tests since they are lower-level than the nim-blscurve library.

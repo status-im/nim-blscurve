@@ -68,7 +68,7 @@ proc test_serialization() =
     var
       sk{.noInit.}: SecretKey
       pk{.noInit.}: PublicKey
-      pk_uncomp{.noInit.}: array[96, byte]
+      # pk_uncomp{.noInit.}: array[96, byte]
       pk_comp{.noInit.}: array[48, byte]
     let ok = sk.fromHex(seckey)
     doAssert ok
@@ -77,16 +77,16 @@ proc test_serialization() =
 
     # Serialize compressed and uncompressed
     doAssert pk_comp.serialize(pk)
-    doAssert pk_uncomp.serialize(pk)
+    # doAssert pk_uncomp.serialize(pk)
 
     var pk2{.noInit.}: PublicKey
-    var pk3{.noInit.}: PublicKey
+    # var pk3{.noInit.}: PublicKey
 
     doAssert pk2.fromBytes(pk_comp)
-    doAssert pk3.fromBytes(pk_uncomp)
+    # doAssert pk3.fromBytes(pk_uncomp)
 
     doAssert pk == pk2
-    doAssert pk == pk3
+    # doAssert pk == pk3
 
   # Signature serialization
   # -----------------------
@@ -94,7 +94,7 @@ proc test_serialization() =
     var
       sk{.noInit.}: SecretKey
       pk{.noInit.}: PublicKey
-      pk_uncomp{.noInit.}: array[96, byte]
+      # pk_uncomp{.noInit.}: array[96, byte]
       pk_comp{.noInit.}: array[48, byte]
     let ok = sk.fromHex(seckey)
     doAssert ok
@@ -110,16 +110,16 @@ proc test_serialization() =
 
       # Serialize compressed and uncompressed
       doAssert sig_comp.serialize(sig)
-      doAssert sig_uncomp.serialize(sig)
+      # doAssert sig_uncomp.serialize(sig)
 
       var sig2{.noInit.}: Signature
-      var sig3{.noInit.}: Signature
+      # var sig3{.noInit.}: Signature
 
       doAssert sig2.fromBytes(sig_comp)
-      doAssert sig3.fromBytes(sig_uncomp)
+      # doAssert sig3.fromBytes(sig_uncomp)
 
       doAssert sig == sig2
-      doAssert sig == sig3
+      # doAssert sig == sig3
 
   echo "SUCCESS"
 

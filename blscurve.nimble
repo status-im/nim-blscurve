@@ -47,12 +47,18 @@ task test, "Run all tests":
   test "-d:BLS_FORCE_BACKEND=miracl", "tests/priv_to_pub.nim"
 
   test "-d:BLS_FORCE_BACKEND=blst", "tests/serialization.nim"
-  test "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
+  # test "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
   test "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
   test "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"
 
   # Internal SHA256
   test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
+
+  when (defined(windows) and sizeof(pointer) == 4):
+    # Eth2 vectors without batch verify
+    test "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
+  else:
+    test "--threads:on -d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
 
   # Windows 32-bit MinGW doesn't support SynchronizationBarrier for nim-taskpools.
   when not (defined(windows) and sizeof(pointer) == 4):
