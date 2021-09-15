@@ -563,11 +563,11 @@ proc isOnCurve*(x, y: FP_BLS12381 or FP2_BLS12381): bool =
 
 proc toBytes*(a: BIG_384, res: var openarray[byte]): bool =
   ## Serialize big integer ``a`` to ``res``. Length of ``res`` array
-  ## must be at least ``MODBYTES_384``.
+  ## must be ``MODBYTES_384``.
   ##
   ## Returns ``true`` if ``a`` was succesfully serialized,
   ## ``false`` otherwise.
-  if len(res) >= MODBYTES_384:
+  if len(res) == MODBYTES_384:
     var c: BIG_384
     BIG_384_copy(c, a)
     # BIG_384_norm() function in Milagro operates inplace.
@@ -576,6 +576,8 @@ proc toBytes*(a: BIG_384, res: var openarray[byte]): bool =
       res[i] = byte(c[0] and 0xFF)
       discard BIG_384_fshr(c, 8)
     result = true
+  else:
+    result = false
 
 proc getBytes*(a: BIG_384): array[MODBYTES_384, byte] =
   ## Serialize big integer ``a`` and return array of bytes.
@@ -627,7 +629,7 @@ proc toBytes*(point: ECP2_BLS12381, res: var openarray[byte]): bool =
   ##
   ## Returns ``true`` if ``a`` was succesfully serialized,
   ## ``false`` otherwise.
-  if len(res) >= MODBYTES_384 * 2:
+  if len(res) == MODBYTES_384 * 2:
     var x, y: FP2_BLS12381
     var x0, x1: BIG_384
     if point.get(x, y) == -1:
@@ -644,6 +646,8 @@ proc toBytes*(point: ECP2_BLS12381, res: var openarray[byte]): bool =
       if cmp(y, negy) > 0:
         res[0] = res[0] or (1'u8 shl 5)
       result = true
+  else:
+    result = false
 
 proc getBytes*(point: ECP2_BLS12381): array[MODBYTES_384 * 2, byte] =
   ## Serialize ECP2(G2) point ``point`` and return array of bytes.
@@ -664,12 +668,16 @@ func fromBytes*(res: var ECP2_BLS12381, data: openarray[byte]): bool =
   ## This procedure supports only compressed form of serialization.
   ##
   ## Returns ``true`` on success, ``false`` otherwise.
-  if len(data) >= MODBYTES_384 * 2:
+  result = false
+  if len(data) == MODBYTES_384 * 2:
     if (data[0] and (1'u8 shl 7)) != 0:
       if (data[0] and (1'u8 shl 6)) != 0:
         # Infinity point
+        # ensure all bytes are 0 except the first in constant-time
+        result = data[0] == byte 0b11000000
+        for i in 1 ..< data.len:
+          result = result and (data[i] == byte 0)
         res.inf()
-        result = true
       else:
         var buffer: array[MODBYTES_384, byte]
         var x1, x0: BIG384
@@ -679,10 +687,21 @@ func fromBytes*(res: var ECP2_BLS12381, data: openarray[byte]): bool =
         if x1.fromBytes(buffer):
           copyMem(addr buffer[0], unsafeAddr data[MODBYTES_384], MODBYTES_384)
           if x0.fromBytes(buffer):
+            {.noSideEffect.}:
+              let over =
+                x0.cmp(FIELD_Modulus) != -1 or
+                x1.cmp(FIELD_Modulus) != -1
+            if over:
+              return false
+
             var x: FP2_BLS12381
             x.fromBigs(x0, x1)
             if res.setx(x, greatest) == 1:
               result = true
+    else: # only compressed form is supported
+      result = false
+  else:
+    result = false
 
 func fromHex*(res: var ECP2_BLS12381, a: string): bool {.inline.} =
   ## Unserialize ECP2(G2) point from hexadecimal string ``a`` to ``res``.
@@ -699,13 +718,13 @@ func fromHex*(res: var ECP2_BLS12381, a: string): bool {.inline.} =
 
 proc toBytes*(point: ECP_BLS12381, res: var openarray[byte]): bool =
   ## Serialize ECP(G1) point ``point`` to ``res``. Length of ``res`` array
-  ## must be at least ``MODBYTES_384``.
+  ## must be ``MODBYTES_384``.
   ##
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   ##
   ## Returns ``true`` if ``a`` was succesfully serialized,
   ## ``false`` otherwise.
-  if len(res) >= MODBYTES_384:
+  if len(res) == MODBYTES_384:
     var x, y: BIG_384
     let parity = point.get(x, y)
     if parity == -1:
@@ -721,6 +740,8 @@ proc toBytes*(point: ECP_BLS12381, res: var openarray[byte]): bool =
         res[0] = res[0] or (1'u8 shl 5)
       res[0] = res[0] or (1'u8 shl 7)
       result = true
+  else:
+    result = false
 
 proc getBytes*(point: ECP_BLS12381): array[MODBYTES_384, byte] =
   ## Serialize ECP(G1) point ``point`` and return array of bytes.
@@ -741,12 +762,15 @@ func fromBytes*(res: var ECP_BLS12381, data: openarray[byte]): bool =
   ## This procedure supports only compressed form of serialization.
   ##
   ## Returns ``true`` on success, ``false`` otherwise.
-  if len(data) >= MODBYTES_384:
+  if len(data) == MODBYTES_384:
     if (data[0] and (1'u8 shl 7)) != 0:
       if (data[0] and (1'u8 shl 6)) != 0:
         # Infinity point
+        # ensure all bytes are 0 except the first in constant-time
+        result = data[0] == byte 0b11000000
+        for i in 1 ..< data.len:
+          result = result and (data[i] == byte 0)
         res.inf()
-        result = true
       else:
         var x: BIG_384
         var buffer: array[MODBYTES_384, byte]
@@ -754,8 +778,16 @@ func fromBytes*(res: var ECP_BLS12381, data: openarray[byte]): bool =
         let greatest = (data[0] and (1'u8 shl 5)) != 0'u8
         buffer[0] = buffer[0] and 0x1F'u8
         if x.fromBytes(buffer):
+          {.noSideEffect.}:
+            let over = x.cmp(FIELD_Modulus) != -1
+          if over:
+            return false
           if res.setx(x, greatest) == 1:
             result = true
+    else: # only compressed form is supported
+      result = false
+  else:
+    result = false
 
 func fromHex*(res: var ECP_BLS12381, a: string): bool {.inline.} =
   ## Unserialize ECP point from hexadecimal string ``a`` to ``res``.

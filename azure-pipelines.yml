@@ -160,7 +160,6 @@ steps:
       echo "PATH=$Env:Path"
       nimble refresh
       nimble install -y --depsOnly
-      nimble install https://github.com/status-im/NimYAML@#head
       nimble install stint
     displayName: 'Building dependencies (Windows)'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
@@ -169,5 +168,8 @@ steps:
       which gcc
       gcc -v
       git submodule update --init --recursive
+      pushd tests
+      bash download_ef_bls12381_vectors.sh
+      popd
       nimble test
     displayName: 'Testing the package'

@@ -43,6 +43,8 @@ install:
 script:
   - nimble install -y
   # testing only
-  - nimble install https://github.com/status-im/NimYAML@#head # Cannot clone upstream https://github.com/flyx/NimYAML/issues/77
   - nimble install stint
+  - push tests
+  - bash download_ef_bls12381_vectors.sh
+  - popd
   - nimble test

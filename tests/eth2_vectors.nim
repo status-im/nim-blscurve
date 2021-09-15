@@ -20,6 +20,9 @@ import
   # Test helpers
   ./test_locator
 
+when compileOption("threads"):
+  import taskpools
+
 type InOut = enum
   Input
   Output
@@ -73,7 +76,7 @@ template withProof(pk: PublicKey, body: untyped): untyped =
     doAssert proof.fromHex(knownProofs[i])
     doAssert wrongProof.fromHex(knownProofs[(i + 1) mod knownProofs.len])
     body
-    
+
 template withProofs(pks: openarray[PublicKey], body: untyped): untyped =
   block:
     var proofs{.inject.}, wrongProofs{.inject.}: seq[ProofOfPossession]
@@ -90,12 +93,12 @@ template withProofs(pks: openarray[PublicKey], body: untyped): untyped =
 template testGen*(name, testJson, body: untyped): untyped =
   ## Generates a test proc
   ## with identifier "test_name"
-  ## The test file is availaible as JsonNode under the
+  ## The test file is available as JsonNode under the
   ## the variable passed as `testJson`
   proc `test _ name`() =
     var count = 0 # Need to fail if walkDir doesn't return anything
     var skipped = 0
-    for dir, file in walkTests(astToStr(name), skipped):
+    for dir, file{.inject.} in walkTests(astToStr(name), skipped):
       echo "       ", astToStr(name), " test: ", file
       let testJson = parseTest(dir / file)
 
@@ -131,23 +134,15 @@ proc getFrom(T: typedesc, test: JsonNode, inout: static InOut, name: string): tu
   else:
     when T is seq[byte]:
       result = (test["input"][name].getStr().hexToSeqByte(), true)
-    elif T is seq[PublicKey]:
-      for pubKeyHex in test["input"][name]:
-        result.val.setLen(result.val.len + 1)
-        let ok = result.val[^1].fromHex(pubKeyHex.getStr())
-        if not ok:
-          # echo "Couldn't parse input PublicKey: " & pubKeyHex.getStr()
-          result.ok = false
-          return
-      result.ok = true
     else:
       result.ok = result.val.fromHex(test["input"][name].getStr())
       # if not result.ok:
       #   echo "Couldn't parse input '" & name & "' (" & $T &
       #     "): " & test["input"][name].getStr()
 
-proc aggFrom(T: typedesc, test: JsonNode): tuple[val: T, ok: bool] =
+proc aggFrom(T: typedesc, test: JsonNode, name: string): tuple[val: T, ok: bool] =
   when T is seq[(PublicKey, seq[byte])]:
+    doAssert name == "pubkeys/messages", "misconfiguration"
     for pubkey in test["input"]["pubkeys"]:
       result.val.setLen(result.val.len + 1)
       let ok = result.val[^1][0].fromHex(pubkey.getStr())
@@ -162,16 +157,25 @@ proc aggFrom(T: typedesc, test: JsonNode): tuple[val: T, ok: bool] =
       inc i
     result.ok = true
   elif T is seq[PublicKey]:
-    for pubkey in test["input"]["pubkeys"]:
+    for pubKeyHex in test["input"][name]:
       result.val.setLen(result.val.len + 1)
-      let ok = result.val[^1].fromHex(pubkey.getStr())
+      let ok = result.val[^1].fromHex(pubKeyHex.getStr())
       if not ok:
-        # echo "Couldn't parse input PublicKey: " & pubkey.getStr()
+        # echo "Couldn't parse input PublicKey: " & pubKeyHex.getStr()
+        result.ok = false
+        return
+    result.ok = true
+  elif T is seq[Signature]:
+    for sigHex in test["input"][name]:
+      result.val.setLen(result.val.len + 1)
+      let ok = result.val[^1].fromHex(sigHex.getStr())
+      if not ok:
+        # echo "Couldn't parse input Signature: " & sigHex.getStr()
         result.ok = false
         return
     result.ok = true
   elif T is seq[seq[byte]]:
-    for message in test["input"]["messages"]:
+    for message in test["input"][name]:
       result.val.setLen(result.val.len + 1)
       result.val[^1] = message.getStr().hexToSeqByte()
     result.ok = true
@@ -207,22 +211,27 @@ testGen(verify, test):
   if not pubkey.ok:
     # Infinity pubkey and infinity signature
     doAssert not expected.val
-  
+
   else:
 
     let libValid = pubKey.val.verify(message.val, signature.val)
 
     doAssert libValid == expected.val, block:
       "\nVerification differs from expected \n" &
-      "   computed: " & $libValid & "\n" &
+      "   verified? " & $libValid & "\n" &
       "   expected: " & $expected.val
+
+    if file.startsWith("verifycase_one_privkey"):
+      # Skip proof-of-possession test when
+      # the secret key is 0x1
+      return
 
     withProof(pubKey.val):
       let libValid = pubKey.val.verify(proof, message.val, signature.val)
 
       doAssert libValid == expected.val, block:
         "\nVerification with proof-of-possession differs from expected \n" &
-        "   computed: " & $libValid & "\n" &
+        "   verified? " & $libValid & "\n" &
         "   expected: " & $expected.val
 
       doAssert not pubKey.val.verify(wrongProof, message.val, signature.val), block:
@@ -248,7 +257,7 @@ testGen(aggregate, test):
 testGen(fast_aggregate_verify, test):
   let
     expected = bool.getFrom(test, Output)
-    pubKeys = seq[PublicKey].getFrom(test, Input, "pubkeys")
+    pubKeys = seq[PublicKey].aggFrom(test, "pubkeys")
     message = seq[byte].getFrom(test, Input, "message")
     signature = Signature.getFrom(test, Input, "signature")
 
@@ -262,15 +271,15 @@ testGen(fast_aggregate_verify, test):
 
     doAssert libValid == expected.val, block:
       "\nFast Aggregate Verification differs from expected \n" &
-      "   computed: " & $libValid & "\n" &
+      "   verified? " & $libValid & "\n" &
       "   expected: " & $expected.val
-      
+
     withProofs(pubKeys.val):
       let libValid = pubKeys.val.fastAggregateVerify(proofs, message.val, signature.val)
 
       doAssert libValid == expected.val, block:
         "\nFast Aggregate Verification with proof-of-possession differs from expected \n" &
-        "   computed: " & $libValid & "\n" &
+        "   verified? " & $libValid & "\n" &
         "   expected: " & $expected.val
 
       doAssert not pubKeys.val.fastAggregateVerify(wrongProofs, message.val, signature.val), block:
@@ -280,9 +289,9 @@ testGen(aggregate_verify, test):
   let
     expected = bool.getFrom(test, Output)
     # We test both the SoA and AoS API
-    pubkey_msg_pairs = seq[(PublicKey, seq[byte])].aggFrom(test)
-    pubkeys = seq[PublicKey].aggFrom(test)
-    msgs = seq[seq[byte]].aggFrom(test)
+    pubkey_msg_pairs = seq[(PublicKey, seq[byte])].aggFrom(test, "pubkeys/messages")
+    pubkeys = seq[PublicKey].aggFrom(test, "pubkeys")
+    msgs = seq[seq[byte]].aggFrom(test, "messages")
     signature = Signature.getFrom(test, Input, "signature")
 
   let libAoSValid = aggregateVerify(pubkey_msg_pairs.val, signature.val)
@@ -297,12 +306,12 @@ testGen(aggregate_verify, test):
 
     doAssert libAoSValid == expected.val, block:
       "\nAggregate Verification differs from expected \n" &
-      "   computed: " & $libAoSValid & "\n" &
+      "   verified? " & $libAoSValid & "\n" &
       "   expected: " & $expected.val
 
     doAssert libSoAValid == expected.val, block:
       "\nAggregate Verification differs from expected \n" &
-      "   computed: " & $libSoAValid & "\n" &
+      "   verified? " & $libSoAValid & "\n" &
       "   expected: " & $expected.val
 
     withProofs(pubkeys.val):
@@ -310,11 +319,86 @@ testGen(aggregate_verify, test):
 
       doAssert libValid == expected.val, block:
         "\nAggregate Verification with proof-of-possession differs from expected \n" &
-        "   computed: " & $libValid & "\n" &
+        "   verified? " & $libValid & "\n" &
         "   expected: " & $expected.val
 
       doAssert not pubkeys.val.aggregateVerify(wrongProofs, msgs.val, signature.val), block:
         "\nAggregate Verification with wrong proof-of-possession succeeded"
+
+testGen(deserialization_G1, test):
+  var
+    pubkey{.noInit.}: PublicKey
+
+  let
+    expected = bool.getFrom(test, Output)
+    deserialized = pubkey.fromHex(test["input"]["pubkey"].getStr())
+
+  doAssert deserialized == expected.val, block:
+    "\nDeserialization differs from expected \n" &
+    "   deserializable? " & $deserialized & "\n" &
+    "   expected: " & $expected.val
+
+testGen(deserialization_G2, test):
+  var
+    sig{.noInit.}: Signature
+
+  let
+    expected = bool.getFrom(test, Output)
+    deserialized = sig.fromHex(test["input"]["signature"].getStr())
+
+  doAssert deserialized == expected.val, block:
+    "\nDeserialization differs from expected \n" &
+    "   deserializable? " & $deserialized & "\n" &
+    "   expected: " & $expected.val
+
+when BLS_BACKEND == BLST and compileOption("threads"):
+  testGen(batch_verify, test):
+    # Only valid for BLST and with --threads:on
+
+    let
+      expected = bool.getFrom(test, Output)
+      # Spec uses pubkeys plural but test vectors are singular ...
+      pubkeys = seq[PublicKey].aggFrom(test, "pubkeys")
+      messages = seq[seq[byte]].aggFrom(test, "messages")
+      signatures = seq[Signature].aggFrom(test, "signatures")
+
+    var tp = Taskpool.new(numThreads = 4)
+    var cache: BatchedBLSVerifierCache
+    var batch: seq[SignatureSet]
+
+
+    proc hash[T: byte|char](message: openarray[T]): array[32, byte] {.noInit.}=
+      result.bls_sha256_digest(message)
+
+    proc asArray[T: byte|char](message: openarray[T]): array[32, byte] {.noInit.}=
+      result[0 ..< 32] = message
+
+    let fakeRandomBytes = hash"Mr F was here"
+
+    # Deserialization is OK
+    doAssert pubkeys.ok
+    doAssert messages.ok
+    doAssert signatures.ok
+    doAssert pubkeys.val.len == messages.val.len
+    doAssert pubkeys.val.len == signatures.val.len
+
+    for i in 0 ..< pubkeys.val.len:
+      batch.add((
+        pubkeys.val[i],
+        messages.val[i].asArray(),
+        signatures.val[i]
+      ))
+
+    let batchValid = tp.batchVerify(cache, batch, fakeRandomBytes)
+    let batchValid2 = tp.batchVerify(batch, fakeRandomBytes)
+
+    doAssert batchValid == batchValid2
+    doAssert batchValid == expected.val, block:
+      "\nBatch Verification differs from expected \n" &
+      "   verified? " & $batchValid & "\n" &
+      "   expected: " & $expected.val
+
+    tp.shutdown()
 
 suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
   test "[" & BLS_ETH2_SPEC & "] sign(SecretKey, message) -> Signature":
@@ -327,3 +411,19 @@ suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
     test_fast_aggregate_verify()
   test "[" & BLS_ETH2_SPEC & "] AggregateVerify(openarray[PublicKey, message], Signature) -> bool":
     test_aggregate_verify()
+  test "[" & BLS_ETH2_SPEC & "] Deserialization_G1(PublicKey) -> bool":
+    test_deserialization_G1()
+  test "[" & BLS_ETH2_SPEC & "] Deserialization_G2(Signature) -> bool":
+    test_deserialization_G2()
+
+  when BLS_BACKEND == BLST and compileOption("threads"):
+    test "[" & BLS_ETH2_SPEC & "] BatchVerify(openarray[(PublicKey, message, Signatures)]) -> bool":
+      test_batch_verify()
+  else:
+    echo "  [SKIP] [v1.0.0] BatchVerify(openarray[(PublicKey, message, Signatures)]) -> bool"
+    echo "    Not using BLST backend or --threads:on"
+
+  echo "  [SKIP] [v1.0.0] HashToG2 tests"
+  # We skip the hashToG2 tests since they are lower-level than the nim-blscurve library.
+  # They are also implicitly tested by sign/verify.
+  # For our own implementation using Miracl, tests are in blscurve/miracl/hash_to_curve.nim

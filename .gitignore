@@ -12,3 +12,7 @@ build/
 
 # Sage
 *.sage.py
+
+# Test vectors
+tests/ef-bls12381-vectors-v*/
+tests/tarballs/

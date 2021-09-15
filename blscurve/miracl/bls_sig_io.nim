@@ -37,8 +37,8 @@ func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
       # KeyValidate
       if obj.point.isInf():
         return false
-      if not subgroupCheck(obj.point):
-        return false
+    if not subgroupCheck(obj.point):
+      return false
 
 func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
        obj: var T,
@@ -62,6 +62,8 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
       # KeyValidate
       if obj.point.isInf():
         result = false
+    if not subgroupCheck(obj.point):
+      return false
 
 func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string {.inline.} =
   ## Return the hex representation of a BLS signature scheme object

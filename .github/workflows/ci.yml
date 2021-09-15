@@ -170,7 +170,9 @@ jobs:
           nimble install -y --depsOnly
           # Dependencies not declared in "blscurve.nimble" as they are only used
           # for testing:
-          nimble install -y https://github.com/status-im/NimYAML@#head
           nimble install -y stint
+          pushd tests
+          bash download_ef_bls12381_vectors.sh
+          popd
           # Run the tests.
           nimble test
