@@ -12,7 +12,13 @@ const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "ef-bls12381-vectors-v
 proc parseTest*(file: string): JsonNode =
   result = json.parseFile(file)
 
-const SkippedTests = [""]
+const SkippedTests = [
+  # For genericity, requires successful deserialization of infinity G1 points,
+  # but since they are pubkeys in Ethereum
+  # and infinity pubkeys aren't allowed, we can't pass this test.
+  # see also https://github.com/ethereum/consensus-specs/issues/2538#issuecomment-892051323
+  "deserialization_succeeds_infinity_with_true_b_flag.json"
+]
 
 iterator walkTests*(category: string, skipped: var int): (string, string) =
   let testDir = ETH2_DIR / category
