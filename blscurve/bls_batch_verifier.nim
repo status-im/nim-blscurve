@@ -11,7 +11,7 @@ import
   ./bls_backend, ./bls_sig_min_pubkey
 
 when compileOption("threads"):
-  import ./taskpools, parallel_chunks
+  import taskpools, ./parallel_chunks
 
 # BLS Batch Verifier
 # ----------------------------------------------------------------------
