@@ -22,6 +22,94 @@ import
 
 var benchRNG = initRand(0xFACADE)
 
+proc benchDeserPubkey*(iters: int) =
+  const seckey = "00000000000000000000000000000000000000000000000000000000000003e8"
+  var
+    sk{.noInit.}: SecretKey
+    pk{.noInit.}: PublicKey
+    pk_comp{.noInit.}: array[48, byte]
+
+  let ok = sk.fromHex(seckey)
+  doAssert ok
+  let ok2 = pk.publicFromSecret(sk)
+  doAssert ok2
+
+  # Serialize compressed
+  doAssert pk_comp.serialize(pk)
+
+  var pk2{.noInit.}: PublicKey
+
+  bench("Pubkey deserialization (full checks)", iters):
+    doAssert pk2.fromBytes(pk_comp)
+
+proc benchDeserPubkeyKnownOnCurve*(iters: int) =
+  const seckey = "00000000000000000000000000000000000000000000000000000000000003e8"
+  var
+    sk{.noInit.}: SecretKey
+    pk{.noInit.}: PublicKey
+    pk_comp{.noInit.}: array[48, byte]
+
+  let ok = sk.fromHex(seckey)
+  doAssert ok
+  let ok2 = pk.publicFromSecret(sk)
+  doAssert ok2
+
+  # Serialize compressed
+  doAssert pk_comp.serialize(pk)
+
+  var pk2{.noInit.}: PublicKey
+
+  bench("Pubkey deserialization (known on curve)", iters):
+    doAssert pk2.fromBytesKnownOnCurve(pk_comp)
+
+proc benchDeserSig*(iters: int) =
+  const seckey = "00000000000000000000000000000000000000000000000000000000000003e8"
+  const msg = "abcdef0123456789"
+
+  var
+    sk{.noInit.}: SecretKey
+    pk{.noInit.}: PublicKey
+    sig_comp{.noInit.}: array[96, byte]
+
+  let ok = sk.fromHex(seckey)
+  doAssert ok
+  let ok2 = pk.publicFromSecret(sk)
+  doAssert ok2
+
+  let sig = sk.sign(msg)
+
+  # Serialize compressed
+  doAssert sig_comp.serialize(sig)
+
+  var sig2{.noInit.}: Signature
+
+  bench("Signature deserialization (full checks)", iters):
+    doAssert sig2.fromBytes(sig_comp)
+
+proc benchDeserSigKnownOnCurve*(iters: int) =
+  const seckey = "00000000000000000000000000000000000000000000000000000000000003e8"
+  const msg = "abcdef0123456789"
+
+  var
+    sk{.noInit.}: SecretKey
+    pk{.noInit.}: PublicKey
+    sig_comp{.noInit.}: array[96, byte]
+
+  let ok = sk.fromHex(seckey)
+  doAssert ok
+  let ok2 = pk.publicFromSecret(sk)
+  doAssert ok2
+
+  let sig = sk.sign(msg)
+
+  # Serialize compressed
+  doAssert sig_comp.serialize(sig)
+
+  var sig2{.noInit.}: Signature
+
+  bench("Signature deserialization (known on curve)", iters):
+    doAssert sig2.fromBytesKnownOnCurve(sig_comp)
+
 proc benchSign*(iters: int) =
   let msg = "Mr F was here"
 
@@ -143,6 +231,10 @@ when BLS_BACKEND == BLST:
       doAssert ok
 
 when isMainModule:
+  benchDeserPubkey(1000)
+  benchDeserPubkeyKnownOnCurve(1000)
+  benchDeserSig(1000)
+  benchDeserSigKnownOnCurve(1000)
   benchSign(1000)
   benchVerify(1000)
   benchFastAggregateVerify(numKeys = 128, iters = 10)
