@@ -29,7 +29,7 @@ type InOut = enum
 
 # Eth2 vectors do not include proof-of-possession data.
 # By adding proof data here, we can leverage the existing tests to also cover proof-of-possession functionality.
-# See https://github.com/ethereum/eth2.0-specs/blob/dev/tests/generators/bls/main.py#L45-L51
+# See https://github.com/ethereum/consensus-specs/blob/dev/tests/generators/bls/main.py#L45-L51
 const knownSeckeys = [
   "263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3",
   "47b8192d77bf871b62e87859d653922725724a5c031afeabc60bcef5ff665138",
