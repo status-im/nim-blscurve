@@ -815,7 +815,7 @@ proc mulCoFactor*(point: ECP2_BLS12381): ECP2_BLS12381 =
 proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS12381 =
   ## Perform transformation of sha2-256 context (which must be already
   ## updated with ``message``) over domain ``domain`` to point in G2.
-  ## https://github.com/ethereum/eth2.0-specs/blob/v0.8.3/specs/bls_signature.md#hash_to_g2
+  ## https://github.com/ethereum/consensus-specs/blob/v0.8.3/specs/bls_signature.md#hash_to_g2
 
   var
     xre, xim: BIG_384
