@@ -59,6 +59,9 @@ This library uses:
 - [SupraNational BLST](https://github.com/supranational/blst) on x86-64 and ARM64
 - [MIRACL Core](https://github.com/miracl/core) on all other platforms.
 
+BLST uses SSSE3 by default, if supported on the host. To disable that, when building
+binaries destined for older CPUs, pass `-d:BLSTuseSSSE3=0` to the Nim compiler.
+
 ### Keeping track of upstream
 
 To keep track of upstream AMCL:
@@ -110,7 +113,7 @@ Licensed and distributed under either of
 * MIT license: [LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT
 * Apache License, Version 2.0, ([LICENSE-APACHEv2](LICENSE-APACHEv2) or http://www.apache.org/licenses/LICENSE-2.0)
 
-at your option. This file may not be copied, modified, or distributed except according to those terms.
+at your option. These files may not be copied, modified, or distributed except according to those terms.
 
 ### Dependencies
 

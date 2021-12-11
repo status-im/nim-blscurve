@@ -26,12 +26,15 @@ const OnARM = defined(arm) or defined(arm64)
 
 when UseBLST:
   when OnX86:
-    # BLST defaults to SSE3 for SHA256 (Pentium 4, 2004)
-    # And autodetects MULX and ADCX/ADOX for bigints (Intel Broadwell 2015, AMD Ryzen 2017)
-    # It is set either via -march=native on a proper CPU
-    # or -madx
-    const useSSE3 = gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0
-    when not useSSE3:
+    # BLST defaults to SSSE3 for SHA256 (Pentium 4, 2004). To disable that, we
+    # need a "portable" build.
+    #
+    # It also autodetects MULX and ADCX/ADOX for bigints (Intel Broadwell 2015,
+    # AMD Ryzen 2017) by looking at a C preprocessor define (__ADX__) set when
+    # "-march=native" or "-madx" are used on a CPU that supports this extension.
+    const BLSTuseSSSE3 {.intdefine.} = gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0
+    when not BLSTuseSSSE3:
+      static: echo "BLST: not using SSSE3"
       {.passC: "-D__BLST_PORTABLE__".}
   elif OnARM:
     # On ARM, BLST can use hardware SHA256.

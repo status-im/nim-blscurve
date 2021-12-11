@@ -125,9 +125,6 @@ include ./bls_sig_io
 
 func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## Generates a public key from a secret key
-  ## This requires some -O3 compiler optimizations to be off
-  ## as such {.passC: "-fno-tree-vectorize".}
-  ## is automatically added to the compiler flags in blst_lowlevel
   ##
   ## Returns:
   ## - false is secret key is invalid (SK == 0 or >= BLS12-381 curve order),
