@@ -59,8 +59,9 @@ proc benchDeserPubkeyKnownOnCurve*(iters: int) =
 
   var pk2{.noInit.}: PublicKey
 
-  bench("Pubkey deserialization (known on curve)", iters):
-    doAssert pk2.fromBytesKnownOnCurve(pk_comp)
+  when BLS_BACKEND == BLST:
+    bench("Pubkey deserialization (known on curve)", iters):
+      doAssert pk2.fromBytesKnownOnCurve(pk_comp)
 
 proc benchDeserSig*(iters: int) =
   const seckey = "00000000000000000000000000000000000000000000000000000000000003e8"
@@ -107,8 +108,9 @@ proc benchDeserSigKnownOnCurve*(iters: int) =
 
   var sig2{.noInit.}: Signature
 
-  bench("Signature deserialization (known on curve)", iters):
-    doAssert sig2.fromBytesKnownOnCurve(sig_comp)
+  when BLS_BACKEND == BLST:
+    bench("Signature deserialization (known on curve)", iters):
+      doAssert sig2.fromBytesKnownOnCurve(sig_comp)
 
 proc benchSign*(iters: int) =
   let msg = "Mr F was here"
@@ -232,14 +234,15 @@ when BLS_BACKEND == BLST:
 
 when isMainModule:
   benchDeserPubkey(1000)
-  benchDeserPubkeyKnownOnCurve(1000)
   benchDeserSig(1000)
-  benchDeserSigKnownOnCurve(1000)
   benchSign(1000)
   benchVerify(1000)
   benchFastAggregateVerify(numKeys = 128, iters = 10)
 
   when BLS_BACKEND == BLST:
+    benchDeserPubkeyKnownOnCurve(1000)
+    benchDeserSigKnownOnCurve(1000)
+
     var nthreads: int
     if existsEnv"TP_NUM_THREADS":
       nthreads = getEnv"TP_NUM_THREADS".parseInt()
