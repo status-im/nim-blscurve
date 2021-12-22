@@ -47,8 +47,8 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  ## For secret key deserialization
-  ## A zero key is invalid
+  ## 
+  ## A zero public key is invalid
   when obj is SecretKey:
     result = obj.intVal.fromBytes(raw)
     if obj.intVal.isZilch():
@@ -64,6 +64,19 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
         result = false
     if not subgroupCheck(obj.point):
       return false
+
+func fromBytesKnownOnCurve*[T: PublicKey|Signature|ProofOfPossession](
+       obj: var T,
+       raw: openarray[byte]
+      ): bool {.inline.} =
+  ## Initialize a BLS signature scheme object from
+  ## its raw bytes representation.
+  ## Returns true on success and false otherwise
+  ##
+  ## The point is known to be on curve:
+  ## - Public key are not checked for infinity points
+  ## - PublicKey, Signature, Proof of possessions are not subgroup checked
+  result = obj.point.fromBytes(raw)
 
 func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string {.inline.} =
   ## Return the hex representation of a BLS signature scheme object
