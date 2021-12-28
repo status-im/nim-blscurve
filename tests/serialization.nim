@@ -28,6 +28,20 @@ when BLS_BACKEND == BLST:
 
   test_zero_sig()
 
+# [Security] Harden against seemingly valid BLS signature
+# https://github.com/status-im/nimbus-eth2/issues/555
+
+echo "\nInvalid infinity point encoding"
+echo "----------------------------------\n"
+
+proc test_invalid_infinity() =
+  let sigbytes = @[byte 217, 149, 255, 97, 73, 133, 236, 43, 248, 34, 30, 10, 15, 45, 82, 72, 243, 179, 53, 17, 27, 17, 248, 180, 7, 92, 200, 153, 11, 3, 111, 137, 124, 171, 29, 218, 191, 246, 148, 57, 160, 50, 232, 129, 81, 90, 72, 161, 110, 138, 243, 116, 0, 88, 125, 180, 67, 153, 194, 181, 117, 152, 166, 147, 13, 77, 15, 91, 33, 50, 140, 199, 150, 10, 15, 10, 209, 165, 38, 57, 56, 114, 175, 29, 49, 11, 11, 126, 55, 189, 170, 46, 218, 240, 189, 144]
+  var sig: Signature
+  let success = sig.fromBytes(sigbytes)
+  doAssert not success
+
+test_invalid_infinity()
+
 # This test ensures that serialization roundtrips work
 
 echo "\nserialization roundtrip"
