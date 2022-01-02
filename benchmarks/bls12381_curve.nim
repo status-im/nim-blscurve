@@ -45,12 +45,16 @@ proc benchScalarMultG1*(iters: int) =
       x.blst_p1_mult(x, scalar, 255)
   else:
     var x = generator1()
-    var scal: BIG_384
-    random(scal)
-    scal.BIG_384_mod(CURVE_Order)
+    var scal{.noInit.}: array[32, byte]
+    for val in scal.mitems:
+      val = byte benchRNG.rand(0xFF)
+
+    var scalar{.noInit.}: BIG_384
+    doAssert scalar.fromBytes(scal) 
+    scalar.BIG_384_mod(CURVE_Order)
 
     bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
-      x.mul(scal)
+      x.mul(scalar)
 
 proc benchScalarMultG2*(iters: int) =
   when BLS_BACKEND == BLST:
@@ -68,12 +72,16 @@ proc benchScalarMultG2*(iters: int) =
       x.blst_p2_mult(x, scalar, 255)
   else:
     var x = generator2()
-    var scal: BIG_384
-    random(scal)
-    scal.BIG_384_mod(CURVE_Order)
+    var scal{.noInit.}: array[32, byte]
+    for val in scal.mitems:
+      val = byte benchRNG.rand(0xFF)
+
+    var scalar{.noInit.}: BIG_384
+    doAssert scalar.fromBytes(scal) 
+    scalar.BIG_384_mod(CURVE_Order)
 
     bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
-      x.mul(scal)
+      x.mul(scalar)
 
 proc benchECAddG1*(iters: int) =
   when BLS_BACKEND == BLST:

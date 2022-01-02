@@ -9,7 +9,6 @@
 
 {.push raises: [Defect].}
 
-import nimcrypto/[sysrand, hash, sha2]
 import stew/[byteutils]
 import milagro
 
@@ -321,10 +320,6 @@ proc mul*(a: var ECP_BLS12381, b: BIG_384) {.inline.} =
   ## Multiply point ``a`` by big integer ``b``.
   ECP_BLS12381_mul(addr a, b)
 
-proc div2*(a: FP2_BLS12381): FP2_BLS12381 {.inline.} =
-  ## Returns ``a div 2``
-  FP2_BLS12381_div2(addr result, unsafeAddr a)
-
 proc get*(a: ECP2_BLS12381, x, y: var FP2_BLS12381): int {.inline.} =
   ## Get coordinates ``x`` and ``y`` from point ``a``.
   result = int(ECP2_BLS12381_get(addr x, addr y, unsafeAddr a))
@@ -461,27 +456,6 @@ func setx*(p: var ECP2_BLS12381, x: FP2_BLS12381, greatest: bool): int =
     FP2_BLS12381_one(addr p.z)
     result = 1
 
-func setx*(p: var ECP2_BLS12381, x: FP2_BLS12381, parity: int): int =
-  ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
-  ##
-  ## This is custom `setx` procedure which works in way compatible to
-  ## python's version.
-  var y, negy: FP2_BLS12381
-  ECP2_BLS12381_rhs(addr y, unsafeAddr x)
-  if not y.isSquare():
-    ECP2_BLS12381_inf(addr p)
-    result = 0
-  else:
-    FP2_BLS12381_sqrt(addr y, addr y)
-    FP2_BLS12381_copy(addr negy, addr y)
-    FP2_BLS12381_neg(addr negy, addr negy)
-    if parity(y) != parity:
-      FP2_BLS12381_copy(addr p.y, addr negy)
-    else:
-      FP2_BLS12381_copy(addr p.y, addr y)
-    FP2_BLS12381_one(addr p.z)
-    result = 1
-
 func setx*(p: var ECP_BLS12381, x: BIG_384, greatest: bool): int =
   ## Set value of ``p`` using just ``x`` coord with care to ``greatest``.
   ##
@@ -506,43 +480,9 @@ func setx*(p: var ECP_BLS12381, x: BIG_384, greatest: bool): int =
     FP_BLS12381_one(addr p.z)
     result = 1
 
-func setx*(p: var ECP_BLS12381, x: BIG_384, parity: int): int =
-  ## Set value of ``p`` using just ``x`` coord with care to ``parity``.
-  ##
-  ## This is custom `setx` procedure which works in way compatible to
-  ## python's version.
-  var rhs, negy, sqrt_hint: FP_BLS12381
-  var t: BIG_384
-  FP_BLS12381_nres(addr rhs, x)
-  ECP_BLS12381_rhs(addr rhs, addr rhs)
-  if FP_BLS12381_qr(addr rhs, addr sqrt_hint) == 0:
-    p.inf()
-    result = 0
-  else:
-    FP_BLS12381_nres(addr p.x, x)
-    FP_BLS12381_sqrt(addr p.y, addr rhs, addr sqrt_hint)
-    FP_BLS12381_redc(t, addr p.y)
-    FP_BLS12381_neg(addr negy, addr p.y)
-    FP_BLS12381_norm(addr negy)
-    if parity(t) != parity:
-      p.y = negy
-    FP_BLS12381_reduce(addr p.y)
-    FP_BLS12381_one(addr p.z)
-    result = 1
-
 proc fromBigs*(p: var FP2_BLS12381, x, y: BIG_384) {.inline.} =
   ## Set value of ``p`` from two big integers ``x`` and ``y``.
   FP2_BLS12381_from_BIGs(addr p, x, y)
-
-proc fromBigs*(p: var ECP2_BLS12381, xr, xi, yr, yi, zr, zi: BIG_384) =
-  ## Set value of ``p`` from 6 big integers.
-  var x, y, z: FP2_BLS12381
-  x.fromBigs(xr, xi)
-  y.fromBigs(yr, yi)
-  z.fromBigs(zr, zi)
-  p.x = x
-  p.y = y
-  p.z = z
 
 proc fromFPs*(p: var FP2_BLS12381, x, y: FP_BLS12381) {.inline.} =
   ## Set value of ``p`` from two big integers ``x`` and ``y``.
@@ -802,59 +742,6 @@ func fromHex*(res: var ECP_BLS12381, a: string): bool {.inline.} =
     # https://github.com/status-im/nim-blscurve/issues/57
     false
 
-proc mulCoFactor*(point: ECP2_BLS12381): ECP2_BLS12381 =
-  ## Multiplies ECP2(G2) point by a cofactor of G2.
-  var lowpart: ECP2_BLS12381
-  result = point
-  lowpart = point
-  mul(result, G2_CoFactorHigh)
-  mul(result, G2_CoFactorShift)
-  mul(lowpart, G2_CoFactorLow)
-  add(result, lowpart)
-
-proc hashToG2*(msgctx: sha256, domain: Domain): ECP2_BLS12381 =
-  ## Perform transformation of sha2-256 context (which must be already
-  ## updated with ``message``) over domain ``domain`` to point in G2.
-  ## https://github.com/ethereum/consensus-specs/blob/v0.8.3/specs/bls_signature.md#hash_to_g2
-
-  var
-    xre, xim: BIG_384
-    x, one: FP2_BLS12381
-
-  var ctx1 = msgctx
-  ctx1.update(domain)
-
-  var ctx2 = ctx1
-
-  # Update hash context with coordinate marker
-  ctx1.update([0x01'u8])
-  ctx2.update([0x02'u8])
-
-  # Obtain result hash
-  var xrehash = ctx1.finish()
-  var ximhash = ctx2.finish()
-
-  discard xre.fromBytes(xrehash.data)
-  discard xim.fromBytes(ximhash.data)
-  # Convert (xre, xim) to FP2.
-  x.fromBigs(xre, xim)
-  # Set FP2 One
-  one.setOne()
-  while true:
-    # Without normalization of `x` 32bit version will fail
-    norm(x)
-    if ECP2_BLS12381_setx(addr result, addr x) == 1:
-      break
-    # Increment `x` by FP2(1, 0)
-    x = add(x, one)
-  # Get biggest Y
-  let negy = neg(result.y)
-  # Reverting sign of ``y`` only when ``y`` less then negated one.
-  if cmp(result.y, negy) < 0:
-   result.y = negy
-  # Scale with G2 CoFactor
-  result = mulCoFactor(result)
-
 proc atePairing*(pointG2: GroupG2, pointG1: GroupG1): FP12_BLS12381 =
   ## Pairing `magic` function.
   PAIR_BLS12381_ate(addr result, unsafeAddr pointG2, unsafeAddr pointG1)
@@ -886,26 +773,3 @@ proc multiPairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
 
   if FP12_BLS12381_isunity(addr v) == 1:
     result = true
-proc random*(a: var BIG_384) =
-  ## Generates random big number `bit by bit` using nimcrypto's sysrand
-  ## generator.
-  var
-    rndBuffer: array[MODBYTES_384, byte]
-    rndByte: byte
-    j: int32
-    k: int32
-
-  doAssert(randomBytes(rndBuffer) == MODBYTES_384)
-  let length = 8 * MODBYTES_384
-  a.zero()
-  for i in 0..<length:
-    if j == 0:
-      rndByte = rndBuffer[k]
-      inc(k)
-    else:
-      rndByte = rndByte shr 1
-    let bit = Chunk(rndByte and 1'u8)
-    BIG_384_shl(a, 1)
-    a[0] = a[0] + bit
-    inc(j)
-    j = j and 0x07

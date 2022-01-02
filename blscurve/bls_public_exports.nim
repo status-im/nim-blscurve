@@ -16,12 +16,12 @@ export
   `==`,
   init, aggregate, finish, aggregateAll,
   publicFromSecret,
-  fromHex, fromBytes,
+  fromHex, fromBytes, fromBytesKnownOnCurve,
   toHex, serialize, exportRaw
 
 # TODO - MIRACL implementation
 when BLS_BACKEND == BLST:
-  export fromBytesKnownOnCurve, exportUncompressed
+  export exportUncompressed
 
 import bls_sig_min_pubkey
 
