@@ -7,7 +7,7 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-import os
+import os, strutils
 
 const BLS_FORCE_BACKEND*{.strdefine.} = "auto"
 
@@ -32,7 +32,11 @@ when UseBLST:
     # It also autodetects MULX and ADCX/ADOX for bigints (Intel Broadwell 2015,
     # AMD Ryzen 2017) by looking at a C preprocessor define (__ADX__) set when
     # "-march=native" or "-madx" are used on a CPU that supports this extension.
-    const BLSTuseSSSE3 {.intdefine.} = gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null | grep -q SSSE3").exitCode == 0
+    when defined(windows):
+      const GccDefines = gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c NUL").output
+    else:
+      const GccDefines = gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null").output
+    const BLSTuseSSSE3 {.intdefine.} = find(GccDefines, "SSSE3") != -1
     when not BLSTuseSSSE3:
       static: echo "BLST: not using SSSE3"
       {.passC: "-D__BLST_PORTABLE__".}
