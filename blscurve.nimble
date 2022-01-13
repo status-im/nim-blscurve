@@ -25,7 +25,7 @@ proc test(env, path: string) =
   if not dirExists "build":
     mkDir "build"
   exec "nim " & lang & " " & env &
-    " --outdir:build -r --hints:off --warnings:off --skipParentCfg " & path
+    " --outdir:build -r -f --hints:off --warnings:off --skipParentCfg " & path
 
 ### tasks
 task test, "Run all tests":
