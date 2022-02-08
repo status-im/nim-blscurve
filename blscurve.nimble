@@ -16,15 +16,11 @@ requires "nim >= 1.0.4",
          "https://github.com/status-im/nim-taskpools.git"
 
 ### Helper functions
-proc test(env, path: string) =
-  # Compilation language is controlled by BLS_TEST_LANG
-  var lang = "c"
-  if existsEnv"BLS_TEST_LANG":
-    lang = getEnv"BLS_TEST_LANG"
-
+proc test(args, path: string) =
+  # Compilation language is controlled by TEST_LANG
   if not dirExists "build":
     mkDir "build"
-  exec "nim " & lang & " " & env &
+  exec "nim " & getEnv("TEST_LANG", "c") & " " & getEnv("NIMFLAGS") & " " & args &
     " --outdir:build -r -f --hints:off --warnings:off --skipParentCfg " & path
 
 ### tasks

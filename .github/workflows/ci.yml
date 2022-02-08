@@ -1,11 +1,15 @@
 name: CI
-on: [pull_request] # [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     strategy:
       fail-fast: false
-      max-parallel: 20
       matrix:
         target:
           - os: linux
@@ -16,9 +20,9 @@ jobs:
             cpu: amd64
           - os: windows
             cpu: amd64
-          - os: windows
-            cpu: i386
-        test_lang: [c] # "cpp" is broken
+          #- os: windows
+            #cpu: i386
+        branch: [version-1-2, version-1-4, version-1-6, devel]
         include:
           - target:
               os: linux
@@ -37,13 +41,13 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
 
-    name: '${{ matrix.target.os }}-${{ matrix.target.cpu }}-${{ matrix.test_lang }}'
+    name: '${{ matrix.target.os }}-${{ matrix.target.cpu }} (Nim ${{ matrix.branch }})'
     runs-on: ${{ matrix.builder }}
+    continue-on-error: ${{ matrix.branch == 'version-1-6' || matrix.branch == 'devel' }}
     steps:
-      - name: Checkout nim-blscurve
+      - name: Checkout
         uses: actions/checkout@v2
         with:
-          path: nim-blscurve
           submodules: true
 
       - name: Install build dependencies (Linux i386)
@@ -117,16 +121,10 @@ jobs:
           else
             PLATFORM=x86
           fi
-          echo "PLATFORM=${PLATFORM}" >> $GITHUB_ENV
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
 
-          if [[ '${{ matrix.target.os }}' == 'windows' ]]; then
-            MAKE_CMD="mingw32-make"
-          else
-            MAKE_CMD="make"
-          fi
-          echo "MAKE_CMD=$MAKE_CMD" >> $GITHUB_ENV
-
-          ncpu=''
+          ncpu=
+          MAKE_CMD="make"
           case '${{ runner.os }}' in
           'Linux')
             ncpu=$(nproc)
@@ -135,38 +133,30 @@ jobs:
             ncpu=$(sysctl -n hw.ncpu)
             ;;
           'Windows')
-            ncpu=${NUMBER_OF_PROCESSORS}
+            ncpu=$NUMBER_OF_PROCESSORS
+            MAKE_CMD="mingw32-make"
             ;;
           esac
           [[ -z "$ncpu" || $ncpu -le 0 ]] && ncpu=1
-          echo "ncpu=${ncpu}" >> $GITHUB_ENV
+          echo "ncpu=$ncpu" >> $GITHUB_ENV
+          echo "MAKE_CMD=${MAKE_CMD}" >> $GITHUB_ENV
 
-      - name: Get latest nimbus-build-system commit hash
-        id: versions
-        run: |
-          getHash() {
-            git ls-remote "https://github.com/$1" "${2:-HEAD}" | cut -f 1
-          }
-          nbsHash=$(getHash status-im/nimbus-build-system)
-          echo "::set-output name=nimbus_build_system::$nbsHash"
-
-      - name: Restore prebuilt Nim from cache
-        id: nim-cache
-        uses: actions/cache@v2
-        with:
-          path: NimBinaries
-          key: 'NimBinaries-${{ matrix.target.os }}-${{ matrix.target.cpu }}-${{ steps.versions.outputs.nimbus_build_system }}'
-
-      - name: Build the Nim compiler
+      - name: Build Nim and Nimble
         run: |
           curl -O -L -s -S https://raw.githubusercontent.com/status-im/nimbus-build-system/master/scripts/build_nim.sh
-          env MAKE="${MAKE_CMD} -j${ncpu}" ARCH_OVERRIDE=${PLATFORM} CC=gcc bash build_nim.sh nim csources dist/nimble NimBinaries
+          env MAKE="${MAKE_CMD} -j${ncpu}" ARCH_OVERRIDE=${PLATFORM} NIM_COMMIT=${{ matrix.branch }} \
+            QUICK_AND_DIRTY_COMPILER=1 QUICK_AND_DIRTY_NIMBLE=1 CC=gcc \
+            bash build_nim.sh nim csources dist/nimble NimBinaries
           echo '${{ github.workspace }}/nim/bin' >> $GITHUB_PATH
 
-      - name: Run nim-blscurve tests
-        working-directory: nim-blscurve
+      - name: Run tests
         run: |
-          export BLS_TEST_LANG=${{ matrix.test_lang }}
+          if [[ "${{ matrix.target.os }}" == "windows" ]]; then
+            # https://github.com/status-im/nimbus-eth2/issues/3121
+            export NIMFLAGS="-d:nimRawSetjmp"
+          fi
+          nim --version
+          nimble --version
           nimble install -y --depsOnly
           # Dependencies not declared in "blscurve.nimble" as they are only used
           # for testing:
