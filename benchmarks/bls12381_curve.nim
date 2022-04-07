@@ -31,26 +31,26 @@ var benchRNG = initRand(0xFACADE)
 
 proc benchScalarMultG1*(iters: int) =
   when BLS_BACKEND == BLST:
-    var x{.noInit.}: blst_p1
+    var x{.noinit.}: blst_p1
     x.blst_p1_from_affine(BLS12_381_G1) # init from generator
 
-    var scal{.noInit.}: array[32, byte]
+    var scal{.noinit.}: array[32, byte]
     for val in scal.mitems:
       val = byte benchRNG.rand(0xFF)
 
-    var scalar{.noInit.}: blst_scalar
+    var scalar{.noinit.}: blst_scalar
     scalar.blst_scalar_from_bendian(scal)
 
     bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
       x.blst_p1_mult(x, scalar, 255)
   else:
     var x = generator1()
-    var scal{.noInit.}: array[32, byte]
+    var scal{.noinit.}: array[32, byte]
     for val in scal.mitems:
       val = byte benchRNG.rand(0xFF)
 
-    var scalar{.noInit.}: BIG_384
-    doAssert scalar.fromBytes(scal) 
+    var scalar{.noinit.}: BIG_384
+    doAssert scalar.fromBytes(scal)
     scalar.BIG_384_mod(CURVE_Order)
 
     bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
@@ -58,26 +58,26 @@ proc benchScalarMultG1*(iters: int) =
 
 proc benchScalarMultG2*(iters: int) =
   when BLS_BACKEND == BLST:
-    var x{.noInit.}: blst_p2
+    var x{.noinit.}: blst_p2
     x.blst_p2_from_affine(BLS12_381_G2) # init from generator
 
-    var scal{.noInit.}: array[32, byte]
+    var scal{.noinit.}: array[32, byte]
     for val in scal.mitems:
       val = byte benchRNG.rand(0xFF)
 
-    var scalar{.noInit.}: blst_scalar
+    var scalar{.noinit.}: blst_scalar
     scalar.blst_scalar_from_bendian(scal)
 
     bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
       x.blst_p2_mult(x, scalar, 255)
   else:
     var x = generator2()
-    var scal{.noInit.}: array[32, byte]
+    var scal{.noinit.}: array[32, byte]
     for val in scal.mitems:
       val = byte benchRNG.rand(0xFF)
 
-    var scalar{.noInit.}: BIG_384
-    doAssert scalar.fromBytes(scal) 
+    var scalar{.noinit.}: BIG_384
+    doAssert scalar.fromBytes(scal)
     scalar.BIG_384_mod(CURVE_Order)
 
     bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
@@ -85,7 +85,7 @@ proc benchScalarMultG2*(iters: int) =
 
 proc benchECAddG1*(iters: int) =
   when BLS_BACKEND == BLST:
-    var x{.noInit.}, y{.noInit.}: blst_p1
+    var x{.noinit.}, y{.noinit.}: blst_p1
     x.blst_p1_from_affine(BLS12_381_G1) # init from generator
     y = x
 
@@ -100,7 +100,7 @@ proc benchECAddG1*(iters: int) =
 
 proc benchECAddG2*(iters: int) =
   when BLS_BACKEND == BLST:
-    var x{.noInit.}, y{.noInit.}: blst_p2
+    var x{.noinit.}, y{.noinit.}: blst_p2
     x.blst_p2_from_affine(BLS12_381_G2) # init from generator
     y = x
 
@@ -128,8 +128,8 @@ when BLS_BACKEND == BLST:
 
     # Signing
     var sig = block:
-      var sig {.noInit.}: blst_p2_affine
-      var s {.noInit.}: blst_p2
+      var sig {.noinit.}: blst_p2_affine
+      var s {.noinit.}: blst_p2
       s.blst_hash_to_g2(
         msg,
         domainSepTag,

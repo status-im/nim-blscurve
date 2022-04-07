@@ -47,14 +47,14 @@ let knownProofs = [
 ]
 for i in 0 ..< knownSeckeys.len:
   var
-    sk{.noInit.}: SecretKey
-    pk{.noInit.}: PublicKey
-    proof{.noInit.}: ProofOfPossession
+    sk{.noinit.}: SecretKey
+    pk{.noinit.}: PublicKey
+    proof{.noinit.}: ProofOfPossession
   doAssert sk.fromHex(knownSeckeys[i])
   doAssert pk.fromHex(knownPubkeys[i])
   doAssert proof.fromHex(knownProofs[i])
 
-  var pk2{.noInit.}: PublicKey
+  var pk2{.noinit.}: PublicKey
   doAssert pk2.publicFromSecret(sk)
   doAssert pk2 == pk
 
@@ -64,7 +64,7 @@ for i in 0 ..< knownSeckeys.len:
   doAssert proof2 == proof
   doAssert pk.popVerify(proof)
 
-  var wrongPk{.noInit.}: PublicKey
+  var wrongPk{.noinit.}: PublicKey
   doAssert wrongPk.fromHex(knownPubkeys[(i + 1) mod knownPubkeys.len])
   doAssert not wrongPk.popVerify(proof)
 
@@ -72,12 +72,12 @@ template withProof(pk: PublicKey, body: untyped): untyped =
   block:
     let i = knownPubkeys.find(pk.toHex())
     doAssert i > -1, block: "\nProof for pubkey not known: " & pk.toHex()
-    var proof{.inject, noInit.}, wrongProof{.inject, noInit.}: ProofOfPossession
+    var proof{.inject, noinit.}, wrongProof{.inject, noinit.}: ProofOfPossession
     doAssert proof.fromHex(knownProofs[i])
     doAssert wrongProof.fromHex(knownProofs[(i + 1) mod knownProofs.len])
     body
 
-template withProofs(pks: openarray[PublicKey], body: untyped): untyped =
+template withProofs(pks: openArray[PublicKey], body: untyped): untyped =
   block:
     var proofs{.inject.}, wrongProofs{.inject.}: seq[ProofOfPossession]
     for pk in pks:
@@ -189,8 +189,8 @@ testGen(sign, test):
 
     expectedSig = Signature.getFrom(test, Output)
 
-  doAssert privkey.ok == expectedSig.ok
-  if not privkey.ok or not expectedSig.ok:
+  doAssert privKey.ok == expectedSig.ok
+  if not privKey.ok or not expectedSig.ok:
     echo ("")
   else:
 
@@ -208,7 +208,7 @@ testGen(verify, test):
     message = seq[byte].getFrom(test, Input, "message")
     signature = Signature.getFrom(test, Input, "signature")
 
-  if not pubkey.ok:
+  if not pubKey.ok:
     # Infinity pubkey and infinity signature
     doAssert not expected.val
 
@@ -241,7 +241,7 @@ testGen(aggregate, test):
   let sigs = seq[Signature].getFrom(test, Input)
   let expectedAgg = Signature.getFrom(test, Output)
 
-  var libAggSig {.noInit.}: Signature
+  var libAggSig {.noinit.}: Signature
   let ok = libAggSig.aggregateAll(sigs.val)
   if not ok:
     doAssert not expectedAgg.ok
@@ -261,7 +261,7 @@ testGen(fast_aggregate_verify, test):
     message = seq[byte].getFrom(test, Input, "message")
     signature = Signature.getFrom(test, Input, "signature")
 
-  if not pubkeys.ok:
+  if not pubKeys.ok:
     # Infinity pubkey in the mix
     doAssert not expected.val
 
@@ -327,7 +327,7 @@ testGen(aggregate_verify, test):
 
 testGen(deserialization_G1, test):
   var
-    pubkey{.noInit.}: PublicKey
+    pubkey{.noinit.}: PublicKey
 
   let
     expected = bool.getFrom(test, Output)
@@ -340,7 +340,7 @@ testGen(deserialization_G1, test):
 
 testGen(deserialization_G2, test):
   var
-    sig{.noInit.}: Signature
+    sig{.noinit.}: Signature
 
   let
     expected = bool.getFrom(test, Output)
@@ -367,10 +367,10 @@ when BLS_BACKEND == BLST and compileOption("threads"):
     var batch: seq[SignatureSet]
 
 
-    proc hash[T: byte|char](message: openarray[T]): array[32, byte] {.noInit.}=
+    proc hash[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.}=
       result.bls_sha256_digest(message)
 
-    proc asArray[T: byte|char](message: openarray[T]): array[32, byte] {.noInit.}=
+    proc asArray[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.}=
       result[0 ..< 32] = message
 
     let fakeRandomBytes = hash"Mr F was here"
@@ -405,11 +405,11 @@ suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
     test_sign()
   test "[" & BLS_ETH2_SPEC & "] verify(PublicKey, message, Signature) -> bool":
     test_verify()
-  test "[" & BLS_ETH2_SPEC & "] aggregate(openarray[Signature]) -> Signature":
+  test "[" & BLS_ETH2_SPEC & "] aggregate(openArray[Signature]) -> Signature":
     test_aggregate()
-  test "[" & BLS_ETH2_SPEC & "] fastAggregateVerify(openarray[PublicKey], message, Signature) -> bool":
+  test "[" & BLS_ETH2_SPEC & "] fastAggregateVerify(openArray[PublicKey], message, Signature) -> bool":
     test_fast_aggregate_verify()
-  test "[" & BLS_ETH2_SPEC & "] AggregateVerify(openarray[PublicKey, message], Signature) -> bool":
+  test "[" & BLS_ETH2_SPEC & "] AggregateVerify(openArray[PublicKey, message], Signature) -> bool":
     test_aggregate_verify()
   test "[" & BLS_ETH2_SPEC & "] Deserialization_G1(PublicKey) -> bool":
     test_deserialization_G1()
@@ -417,10 +417,10 @@ suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
     test_deserialization_G2()
 
   when BLS_BACKEND == BLST and compileOption("threads"):
-    test "[" & BLS_ETH2_SPEC & "] BatchVerify(openarray[(PublicKey, message, Signatures)]) -> bool":
+    test "[" & BLS_ETH2_SPEC & "] BatchVerify(openArray[(PublicKey, message, Signatures)]) -> bool":
       test_batch_verify()
   else:
-    echo "  [SKIP] [v1.0.0] BatchVerify(openarray[(PublicKey, message, Signatures)]) -> bool"
+    echo "  [SKIP] [v1.0.0] BatchVerify(openArray[(PublicKey, message, Signatures)]) -> bool"
     echo "    Not using BLST backend or --threads:on"
 
   echo "  [SKIP] [v1.0.0] HashToG2 tests"

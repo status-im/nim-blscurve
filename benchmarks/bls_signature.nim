@@ -25,9 +25,9 @@ var benchRNG = initRand(0xFACADE)
 proc benchDeserPubkey*(iters: int) =
   const seckey = "00000000000000000000000000000000000000000000000000000000000003e8"
   var
-    sk{.noInit.}: SecretKey
-    pk{.noInit.}: PublicKey
-    pk_comp{.noInit.}: array[48, byte]
+    sk{.noinit.}: SecretKey
+    pk{.noinit.}: PublicKey
+    pk_comp{.noinit.}: array[48, byte]
 
   let ok = sk.fromHex(seckey)
   doAssert ok
@@ -37,7 +37,7 @@ proc benchDeserPubkey*(iters: int) =
   # Serialize compressed
   doAssert pk_comp.serialize(pk)
 
-  var pk2{.noInit.}: PublicKey
+  var pk2{.noinit.}: PublicKey
 
   bench("Pubkey deserialization (full checks)", iters):
     doAssert pk2.fromBytes(pk_comp)
@@ -45,9 +45,9 @@ proc benchDeserPubkey*(iters: int) =
 proc benchDeserPubkeyKnownOnCurve*(iters: int) =
   const seckey = "00000000000000000000000000000000000000000000000000000000000003e8"
   var
-    sk{.noInit.}: SecretKey
-    pk{.noInit.}: PublicKey
-    pk_comp{.noInit.}: array[48, byte]
+    sk{.noinit.}: SecretKey
+    pk{.noinit.}: PublicKey
+    pk_comp{.noinit.}: array[48, byte]
 
   let ok = sk.fromHex(seckey)
   doAssert ok
@@ -57,7 +57,7 @@ proc benchDeserPubkeyKnownOnCurve*(iters: int) =
   # Serialize compressed
   doAssert pk_comp.serialize(pk)
 
-  var pk2{.noInit.}: PublicKey
+  var pk2{.noinit.}: PublicKey
 
   when BLS_BACKEND == BLST:
     bench("Pubkey deserialization (known on curve)", iters):
@@ -68,9 +68,9 @@ proc benchDeserSig*(iters: int) =
   const msg = "abcdef0123456789"
 
   var
-    sk{.noInit.}: SecretKey
-    pk{.noInit.}: PublicKey
-    sig_comp{.noInit.}: array[96, byte]
+    sk{.noinit.}: SecretKey
+    pk{.noinit.}: PublicKey
+    sig_comp{.noinit.}: array[96, byte]
 
   let ok = sk.fromHex(seckey)
   doAssert ok
@@ -82,7 +82,7 @@ proc benchDeserSig*(iters: int) =
   # Serialize compressed
   doAssert sig_comp.serialize(sig)
 
-  var sig2{.noInit.}: Signature
+  var sig2{.noinit.}: Signature
 
   bench("Signature deserialization (full checks)", iters):
     doAssert sig2.fromBytes(sig_comp)
@@ -92,9 +92,9 @@ proc benchDeserSigKnownOnCurve*(iters: int) =
   const msg = "abcdef0123456789"
 
   var
-    sk{.noInit.}: SecretKey
-    pk{.noInit.}: PublicKey
-    sig_comp{.noInit.}: array[96, byte]
+    sk{.noinit.}: SecretKey
+    pk{.noinit.}: PublicKey
+    sig_comp{.noinit.}: array[96, byte]
 
   let ok = sk.fromHex(seckey)
   doAssert ok
@@ -106,7 +106,7 @@ proc benchDeserSigKnownOnCurve*(iters: int) =
   # Serialize compressed
   doAssert sig_comp.serialize(sig)
 
-  var sig2{.noInit.}: Signature
+  var sig2{.noinit.}: Signature
 
   when BLS_BACKEND == BLST:
     bench("Signature deserialization (known on curve)", iters):

@@ -20,8 +20,8 @@ echo "----------------------------------\n"
 proc test_sk_to_pk(seckey, pubkey: string) =
 
   var
-    sk{.noInit.}: SecretKey
-    pk{.noInit.}: PublicKey
+    sk{.noinit.}: SecretKey
+    pk{.noinit.}: PublicKey
   let ok = sk.fromHex(seckey)
   doAssert ok
   let ok2 = pk.publicFromSecret(sk)
@@ -84,7 +84,7 @@ test_sk_to_pk(
 # BLS12-381 curve order is 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 
 block:
-  var sk{.noInit.}: SecretKey
+  var sk{.noinit.}: SecretKey
   doAssert not sk.fromHex("0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
   doAssert not sk.fromHex("0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000002")
   echo "SUCCESS - secret keys > curve order are refused"

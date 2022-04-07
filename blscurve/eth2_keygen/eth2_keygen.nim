@@ -57,12 +57,12 @@ func parent_SK_to_lamport_PK(
   static: doAssert sizeof(salt) == 4
 
   # 1. IKM = I2OSP(parent_SK, 32)
-  var ikm {.noInit.}: array[32, byte]
+  var ikm {.noinit.}: array[32, byte]
   when BLS_BACKEND == Miracl:
     # While the BLS prime is 381-bit (48 bytes)
     # the curve order is 255-bit (32 bytes)
     # and a secret key would always fit in 32 bytes
-    var tmp {.noInit.}: array[48, byte]
+    var tmp {.noinit.}: array[48, byte]
     doAssert tmp.serialize(parentSecretKey)
     ikm[0 .. 31] = tmp.toOpenArray(48-32, 48-1)
   else:
@@ -80,7 +80,7 @@ func parent_SK_to_lamport_PK(
 
   # 2. lamport_0 = IKM_to_lamport_SK(IKM, salt)
   # TODO: this uses 8KB and has a high stack-overflow potential
-  var lamport {.noInit.}: array[255, array[32, byte]]
+  var lamport {.noinit.}: array[255, array[32, byte]]
   ikm.ikm_to_lamport_SK(salt, lamport)
 
   # TODO: unclear inclusive/exclusive ranges in spec
@@ -95,7 +95,7 @@ func parent_SK_to_lamport_PK(
   # We can flip the bit of the IKM instead
   # as flipping bits of milagro representation (Montgomery)
   # doesn't make sense
-  var not_ikm {.noInit.}: array[32, byte]
+  var not_ikm {.noinit.}: array[32, byte]
   for i in 0 ..< 32:
     not_ikm[i] = not ikm[i]
 

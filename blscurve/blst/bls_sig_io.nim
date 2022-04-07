@@ -22,19 +22,19 @@ func toHex*(
   ## They are serialized in compressed form
   when obj is SecretKey:
     const size = 32
-    var bytes{.noInit.}: array[size, byte]
+    var bytes{.noinit.}: array[size, byte]
     bytes.blst_bendian_from_scalar(obj.scalar)
   elif obj is PublicKey:
     const size = 48
-    var bytes{.noInit.}: array[size, byte]
+    var bytes{.noinit.}: array[size, byte]
     bytes.blst_p1_affine_compress(obj.point)
   elif obj is (Signature or ProofOfPossession):
     const size = 96
-    var bytes{.noInit.}: array[size, byte]
+    var bytes{.noinit.}: array[size, byte]
     bytes.blst_p2_affine_compress(obj.point)
   elif obj is AggregateSignature:
     const size = 96
-    var bytes{.noInit.}: array[size, byte]
+    var bytes{.noinit.}: array[size, byte]
     bytes.blst_p2_compress(obj.point)
 
   result = bytes.toHex()
@@ -148,7 +148,7 @@ func fromBytes*(
 
 func fromBytes*(
        obj: var SecretKey,
-       raw: openarray[byte] or array[32, byte]
+       raw: openArray[byte] or array[32, byte]
       ): bool {.inline.} =
   ## Initialize a BLS secret key from
   ## its raw bytes representation.

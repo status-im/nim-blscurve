@@ -21,7 +21,7 @@ proc test() =
 
   let a = sha256.digest(input)
 
-  var b{.noInit.}: array[32, byte]
+  var b{.noinit.}: array[32, byte]
   b.bls_sha256_digest(input)
   doAssert a.data == b
 

@@ -43,7 +43,7 @@ proc cpuName*(): string =
 
 proc getTicks*(): int64 {.inline.} =
   when defined(vcc):
-    proc rdtsc(): int64 {.sideeffect, importc: "__rdtsc", header: "<intrin.h>".}
+    proc rdtsc(): int64 {.sideEffect, importc: "__rdtsc", header: "<intrin.h>".}
     proc lfence() {.importc: "__mm_lfence", header: "<intrin.h>".}
 
     lfence()

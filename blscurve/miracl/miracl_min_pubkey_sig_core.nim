@@ -104,7 +104,7 @@ func subgroupCheck*(P: GroupG1 or GroupG2): bool =
   var rP = P
   {.noSideEffect.}:
     rP.mul(CURVE_Order)
-  result = rP.isInf()
+  result = rP.isinf()
 
 func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## Generates a public key from a secret key
@@ -131,13 +131,13 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   #
   # Always != 0:
   # keyGen, deriveChild_secretKey, fromHex, fromBytes guarantee that.
-  if seckey.intVal.isZilch():
+  if seckey.intVal.iszilch():
     return false
   {.noSideEffect.}:
     if seckey.intVal.cmp(CURVE_Order) != -1:
       return false
   pubkey.point = generator1()
-  pubkey.point.mul(secKey.intVal)
+  pubkey.point.mul(seckey.intVal)
   return true
 
 func rawFromPublic*(raw: var array[48, byte], pubkey: PublicKey) {.inline.} =
@@ -199,7 +199,7 @@ template genAggregatorProcedures(
     # Precondition n >= 1 is respected
     agg.point.add(elem.point)
 
-  proc aggregate*(agg: var Aggregate, elems: openarray[BaseType]) =
+  proc aggregate*(agg: var Aggregate, elems: openArray[BaseType]) =
     ## Aggregates an array of elements `elems` into `agg`
     # Precondition n >= 1 is respected even if sigs.len == 0
     for e in elems:
@@ -209,7 +209,7 @@ template genAggregatorProcedures(
     ## Canonicalize the Aggregate into a BaseType element
     dst = BaseType(src)
 
-  proc aggregateAll*(dst: var BaseType, elems: openarray[BaseType]): bool =
+  proc aggregateAll*(dst: var BaseType, elems: openArray[BaseType]): bool =
     ## Returns the aggregate signature of ``elems[0..<elems.len]``.
     ## Important:
     ##   `dst` is overwritten
@@ -238,8 +238,8 @@ genAggregatorProcedures(AggregatePublicKey, PublicKey)
 #
 # For coreAggregateVerify, we introduce an internal streaming API that
 # can handle both
-# - publicKeys: openarray[PublicKey], messages: openarray[openarray[T]]
-# - pairs: openarray[tuple[publicKeys: seq[PublicKey], message: seq[byte or string]]]
+# - publicKeys: openArray[PublicKey], messages: openArray[openArray[T]]
+# - pairs: openArray[tuple[publicKeys: seq[PublicKey], message: seq[byte or string]]]
 # efficiently for the high-level API
 #
 # This also allows efficient interleaving of Proof-Of-Possession checks in the high-level API
@@ -247,7 +247,7 @@ genAggregatorProcedures(AggregatePublicKey, PublicKey)
 func coreSign*[T: byte|char](
        signature: var (Signature or ProofOfPossession),
        secretKey: SecretKey,
-       message: openarray[T],
+       message: openArray[T],
        domainSepTag: static string) =
   ## Computes a signature or proof-of-possession
   ## from a secret key and a message
@@ -266,7 +266,7 @@ func coreSign*[T: byte|char](
 
 func coreVerify*[T: byte|char](
        publicKey: PublicKey,
-       message: openarray[T],
+       message: openArray[T],
        sig_or_proof: Signature or ProofOfPossession,
        domainSepTag: static string): bool =
   ## Check that a signature (or proof-of-possession) is valid
@@ -298,7 +298,7 @@ func coreVerify*[T: byte|char](
   if not subgroupCheck(sig_or_proof.point):
     return false
   # 4. If KeyValidate(PK) is INVALID, return INVALID
-  if publicKey.point.isInf():
+  if publicKey.point.isinf():
     return false
   if not subgroupCheck(publicKey.point):
     return false
@@ -312,7 +312,7 @@ func coreVerify*[T: byte|char](
 
 func coreVerifyNoGroupCheck*[T: byte|char](
        publicKey: PublicKey,
-       message: openarray[T],
+       message: openArray[T],
        sig_or_proof: Signature or ProofOfPossession,
        domainSepTag: static string): bool =
   ## Check that a signature (or proof-of-possession) is valid
@@ -359,7 +359,7 @@ template `&`(point: GroupG1 or GroupG2): untyped = unsafeAddr point
 func update*[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
-       message: openarray[T]): bool =
+       message: openArray[T]): bool =
   if not subgroupCheck(publicKey.point):
     return false
   let Q = hashToG2(message, ctx.DomainSepTag)                   # Q = hash_to_point(message_i)

@@ -7,8 +7,6 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-import os, strutils
-
 const BLS_FORCE_BACKEND*{.strdefine.} = "auto"
 
 static: doAssert BLS_FORCE_BACKEND == "auto" or
@@ -26,6 +24,7 @@ const OnARM = defined(arm) or defined(arm64)
 
 when UseBLST:
   when OnX86:
+    import os, strutils
     # BLST defaults to SSSE3 for SHA256 (Pentium 4, 2004). To disable that, we
     # need a "portable" build.
     #

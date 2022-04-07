@@ -1,9 +1,6 @@
 import
   # Standard library
-  json, strutils, os,
-  # Detect spec version
-  ../blscurve
-
+  json, strutils, os
 export
   os, json
 

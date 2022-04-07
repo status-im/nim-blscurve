@@ -15,7 +15,7 @@ when compileOption("threads"):
 
 # BLS Batch Verifier
 # ----------------------------------------------------------------------
-# Nim supports for view types and openarray in object fields is experimental
+# Nim supports for view types and openArray in object fields is experimental
 # we collect/copy the inputs in the object for now by copy.
 # instead of accumulating them in a pairing context.
 # Note that a pairing context is 3+MB
@@ -166,7 +166,7 @@ when compileOption("threads"):
   #
   # Note 3: 3M cycles is 1ms at 3GHz.
 
-  func toPtrUncheckedArray[T](s: openarray[T]): ptr UncheckedArray[T] {.inline.} =
+  func toPtrUncheckedArray[T](s: openArray[T]): ptr UncheckedArray[T] {.inline.} =
     {.pragma: restrict, codegenDecl: "$# __restrict $#".}
     let p{.restrict.} = cast[
       ptr UncheckedArray[T]](
@@ -232,7 +232,7 @@ when compileOption("threads"):
         cache: var BatchedBLSVerifierCache,
         input: openArray[SignatureSet],
         secureRandomBytes: array[32, byte]
-      ): bool {.sideeffect.} =
+      ): bool {.sideEffect.} =
     ## Multithreaded batch verification
     ## If multithreaded with -d:openmp requires OpenMP 3.0 (GCC 4.4, 2008)
     ## This will verify all the inputs (PublicKey, message, Signature) triplets

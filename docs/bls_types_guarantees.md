@@ -37,6 +37,6 @@ The input is checked against both conditions with both BLST and MIRACL backend.
 - Procedures in `bls_sig_io.nim`:
   - `fromBytes` and `fromHex`
 - BLST: `blst_p1_affine_is_inf` and subgroup checks `blst_p1_affine_in_g1`
-- MIRACL: `isInf` and `subgroupCheck`
+- MIRACL: `isinf` and `subgroupCheck`
 
 There is no other public API to create a PublicKey instance.
