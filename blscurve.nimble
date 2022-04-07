@@ -21,7 +21,7 @@ proc test(args, path: string) =
   if not dirExists "build":
     mkDir "build"
   exec "nim " & getEnv("TEST_LANG", "c") & " " & getEnv("NIMFLAGS") & " " & args &
-    " --outdir:build -r -f --hints:off --warnings:off --skipParentCfg"
+    " --outdir:build -r -f --hints:off --warnings:off --skipParentCfg" &
     " --styleCheck:usages --styleCheck:hint" &
     " --hint[XDeclaredButNotUsed]:off --hint[Processing]:off " & path
 
