@@ -501,7 +501,7 @@ proc isOnCurve*(x, y: FP_BLS12381 or FP2_BLS12381): bool =
   else:
     result = (sqr(y) == rhs(x))
 
-proc toBytes*(a: BIG_384, res: var openarray[byte]): bool =
+proc toBytes*(a: BIG_384, res: var openArray[byte]): bool =
   ## Serialize big integer ``a`` to ``res``. Length of ``res`` array
   ## must be ``MODBYTES_384``.
   ##
@@ -528,7 +528,7 @@ proc toHex*(a: BIG_384): string {.inline.} =
   ## representation, if serialization failed empty string will be returned.
   toHex(getBytes(a))
 
-func fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
+func fromBytes*(res: var BIG_384, a: openArray[byte]): bool =
   ## Unserialize big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``MODBYTES_384_29``.
   zeroMem(res.addr, sizeof(res))
@@ -538,7 +538,7 @@ func fromBytes*(res: var BIG_384, a: openarray[byte]): bool =
     res[0] = res[0] + cast[Chunk](a[i])
   result = true
 
-func fromBytes*(res: var DBIG_384, a: openarray[byte]): bool =
+func fromBytes*(res: var DBIG_384, a: openArray[byte]): bool =
   ## Unserialize double big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``2*MODBYTES_384_29``.
 
@@ -561,7 +561,7 @@ func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
     # https://github.com/status-im/nim-blscurve/issues/57
     false
 
-proc toBytes*(point: ECP2_BLS12381, res: var openarray[byte]): bool =
+proc toBytes*(point: ECP2_BLS12381, res: var openArray[byte]): bool =
   ## Serialize ECP2(G2) point ``point`` to ``res``. Length of ``res`` array
   ## must be at least ``MODBYTES_384 * 2``.
   ##
@@ -602,7 +602,7 @@ proc toHex*(point: ECP2_BLS12381): string =
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   toHex(getBytes(point))
 
-func fromBytes*(res: var ECP2_BLS12381, data: openarray[byte]): bool =
+func fromBytes*(res: var ECP2_BLS12381, data: openArray[byte]): bool =
   ## Unserialize ECP2(G2) point from array of bytes ``data``.
   ##
   ## This procedure supports only compressed form of serialization.
@@ -620,7 +620,7 @@ func fromBytes*(res: var ECP2_BLS12381, data: openarray[byte]): bool =
         res.inf()
       else:
         var buffer: array[MODBYTES_384, byte]
-        var x1, x0: BIG384
+        var x1, x0: BIG_384
         let greatest = (data[0] and (1'u8 shl 5)) != 0'u8
         copyMem(addr buffer[0], unsafeAddr data[0], MODBYTES_384)
         buffer[0] = buffer[0] and 0x1F'u8
@@ -656,7 +656,7 @@ func fromHex*(res: var ECP2_BLS12381, a: string): bool {.inline.} =
     # https://github.com/status-im/nim-blscurve/issues/57
     false
 
-proc toBytes*(point: ECP_BLS12381, res: var openarray[byte]): bool =
+proc toBytes*(point: ECP_BLS12381, res: var openArray[byte]): bool =
   ## Serialize ECP(G1) point ``point`` to ``res``. Length of ``res`` array
   ## must be ``MODBYTES_384``.
   ##
@@ -696,7 +696,7 @@ proc toHex*(point: ECP_BLS12381): string =
   ## This procedure serialize point in compressed form (e.g. only x coordinate).
   toHex(getBytes(point))
 
-func fromBytes*(res: var ECP_BLS12381, data: openarray[byte]): bool =
+func fromBytes*(res: var ECP_BLS12381, data: openArray[byte]): bool =
   ## Unserialize ECP point from array of bytes ``data``.
   ##
   ## This procedure supports only compressed form of serialization.

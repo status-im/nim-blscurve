@@ -35,7 +35,7 @@ proc blst_sha256_init(ctx: var BLST_SHA256_CTX)
      {.importc: "sha256_init", header: headerPath, cdecl.}
 proc blst_sha256_update[T: byte|char](
        ctx: var BLST_SHA256_CTX,
-       input: openarray[T]
+       input: openArray[T]
      ){.importc: "sha256_update", header: headerPath, cdecl.}
 proc blst_sha256_final(
        digest: var array[32, byte],
@@ -47,7 +47,7 @@ proc init*(ctx: var BLST_SHA256_CTX) =
 
 proc update*[T: byte|char](
        ctx: var BLST_SHA256_CTX,
-       input: openarray[T]
+       input: openArray[T]
      ) =
   blst_sha256_update(ctx, input)
 
@@ -56,20 +56,20 @@ proc finalize*(digest: var array[32, byte], ctx: var BLST_SHA256_CTX) =
 
 proc bls_sha256_digest*[T: byte|char](
        digest: var array[32, byte],
-       input: openarray[T]) =
-  var ctx{.noInit.}: BLST_SHA256_CTX
+       input: openArray[T]) =
+  var ctx{.noinit.}: BLST_SHA256_CTX
   ctx.blst_sha256_init()
   ctx.blst_sha256_update(input)
   digest.blst_sha256_final(ctx)
 
 proc bls_sha256_digest*[T, U: byte|char](
        digest: var array[32, byte],
-       input: openarray[T],
+       input: openArray[T],
        sepTag: openArray[U]
      ) =
   # Workaround linker issue when using init/update/update/finalize
   # in ContextMultiAggregateVerify.init()
-  var ctx{.noInit.}: BLST_SHA256_CTX
+  var ctx{.noinit.}: BLST_SHA256_CTX
   ctx.blst_sha256_init()
   ctx.blst_sha256_update(input)
   ctx.blst_sha256_update(sepTag)

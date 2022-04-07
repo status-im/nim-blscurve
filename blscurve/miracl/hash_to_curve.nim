@@ -110,7 +110,7 @@ func expandMessageXMD[B: byte|char, len_in_bytes: static int](
   let b_0 = block:
     ctx.update z_pad
     if msg.len != 0:
-      ctx.update toOpenArray(cast[ptr UncheckedArray[byte]](msg[0].unsafeaddr), 0, msg.len-1)
+      ctx.update toOpenArray(cast[ptr UncheckedArray[byte]](msg[0].unsafeAddr), 0, msg.len-1)
     ctx.update l_i_b_str
     ctx.update [byte 0]
     ctx.update dst_prime
@@ -135,7 +135,7 @@ func expandMessageXMD[B: byte|char, len_in_bytes: static int](
 
   output.copyFrom(b_1.data, cur)
 
-  var b_i{.noInit.}: array[H.bits div 8, byte]
+  var b_i{.noinit.}: array[H.bits div 8, byte]
 
   template strxor(b_i1: var array, b0: array): untyped =
     for i in 0 ..< b_i1.len:
@@ -195,12 +195,12 @@ func hashToFieldFP2[B: byte|char, count: static int](
   # 9. return (u_0, ..., u_(count - 1))
   const len_in_bytes = count * m * L_BLS
 
-  var uniform_bytes{.noInit.}: array[len_in_bytes, byte]
+  var uniform_bytes{.noinit.}: array[len_in_bytes, byte]
   sha256.expandMessageXMD(uniform_bytes, msg, domainSepTag)
 
   for i in 0 ..< count:
-    var e_0{.noInit.}, e_1{.noInit.}: BIG_384
-    var de_j{.noInit.}: DBIG_384 # Need a DBIG, L = 64 bytes = 512-bit > 384-bit
+    var e_0{.noinit.}, e_1{.noinit.}: BIG_384
+    var de_j{.noinit.}: DBIG_384 # Need a DBIG, L = 64 bytes = 512-bit > 384-bit
 
     template loopIter(e_j: untyped, j: range[1..m]): untyped {.dirty.} =
       block: ## for j in 0 ..< m
@@ -241,7 +241,7 @@ func sign0(x: FP2_BLS12381): bool =
   ## Specialized for the quadratic extension field (m == 2)
   # May need further changes? https://github.com/cfrg/draft-irtf-cfrg-hash-to-curve/pull/250
   let sign_0 = x.a.parity()
-  let zero_0 = x.a.isZilch().int
+  let zero_0 = x.a.iszilch().int
   let sign_1 = x.b.parity()
   return bool(sign_0 or (zero_0 and sign_1))
 
@@ -280,7 +280,7 @@ func mapToIsoCurveSimpleSWU_G2(u: FP2_BLS12381): tuple[x, y: FP2_BLS12381] =
     var tv2 = sqr(tv1)
     var x1 = add(tv1, tv2)
     x1 = inv(x1)                         # TODO: Spec defines inv0(0) == 0; inv0(x) == x^(q-2)
-    let e1 = x1.isZilch()
+    let e1 = x1.iszilch()
     x1.add(x1, one)                      # // no norm needed when adding one
     x1.cmov(c2, e1)                      # If (tv1 + tv2) == 0, set x1 = -1 / Z
     x1.mul(x1, c1)                       # x1 = (-B / A) * (1 + (1 / (Z² * u^4 + Z * u²)))
@@ -499,7 +499,7 @@ func hashToG2*[B: byte|char](msg: openArray[B],
   # allocations:
   # - threadsafe
   # - no GC in cryptographic code
-  var u{.noInit.}: array[2, FP2_BLS12381]
+  var u{.noinit.}: array[2, FP2_BLS12381]
 
   sha256.hashToFieldFP2(u, msg, domainSepTag)
 
@@ -655,7 +655,7 @@ when isMainModule:
       # each step in a fine grained manner
       constants
 
-      var u{.noInit.}: array[2, FP2_BLS12381]
+      var u{.noinit.}: array[2, FP2_BLS12381]
 
       sha256.hashToFieldFP2(u, msg, domainSepTag)
 

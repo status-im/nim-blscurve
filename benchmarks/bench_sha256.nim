@@ -12,12 +12,12 @@ static: doAssert BLS_BACKEND == BLST
 
 var rng = initRand(int64 0xDECAF)
 
-proc benchSHA256_nimcrypto[T](msg: openarray[T], msgComment: string, iters: int) =
+proc benchSHA256_nimcrypto[T](msg: openArray[T], msgComment: string, iters: int) =
   var digest: MDigest[256]
   bench("SHA256 - " & msgComment & " - nimcrypto", iters):
     digest = sha256.digest(msg)
 
-proc benchSHA256_blst[T](msg: openarray[T], msgComment: string, iters: int) =
+proc benchSHA256_blst[T](msg: openArray[T], msgComment: string, iters: int) =
   var digest: array[32, byte]
   bench("SHA256 - " & msgComment & " - BLST", iters):
     digest.bls_sha256_digest(msg)

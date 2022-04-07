@@ -26,7 +26,7 @@ func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
   ## The key must be 0 < key < CURVE_Order
   when obj is SecretKey:
     result = obj.intVal.fromHex(hexStr)
-    if obj.intVal.isZilch():
+    if obj.intVal.iszilch():
       return false
     {.noSideEffect.}:
       if obj.intVal.cmp(CURVE_Order) != -1:
@@ -35,23 +35,23 @@ func fromHex*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
     result = obj.point.fromHex(hexStr)
     when obj is PublicKey:
       # KeyValidate
-      if obj.point.isInf():
+      if obj.point.isinf():
         return false
     if not subgroupCheck(obj.point):
       return false
 
 func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
        obj: var T,
-       raw: openarray[byte]
+       raw: openArray[byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  ## 
+  ##
   ## A zero public key is invalid
   when obj is SecretKey:
     result = obj.intVal.fromBytes(raw)
-    if obj.intVal.isZilch():
+    if obj.intVal.iszilch():
       return false
     {.noSideEffect.}:
       if obj.intVal.cmp(CURVE_Order) != -1:
@@ -60,14 +60,14 @@ func fromBytes*[T: SecretKey|PublicKey|Signature|ProofOfPossession](
     result = obj.point.fromBytes(raw)
     when obj is PublicKey:
       # KeyValidate
-      if obj.point.isInf():
+      if obj.point.isinf():
         result = false
     if not subgroupCheck(obj.point):
       return false
 
 func fromBytesKnownOnCurve*[T: PublicKey|Signature|ProofOfPossession](
        obj: var T,
-       raw: openarray[byte]
+       raw: openArray[byte]
       ): bool {.inline.} =
   ## Initialize a BLS signature scheme object from
   ## its raw bytes representation.
@@ -87,7 +87,7 @@ func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string {.inli
     result = obj.point.toHex()
 
 func serialize*(
-       dst: var openarray[byte],
+       dst: var openArray[byte],
        obj: SecretKey|PublicKey|Signature|ProofOfPossession): bool {.inline.} =
   ## Serialize the input `obj` in raw binary form and write it
   ## in `dst`.

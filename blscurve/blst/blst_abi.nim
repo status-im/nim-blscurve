@@ -174,8 +174,8 @@ proc blst_scalar_from_bendian*(ret: var blst_scalar; a: array[32, byte])
 proc blst_bendian_from_scalar*(ret: var array[32, byte]; a: blst_scalar)
 proc blst_scalar_from_lendian*(ret: var blst_scalar; a: array[32, byte])
 proc blst_lendian_from_scalar*(ret: var array[32, byte]; a: blst_scalar)
-proc blst_scalar_fr_check*(a: blst_scalar): CTBool
-proc blst_sk_check*(a: blst_scalar): CTBool
+proc blst_scalar_fr_check*(a: blst_scalar): CTbool
+proc blst_sk_check*(a: blst_scalar): CTbool
 
 # BLS12-381-specific Fr operations (Modulo curve order)
 proc blst_fr_add*(ret: var blst_fr; a: blst_fr; b: blst_fr)
@@ -203,7 +203,7 @@ proc blst_fp_sqr*(ret: var blst_fp; a: blst_fp)
 proc blst_fp_cneg*(ret: var blst_fp; a: blst_fp; flag: uint)
 proc blst_fp_eucl_inverse*(ret: var blst_fp; a: blst_fp)
 proc blst_fp_inverse*(ret: var blst_fp; a: blst_fp)
-proc blst_fp_sqrt*(ret: var blst_fp; a: blst_fp): CTBool
+proc blst_fp_sqrt*(ret: var blst_fp; a: blst_fp): CTbool
 proc blst_fp_from_uint32*(ret: var blst_fp; a: array[12, uint32])
 proc blst_uint32_from_fp*(ret: var array[12, uint32]; a: blst_fp)
 proc blst_fp_from_uint64*(ret: var blst_fp; a: array[6, uint64])
@@ -224,7 +224,7 @@ proc blst_fp2_sqr*(ret: var blst_fp2; a: blst_fp2)
 proc blst_fp2_cneg*(ret: var blst_fp2; a: blst_fp2; flag: uint)
 proc blst_fp2_eucl_inverse*(ret: var blst_fp2; a: blst_fp2)
 proc blst_fp2_inverse*(ret: var blst_fp2; a: blst_fp2)
-proc blst_fp2_sqrt*(ret: var blst_fp2; a: blst_fp2): CTBool
+proc blst_fp2_sqrt*(ret: var blst_fp2; a: blst_fp2): CTbool
 
 # BLS12-381-specific Fp12 operations.
 proc blst_fp12_sqr*(ret: var blst_fp12; a: blst_fp12)
@@ -235,8 +235,8 @@ proc blst_fp12_conjugate*(a: var blst_fp12)
 proc blst_fp12_inverse*(ret: var blst_fp12; a: blst_fp12)
 proc blst_fp12_frobenius_map*(ret: var blst_fp12; a: blst_fp12; n: uint)
   ##   caveat lector! |n| has to be non-zero and not more than 3!
-proc blst_fp12_is_equal*(a: blst_fp12; b: blst_fp12): CTBool
-proc blst_fp12_is_one*(a: blst_fp12): CTBool
+proc blst_fp12_is_equal*(a: blst_fp12; b: blst_fp12): CTbool
+proc blst_fp12_is_one*(a: blst_fp12): CTbool
 proc blst_fp12_one*(): ptr blst_fp12
 
 # BLS12-381-specific G1 operations.
@@ -249,14 +249,14 @@ proc blst_p1_mult*(dst: var blst_p1; p: blst_p1; scalar: blst_scalar; nbits: uin
 proc blst_p1_cneg*(p: var blst_p1; cbit: uint)
 proc blst_p1_to_affine*(dst: var blst_p1_affine; src: blst_p1)
 proc blst_p1_from_affine*(dst: var blst_p1; src: blst_p1_affine)
-proc blst_p1_on_curve*(p: blst_p1): CTBool
-proc blst_p1_in_g1*(p: blst_p1): CTBool
-proc blst_p1_is_equal*(a: blst_p1, b: blst_p1): CTBool
-proc blst_p1_is_inf*(a: blst_p1): CTBool
-proc blst_p1_affine_on_curve*(p: blst_p1_affine): CTBool
-proc blst_p1_affine_in_g1*(p: blst_p1_affine): CTBool
-proc blst_p1_affine_is_equal*(a: blst_p1_affine; b: blst_p1_affine): CTBool
-proc blst_p1_affine_is_inf*(a: blst_p1_affine): CTBool
+proc blst_p1_on_curve*(p: blst_p1): CTbool
+proc blst_p1_in_g1*(p: blst_p1): CTbool
+proc blst_p1_is_equal*(a: blst_p1, b: blst_p1): CTbool
+proc blst_p1_is_inf*(a: blst_p1): CTbool
+proc blst_p1_affine_on_curve*(p: blst_p1_affine): CTbool
+proc blst_p1_affine_in_g1*(p: blst_p1_affine): CTbool
+proc blst_p1_affine_is_equal*(a: blst_p1_affine; b: blst_p1_affine): CTbool
+proc blst_p1_affine_is_inf*(a: blst_p1_affine): CTbool
 proc blst_p1_generator*(): ptr blst_p1
 
 # BLS12-381-specific G2 operations.
@@ -269,14 +269,14 @@ proc blst_p2_mult*(dst: var blst_p2; p: blst_p2; scalar: blst_scalar; nbits: uin
 proc blst_p2_cneg*(p: var blst_p2; cbit: uint)
 proc blst_p2_to_affine*(dst: var blst_p2_affine; src: blst_p2)
 proc blst_p2_from_affine*(dst: var blst_p2; src: blst_p2_affine)
-proc blst_p2_on_curve*(p: blst_p2): CTBool
-proc blst_p2_in_g2*(p: blst_p2): CTBool
-proc blst_p2_is_equal*(a: blst_p2, b: blst_p2): CTBool
-proc blst_p2_is_inf*(a: blst_p2): CTBool
-proc blst_p2_affine_on_curve*(p: blst_p2_affine): CTBool
-proc blst_p2_affine_in_g2*(p: blst_p2_affine): CTBool
-proc blst_p2_affine_is_equal*(a: blst_p2_affine; b: blst_p2_affine): CTBool
-proc blst_p2_affine_is_inf*(a: blst_p2_affine): CTBool
+proc blst_p2_on_curve*(p: blst_p2): CTbool
+proc blst_p2_in_g2*(p: blst_p2): CTbool
+proc blst_p2_is_equal*(a: blst_p2, b: blst_p2): CTbool
+proc blst_p2_is_inf*(a: blst_p2): CTbool
+proc blst_p2_affine_on_curve*(p: blst_p2_affine): CTbool
+proc blst_p2_affine_in_g2*(p: blst_p2_affine): CTbool
+proc blst_p2_affine_is_equal*(a: blst_p2_affine; b: blst_p2_affine): CTbool
+proc blst_p2_affine_is_inf*(a: blst_p2_affine): CTbool
 proc blst_p2_generator*(): ptr blst_p2
 
 # Hash-to-curve operations.
@@ -438,7 +438,7 @@ proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](
                                      aug: openArray[U]
                                      ): BLST_ERROR
 proc blst_pairing_merge*(ctx: var blst_pairing; ctx1: blst_pairing): BLST_ERROR
-proc blst_pairing_finalverify*(ctx: var blst_pairing; gtsig: ptr blst_fp12): CTBool
+proc blst_pairing_finalverify*(ctx: var blst_pairing; gtsig: ptr blst_fp12): CTbool
 
 #   Customarily applications aggregate signatures separately.
 #    In which case application would have to pass NULLs for |signature|

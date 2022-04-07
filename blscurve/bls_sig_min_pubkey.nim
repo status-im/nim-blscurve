@@ -39,7 +39,7 @@ func popProve*(secretKey: SecretKey, publicKey: PublicKey): ProofOfPossession =
   # 4. R = SK * Q
   # 5. proof = point_to_signature(R)
   # 6. return proof
-  var pk{.noInit.}: array[48, byte]
+  var pk{.noinit.}: array[48, byte]
   pk.rawFromPublic(publicKey) # 2. Convert to raw bytes compressed form
   result.coreSign(secretKey, pk, DST_POP)     # 3-4. hash_to_curve and multiply by secret key
 
@@ -52,7 +52,7 @@ func popProve*(secretKey: SecretKey): ProofOfPossession =
   # 4. R = SK * Q
   # 5. proof = point_to_signature(R)
   # 6. return proof
-  var pubkey {.noInit.}: PublicKey
+  var pubkey {.noinit.}: PublicKey
   let ok {.used.} = pubkey.publicFromSecret(secretKey)
   assert ok, "The secret key is INVALID, it should be initialized non-zero with keyGen or derive_child_secretKey"
   result = popProve(secretKey, pubkey)
@@ -69,11 +69,11 @@ func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
   # 7. C1 = pairing(Q, xP)
   # 8. C2 = pairing(R, P)
   # 9. If C1 == C2, return VALID, else return INVALID
-  var pk{.noInit.}: array[48, byte]
+  var pk{.noinit.}: array[48, byte]
   pk.rawFromPublic(publicKey)
   result = coreVerifyNoGroupCheck(publicKey, pk, proof, DST_POP)
 
-func sign*[T: byte|char](secretKey: SecretKey, message: openarray[T]): Signature =
+func sign*[T: byte|char](secretKey: SecretKey, message: openArray[T]): Signature =
   ## Computes a signature
   ## from a secret key and a message
   ##
@@ -86,7 +86,7 @@ func sign*[T: byte|char](secretKey: SecretKey, message: openarray[T]): Signature
 func verify*[T: byte|char](
        publicKey: PublicKey,
        proof: ProofOfPossession,
-       message: openarray[T],
+       message: openArray[T],
        signature: Signature) : bool =
   ## Check that a signature is valid for a message
   ## under the provided public key.
@@ -107,7 +107,7 @@ func verify*[T: byte|char](
 
 func verify*[T: byte|char](
        publicKey: PublicKey,
-       message: openarray[T],
+       message: openArray[T],
        signature: Signature) : bool =
   ## Check that a signature is valid for a message
   ## under the provided public key.
@@ -125,23 +125,23 @@ func verify*[T: byte|char](
   return publicKey.coreVerifyNoGroupCheck(message, signature, DST)
 
 func aggregateVerify*(
-        publicKeys: openarray[PublicKey],
-        proofs: openarray[ProofOfPossession],
-        messages: openarray[string or seq[byte]],
-        signature: Signature): bool {.noInline.} =
+        publicKeys: openArray[PublicKey],
+        proofs: openArray[ProofOfPossession],
+        messages: openArray[string or seq[byte]],
+        signature: Signature): bool {.noinline.} =
   ## Check that an aggregated signature over several (publickey, message) pairs
   ## returns `true` if the signature is valid, `false` otherwise.
   ##
   ## Compared to the IETF spec API, it is modified to
   ## enforce proper usage of the proof-of-possessions
-  # Note: we can't have openarray of openarrays until openarrays are first-class value types
+  # Note: we can't have openArray of openarrays until openarrays are first-class value types
   if publicKeys.len != proofs.len or publicKeys.len != messages.len:
     return false
   if not(publicKeys.len >= 1):
     # Spec precondition
     return false
 
-  var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
+  var ctx{.noinit.}: ContextCoreAggregateVerify[DST]
 
   ctx.init()
   for i in 0 ..< publicKeys.len:
@@ -152,8 +152,8 @@ func aggregateVerify*(
   return ctx.finish(signature)
 
 func aggregateVerify*(
-        publicKeys: openarray[PublicKey],
-        messages: openarray[string or seq[byte]],
+        publicKeys: openArray[PublicKey],
+        messages: openArray[string or seq[byte]],
         signature: Signature): bool =
   ## Check that an aggregated signature over several (publickey, message) pairs
   ## returns `true` if the signature is valid, `false` otherwise.
@@ -161,14 +161,14 @@ func aggregateVerify*(
   ## The proof-of-possession MUST be verified before calling this function.
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
-  # Note: we can't have openarray of openarrays until openarrays are first-class value types
+  # Note: we can't have openArray of openarrays until openarrays are first-class value types
   if publicKeys.len != messages.len:
     return false
   if not(publicKeys.len >= 1):
     # Spec precondition
     return false
 
-  var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
+  var ctx{.noinit.}: ContextCoreAggregateVerify[DST]
 
   ctx.init()
   for i in 0 ..< publicKeys.len:
@@ -177,7 +177,7 @@ func aggregateVerify*(
   return ctx.finish(signature)
 
 func aggregateVerify*[T: string or seq[byte]](
-        publicKey_msg_pairs: openarray[tuple[publicKey: PublicKey, message: T]],
+        publicKey_msg_pairs: openArray[tuple[publicKey: PublicKey, message: T]],
         signature: Signature): bool =
   ## Check that an aggregated signature over several (publickey, message) pairs
   ## returns `true` if the signature is valid, `false` otherwise.
@@ -190,7 +190,7 @@ func aggregateVerify*[T: string or seq[byte]](
     # Spec precondition
     return false
 
-  var ctx{.noInit.}: ContextCoreAggregateVerify[DST]
+  var ctx{.noinit.}: ContextCoreAggregateVerify[DST]
 
   ctx.init()
   for i in 0 ..< publicKey_msg_pairs.len:
@@ -199,9 +199,9 @@ func aggregateVerify*[T: string or seq[byte]](
   return ctx.finish(signature)
 
 func fastAggregateVerify*[T: byte|char](
-        publicKeys: openarray[PublicKey],
-        proofs: openarray[ProofOfPossession],
-        message: openarray[T],
+        publicKeys: openArray[PublicKey],
+        proofs: openArray[ProofOfPossession],
+        message: openArray[T],
         signature: Signature
       ): bool =
   ## Verify the aggregate of multiple signatures on the same message
@@ -219,7 +219,7 @@ func fastAggregateVerify*[T: byte|char](
     return false
   if not publicKeys[0].popVerify(proofs[0]):
     return false
-  var aggPK {.noInit.}: AggregatePublicKey
+  var aggPK {.noinit.}: AggregatePublicKey
   aggPK.init(publicKeys[0])
   for i in 1 ..< publicKeys.len:
     if not publicKeys[i].popVerify(proofs[i]):
@@ -227,13 +227,13 @@ func fastAggregateVerify*[T: byte|char](
     # We assume that the PublicKey is in on curve, in the proper subgroup
     aggPK.aggregate(publicKeys[i])
 
-  var aggAffine{.noInit.}: PublicKey
+  var aggAffine{.noinit.}: PublicKey
   aggAffine.finish(aggPK)
   return coreVerifyNoGroupCheck(aggAffine, message, signature, DST)
 
 func fastAggregateVerify*[T: byte|char](
-        publicKeys: openarray[PublicKey],
-        message: openarray[T],
+        publicKeys: openArray[PublicKey],
+        message: openArray[T],
         signature: Signature
       ): bool =
   ## Verify the aggregate of multiple signatures on the same message
@@ -252,7 +252,7 @@ func fastAggregateVerify*[T: byte|char](
     # Spec precondition
     return false
 
-  var aggAffine{.noInit.}: PublicKey
+  var aggAffine{.noinit.}: PublicKey
   if not aggAffine.aggregateAll(publicKeys):
     return false
   return coreVerifyNoGroupCheck(aggAffine, message, signature, DST)

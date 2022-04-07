@@ -15,7 +15,7 @@
 {.push raises: [].} # C functions don't raise
 
 when not defined(cpp) or defined(objc) or defined(js):
-  {.passC: "-std=c99".}
+  {.passc: "-std=c99".}
 
 import strutils
 from os import DirSep
@@ -295,4 +295,4 @@ proc FP12_BLS12381_isunity*(x: ptr FP12_BLS12381): cint {.milagro_func.}
 proc FP12_BLS12381_mul*(x: ptr FP12_BLS12381, y: ptr FP12_BLS12381) {.milagro_func.}
 
 # Debug
-proc FP2_BLS12381_output*(x: ptr FP2_BLS12381) {.sideeffect, milagro_func.}
+proc FP2_BLS12381_output*(x: ptr FP2_BLS12381) {.sideEffect, milagro_func.}

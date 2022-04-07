@@ -37,7 +37,7 @@ proc keyGen(seed: uint64): tuple[pubkey: PublicKey, seckey: SecretKey] =
   let ok = ikm.keyGen(result.pubkey, result.seckey)
   doAssert ok
 
-proc hash[T: byte|char](message: openarray[T]): array[32, byte] {.noInit.}=
+proc hash[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.}=
   result.bls_sha256_digest(message)
 
 proc addExample(batch: var seq[SignatureSet], seed: int, message: string) =

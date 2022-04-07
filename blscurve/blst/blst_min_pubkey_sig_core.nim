@@ -135,7 +135,7 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
     return false
   if not seckey.scalar.blst_sk_check().bool:
     return false
-  var pk {.noInit.}: blst_p1
+  var pk {.noinit.}: blst_p1
   pk.blst_sk_to_pk_in_g1(seckey.scalar)
   pubkey.point.blst_p1_to_affine(pk)
   return true
@@ -164,7 +164,7 @@ template genAggregatorProcedures(
       elem.point
     )
 
-  proc aggregate*(agg: var Aggregate, elems: openarray[BaseType]) =
+  proc aggregate*(agg: var Aggregate, elems: openArray[BaseType]) =
     ## Aggregates an array of elements `elems` into `agg`
     # Precondition n >= 1 is respected even if elems.len == 0
     for e in elems:
@@ -177,7 +177,7 @@ template genAggregatorProcedures(
     ## Canonicalize the Aggregate into a BaseType element
     dst.point.`blst _ p1_or_p2 _ to_affine`(src.point)
 
-  proc aggregateAll*(dst: var BaseType, elems: openarray[BaseType]): bool =
+  proc aggregateAll*(dst: var BaseType, elems: openArray[BaseType]): bool =
     ## Returns the aggregate of ``elems[0..<elems.len]``.
     ## Important:
     ##   `dst` is overwritten
@@ -189,7 +189,7 @@ template genAggregatorProcedures(
     if len(elems) == 0:
       # Spec precondition
       return false
-    var agg{.noInit.}: Aggregate
+    var agg{.noinit.}: Aggregate
     agg.init(elems[0])
     agg.aggregate(elems.toOpenArray(1, elems.high))
     dst.finish(agg)
@@ -208,8 +208,8 @@ genAggregatorProcedures(AggregatePublicKey, PublicKey, p1)
 #
 # For coreAggregateVerify, we introduce an internal streaming API that
 # can handle both
-# - publicKeys: openarray[PublicKey], messages: openarray[openarray[T]]
-# - pairs: openarray[tuple[publicKeys: seq[PublicKey], message: seq[byte or string]]]
+# - publicKeys: openArray[PublicKey], messages: openArray[openArray[T]]
+# - pairs: openArray[tuple[publicKeys: seq[PublicKey], message: seq[byte or string]]]
 # efficiently for the high-level API
 #
 # This also allows efficient interleaving of Proof-Of-Possession checks in the high-level API
@@ -217,7 +217,7 @@ genAggregatorProcedures(AggregatePublicKey, PublicKey, p1)
 func coreSign*[T: byte|char](
        signature: var (Signature or ProofOfPossession),
        secretKey: SecretKey,
-       message: openarray[T],
+       message: openArray[T],
        domainSepTag: static string) =
   ## Computes a signature or proof-of-possession
   ## from a secret key and a message
@@ -226,7 +226,7 @@ func coreSign*[T: byte|char](
   # 2. R = SK * Q
   # 3. signature = point_to_signature(R)
   # 4. return signature
-  var sig{.noInit.}: blst_p2
+  var sig{.noinit.}: blst_p2
   sig.blst_hash_to_g2(
     message,
     domainSepTag,
@@ -237,7 +237,7 @@ func coreSign*[T: byte|char](
 
 func coreVerify*[T: byte|char](
        publicKey: PublicKey,
-       message: openarray[T],
+       message: openArray[T],
        sig_or_proof: Signature or ProofOfPossession,
        domainSepTag: static string): bool {.inline.} =
   ## Check that a signature (or proof-of-possession) is valid
@@ -253,14 +253,14 @@ func coreVerify*[T: byte|char](
 
 func coreVerifyNoGroupCheck*[T: byte|char](
        publicKey: PublicKey,
-       message: openarray[T],
+       message: openArray[T],
        sig_or_proof: Signature or ProofOfPossession,
        domainSepTag: static string): bool {.noinline.} =
   ## Check that a signature (or proof-of-possession) is valid
   ## for a message (or serialized publickey) under the provided public key
   ## This assumes that the Public Key and Signatures
   ## have been pre group checked (likely on deserialization)
-  var ctx{.noInit.}: blst_pairing
+  var ctx{.noinit.}: blst_pairing
   ctx.blst_pairing_init(
     hash_or_encode = kHash,
     domainSepTag
@@ -311,7 +311,7 @@ func init*(ctx: var ContextCoreAggregateVerify) {.inline.} =
 func update*[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
-       message: openarray[T]): bool {.inline.} =
+       message: openArray[T]): bool {.inline.} =
   result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
     publicKey.point.unsafeAddr,
     pk_grpchk = false, # Already grouped checked
@@ -374,7 +374,7 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
     )
   elif signature is AggregateSignature:
     block:
-      var sig{.noInit.}: blst_p2_affine
+      var sig{.noinit.}: blst_p2_affine
       sig.blst_p2_to_affine(signature.point)
       result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
         PK = nil,
@@ -455,7 +455,7 @@ type
 func init*[T: char|byte](
        ctx: var ContextMultiAggregateVerify,
        secureRandomBytes: array[32, byte],
-       threadSepTag: openarray[T]
+       threadSepTag: openArray[T]
      ) =
   ## initialize a multi-signature aggregate verification context
   ## This requires cryptographically secure random bytes
@@ -485,7 +485,7 @@ func init*[T: char|byte](
 func update*[T: char|byte](
          ctx: var ContextMultiAggregateVerify,
          publicKey: PublicKey,
-         message: openarray[T],
+         message: openArray[T],
          signature: Signature
        ): bool =
   ## Add a (public key, message, signature) triplet
@@ -518,7 +518,7 @@ func update*[T: char|byte](
   # We only use the first 8 bytes for blinding
   # but use the full 32 bytes to derive new random scalar
   const blindingBits = 64
-  var blindingScalar {.noInit.}: blst_scalar
+  var blindingScalar {.noinit.}: blst_scalar
   block: # Warning: Rolling my own crypto
     let blindingAsU64 = cast[ptr uint64](ctx.secureBlinding.addr)
     let blindingAsArray = cast[ptr array[32, byte]](ctx.secureBlinding.addr)
