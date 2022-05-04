@@ -96,17 +96,9 @@ func `==`*(a, b: SecretKey): bool {.error: "Comparing secret keys is not allowed
 func `==`*(a, b: PublicKey or Signature or ProofOfPossession): bool {.inline.} =
   ## Check if 2 BLS signature scheme objects are equal
   when a.point is blst_p1_affine:
-    result = bool(
-      blst_p1_affine_is_equal(
-        a.point, b.point
-      )
-    )
+    bool blst_p1_affine_is_equal(a.point, b.point)
   else:
-    result = bool(
-      blst_p2_affine_is_equal(
-        a.point, b.point
-      )
-    )
+    bool blst_p2_affine_is_equal(a.point, b.point)
 
 # IO
 # ----------------------------------------------------------------------
@@ -242,7 +234,7 @@ func coreVerify*[T: byte|char](
        domainSepTag: static string): bool {.inline.} =
   ## Check that a signature (or proof-of-possession) is valid
   ## for a message (or serialized publickey) under the provided public key
-  result = BLST_SUCCESS == blst_core_verify_pk_in_g1(
+  BLST_SUCCESS == blst_core_verify_pk_in_g1(
     publicKey.point,
     sig_or_proof.point,
     hash_or_encode = kHash,
@@ -277,7 +269,7 @@ func coreVerifyNoGroupCheck*[T: byte|char](
     return false
 
   ctx.blst_pairing_commit()
-  result = bool ctx.blst_pairing_finalverify(nil)
+  bool ctx.blst_pairing_finalverify(nil)
 
 # Core aggregate operations
 # Aggregate Batch of (Publickeys, Messages, Signatures)
@@ -312,7 +304,7 @@ func update*[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
        message: openArray[T]): bool {.inline.} =
-  result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
+  BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
     publicKey.point.unsafeAddr,
     pk_grpchk = false, # Already grouped checked
     signature = nil,
@@ -331,7 +323,7 @@ func commit(ctx: var ContextCoreAggregateVerify) {.inline.} =
 
 func finalVerify(ctx: var ContextCoreAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
-  result = bool ctx.c.blst_pairing_finalverify(nil)
+  bool ctx.c.blst_pairing_finalverify(nil)
 
 func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or AggregateSignature): bool =
   # Implementation strategy
@@ -562,3 +554,19 @@ func merge*(
 func finalVerify*(ctx: var ContextMultiAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
   result = bool ctx.c.blst_pairing_finalverify(nil)
+
+func getScalar*(sk: SecretKey): blst_scalar =
+  return sk.scalar
+
+func fromFr*(t: typedesc[SecretKey], pt: blst_fr): SecretKey =
+  var transformed: blst_scalar
+  transformed.blst_scalar_from_fr(pt)
+  SecretKey(scalar: transformed)
+
+func getPoint*(sig: Signature): blst_p2_affine =
+  return sig.point
+
+func fromP2*(s: typedesc[Signature], pt: blst_p2): Signature =
+  var transformed: blst_p2_affine
+  transformed.blst_p2_to_affine(pt)
+  Signature(point: transformed)

@@ -7,7 +7,7 @@ export
 const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "ef-bls12381-vectors-v0.1.1"
 
 proc parseTest*(file: string): JsonNode =
-  result = json.parseFile(file)
+  json.parseFile(file)
 
 const SkippedTests = [
   # For genericity, requires successful deserialization of infinity G1 points,

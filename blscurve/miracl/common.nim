@@ -77,7 +77,7 @@ proc zero*(a: var BIG_384) {.inline.} =
 
 proc bitsCount*(a: BIG_384): int {.inline.} =
   ## Returns number of bits in big integer ``a``.
-  result = BIG_384_nbits(a)
+  BIG_384_nbits(a)
 
 proc copy*(dst: var BIG_384, src: BIG_384) {.inline.} =
   ## Copy value if big integer ``src`` to ``dst``.
@@ -134,7 +134,7 @@ proc sqr*(x: FP2_BLS12381): FP2_BLS12381 {.inline.} =
 
 func isSquare*(a: FP2_BLS12381): bool {.inline.} =
   ## Returns true if ``a`` is a square in the FP2 extension field
-  result = FP2_BLS12381_qr(unsafeAddr a) == 1
+  FP2_BLS12381_qr(unsafeAddr a) == 1
 
 proc sqrt*(a: var FP2_BLS12381, b: FP2_BLS12381): bool {.inline.} =
   ## ``a ≡ sqrt(b) (mod q)``
@@ -160,15 +160,15 @@ proc cmp*(a: BIG_384, b: BIG_384): int {.inline.} =
   ## Compares two big integers, inputs must be normalized externally
   ##
   ## Returns ``-1`` if ``a < b``, ``0`` if ``a == b``, ``1`` if ``a > b``
-  result = int(BIG_384_comp(a, b))
+  int BIG_384_comp(a, b)
 
 proc iszilch*(a: BIG_384): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
-  result = bool(BIG_384_iszilch(a))
+  bool BIG_384_iszilch(a)
 
 proc iszilch*(a: FP_BLS12381): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
-  result = (FP_BLS12381_iszilch(unsafeAddr a) == 1)
+  FP_BLS12381_iszilch(unsafeAddr a) == 1
 
 proc cmp*(a: FP_BLS12381, b: FP_BLS12381): int {.inline.} =
   ## Compares two FP field members
@@ -177,7 +177,7 @@ proc cmp*(a: FP_BLS12381, b: FP_BLS12381): int {.inline.} =
   var ab, bb: BIG_384
   FP_BLS12381_redc(ab, unsafeAddr a)
   FP_BLS12381_redc(bb, unsafeAddr b)
-  result = cmp(ab, bb)
+  cmp(ab, bb)
 
 proc cmp*(a: FP2_BLS12381, b: FP2_BLS12381): int {.inline.} =
   ## Compares two FP2 field members.
@@ -228,12 +228,12 @@ proc inf*(a: var ECP_BLS12381) {.inline.} =
 proc isinf*(a: ECP_BLS12381): bool {.inline.} =
   ## Check if ``a`` is infinite.
   var tmp = a
-  result = (ECP_BLS12381_isinf(addr tmp) != 0)
+  ECP_BLS12381_isinf(addr tmp) != 0
 
 proc isinf*(a: ECP2_BLS12381): bool {.inline.} =
   ## Check if ``a`` is infinite.
   var tmp = a
-  result = (ECP2_BLS12381_isinf(addr tmp) != 0)
+  ECP2_BLS12381_isinf(addr tmp) != 0
 
 proc inv*(a: FP2_BLS12381): FP2_BLS12381 {.inline.} =
   ## Returns the reciprocal copy of ``a``
@@ -246,7 +246,7 @@ proc rhs*(x: FP2_BLS12381): FP2_BLS12381 {.inline.} =
 
 proc iszilch*(a: FP2_BLS12381): bool {.inline.} =
   ## Returns ``true`` if ``a`` is zero.
-  result = (FP2_BLS12381_iszilch(unsafeAddr a) == 1)
+  FP2_BLS12381_iszilch(unsafeAddr a) == 1
 
 proc cmov*(a: var FP2_BLS12381, b: FP2_BLS12381, c: bool) {.inline.} =
   ## Conditional copy of FP2 element (without branching)
@@ -267,17 +267,17 @@ proc parity*(a: FP2_BLS12381): int {.inline.} =
   ## Returns parity for ``a``.
   var t: BIG_384
   FP_BLS12381_redc(t, unsafeAddr a.a)
-  result = int(BIG_384_parity(t))
+  int BIG_384_parity(t)
 
 proc parity*(a: FP_BLS12381): int {.inline.} =
   ## Returns parity for ``a``.
   var t: BIG_384
   FP_BLS12381_redc(t, unsafeAddr a)
-  result = int(BIG_384_parity(t))
+  int BIG_384_parity(t)
 
 proc parity*(a: BIG_384): int {.inline.} =
   ## Returns parity for ``a``.
-  result = int(BIG_384_parity(a))
+  int BIG_384_parity(a)
 
 func inf*(a: var ECP2_BLS12381) {.inline.} =
   ## Makes point ``a`` infinite.
@@ -322,31 +322,31 @@ proc mul*(a: var ECP_BLS12381, b: BIG_384) {.inline.} =
 
 proc get*(a: ECP2_BLS12381, x, y: var FP2_BLS12381): int {.inline.} =
   ## Get coordinates ``x`` and ``y`` from point ``a``.
-  result = int(ECP2_BLS12381_get(addr x, addr y, unsafeAddr a))
+  int ECP2_BLS12381_get(addr x, addr y, unsafeAddr a)
 
 proc get*(a: ECP_BLS12381, x, y: var BIG_384): int {.inline.} =
   ## Get coordinates ``x`` and ``y`` from point ``a``.
-  result = int(ECP_BLS12381_get(x, y, unsafeAddr a))
+  int ECP_BLS12381_get(x, y, unsafeAddr a)
 
 proc `==`*(a, b: ECP_BLS12381): bool {.inline.} =
   ## Compare points ``a`` and ``b`` in ECP Group.
-  result = (ECP_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  ECP_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1
 
 proc `==`*(a, b: ECP2_BLS12381): bool {.inline.} =
   ## Compare points ``a`` and ``b`` in ECP2 Group.
-  result = (ECP2_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  ECP2_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1
 
 proc `==`*(a, b: FP_BLS12381): bool {.inline.} =
   ## Compare field elements over FP.
-  result = (FP_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  FP_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1
 
 proc `==`*(a, b: FP2_BLS12381): bool {.inline.} =
   ## Compare field elements over FP2.
-  result = (FP2_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  FP2_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1
 
 proc `==`*(a, b: FP12_BLS12381): bool {.inline.} =
   ## Compare field elements over FP12.
-  result = (FP12_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1)
+  FP12_BLS12381_equals(unsafeAddr a, unsafeAddr b) == 1
 
 proc `$`*(a: BIG_384): string =
   ## Returns string hexadecimal representation of big integer ``a``.
@@ -372,7 +372,7 @@ proc `$`*(r: FP_BLS12381): string =
   ## Return string representation of ``FP_BLS12381``.
   var c: BIG_384
   FP_BLS12381_redc(c, unsafeAddr r)
-  result = $c
+  $c
 
 proc `$`*(w: FP2_BLS12381): string =
   ## Return string representation of ``FP2_BLS12381``.
@@ -497,9 +497,9 @@ proc generator2*(): ECP2_BLS12381 {.inline.} =
 proc isOnCurve*(x, y: FP_BLS12381 or FP2_BLS12381): bool =
   ## Returns ``true`` if point is on curve or points to infinite.
   if x.iszilch() and y.iszilch():
-    result = true
+    true
   else:
-    result = (sqr(y) == rhs(x))
+    sqr(y) == rhs(x)
 
 proc toBytes*(a: BIG_384, res: var openArray[byte]): bool =
   ## Serialize big integer ``a`` to ``res``. Length of ``res`` array
@@ -515,9 +515,9 @@ proc toBytes*(a: BIG_384, res: var openArray[byte]): bool =
     for i in countdown(MODBYTES_384 - 1, 0):
       res[i] = byte(c[0] and 0xFF)
       discard BIG_384_fshr(c, 8)
-    result = true
+    true
   else:
-    result = false
+    false
 
 proc getBytes*(a: BIG_384): array[MODBYTES_384, byte] =
   ## Serialize big integer ``a`` and return array of bytes.
@@ -536,7 +536,7 @@ func fromBytes*(res: var BIG_384, a: openArray[byte]): bool =
   for i in 0..<length:
     discard BIG_384_fshl(res, 8)
     res[0] = res[0] + cast[Chunk](a[i])
-  result = true
+  true
 
 func fromBytes*(res: var DBIG_384, a: openArray[byte]): bool =
   ## Unserialize double big integer from ``a`` to ``res``.
@@ -548,7 +548,7 @@ func fromBytes*(res: var DBIG_384, a: openArray[byte]): bool =
   for rawByte in a:
     BIG_384_dshl(res, 8)
     res[0] = res[0] + cast[Chunk](rawByte)
-  result = true
+  true
 
 func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
   ## Unserialize big integer from hexadecimal string ``a`` to ``res``.
@@ -575,7 +575,7 @@ proc toBytes*(point: ECP2_BLS12381, res: var openArray[byte]): bool =
     if point.get(x, y) == -1:
       zeroMem(addr res[0], MODBYTES_384 * 2)
       res[0] = res[0] or (1'u8 shl 7) or (1'u8 shl 6)
-      result = true
+      true
     else:
       FP_BLS12381_redc(x0, addr x.a)
       FP_BLS12381_redc(x1, addr x.b)
@@ -585,9 +585,9 @@ proc toBytes*(point: ECP2_BLS12381, res: var openArray[byte]): bool =
       res[0] = res[0] or (1'u8 shl 7)
       if cmp(y, negy) > 0:
         res[0] = res[0] or (1'u8 shl 5)
-      result = true
+      true
   else:
-    result = false
+    false
 
 proc getBytes*(point: ECP2_BLS12381): array[MODBYTES_384 * 2, byte] =
   ## Serialize ECP2(G2) point ``point`` and return array of bytes.
@@ -670,7 +670,7 @@ proc toBytes*(point: ECP_BLS12381, res: var openArray[byte]): bool =
     if parity == -1:
       zeroMem(addr res[0], MODBYTES_384)
       res[0] = res[0] or (1'u8 shl 7) or (1'u8 shl 6)
-      result = true
+      true
     else:
       var ny = nres(y)
       var negy = ny.neg()
@@ -679,9 +679,9 @@ proc toBytes*(point: ECP_BLS12381, res: var openArray[byte]): bool =
       if cmp(ny, negy) > 0:
         res[0] = res[0] or (1'u8 shl 5)
       res[0] = res[0] or (1'u8 shl 7)
-      result = true
+      true
   else:
-    result = false
+    false
 
 proc getBytes*(point: ECP_BLS12381): array[MODBYTES_384, byte] =
   ## Serialize ECP(G1) point ``point`` and return array of bytes.
@@ -755,9 +755,7 @@ proc doublePairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
   PAIR_BLS12381_double_ate(addr v, unsafeAddr pointG2_1, addr npoint,
                          unsafeAddr pointG2_2, unsafeAddr pointG1_2)
   PAIR_BLS12381_fexp(addr v)
-
-  if FP12_BLS12381_isunity(addr v) == 1:
-    result = true
+  FP12_BLS12381_isunity(addr v) == 1
 
 proc multiPairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
                    pointG2_2: GroupG2, pointG1_2: GroupG1): bool =
@@ -770,6 +768,4 @@ proc multiPairing*(pointG2_1: GroupG2, pointG1_1: GroupG1,
   PAIR_BLS12381_another(addr r[0], unsafeAddr pointG2_2, unsafeAddr pointG1_2)
   PAIR_BLS12381_miller(addr v, addr r[0])
   PAIR_BLS12381_fexp(addr v)
-
-  if FP12_BLS12381_isunity(addr v) == 1:
-    result = true
+  FP12_BLS12381_isunity(addr v) == 1

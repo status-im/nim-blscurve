@@ -7,7 +7,8 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-import bls_backend
+import
+  bls_backend
 
 export
   BLS_BACKEND, BlsBackendKind,
@@ -21,15 +22,22 @@ export
 
 # TODO - MIRACL implementation
 when BLS_BACKEND == BLST:
-  export exportUncompressed
+  export
+    exportUncompressed,
+    ID, recover, genSecretShare, fromUint32, add
 
 import bls_sig_min_pubkey
 
 export
   sign,
-  verify, aggregateVerify, fastAggregateVerify
+  verify,
+  aggregateVerify,
+  fastAggregateVerify
 
 when BLS_BACKEND == BLST:
+  import ./blst/blst_recovery
+  export blst_recovery
+
   import ./blst/sha256_abi
   export sha256_abi
 

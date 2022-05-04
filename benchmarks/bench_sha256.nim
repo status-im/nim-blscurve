@@ -37,5 +37,4 @@ when isMainModule:
       benchSHA256_nimcrypto(msg5MB, "5MB", 16)
       benchSHA256_blst(msg5MB, "5MB", 16)
 
-
   main()

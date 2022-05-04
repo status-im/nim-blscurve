@@ -21,7 +21,7 @@ proc cpuName*(): string =
     cpuID(eaxi = 0x80000002'i32, ecxi = 0),
     cpuID(eaxi = 0x80000003'i32, ecxi = 0),
     cpuID(eaxi = 0x80000004'i32, ecxi = 0)])
-  result = $cast[cstring](addr leaves[0])
+  $cast[cstring](addr leaves[0])
 
 # Counting cycles
 # -------------------------------------------------------

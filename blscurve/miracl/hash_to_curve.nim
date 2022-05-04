@@ -50,7 +50,6 @@ func dstToDSTprime(dst: string): seq[byte] =
   for ch in dst:
     result.add byte(ch)
   result.add byte(dst.len)
-  result
 
 func expandMessageXMD[B: byte|char, len_in_bytes: static int](
        H: typedesc,
@@ -427,7 +426,7 @@ func mapToCurveG2*(u: FP2_BLS12381): ECP2_BLS12381 =
   # Hash to a curve isogenous to G2 BLS12-381
   let pointPrime = mapToIsoCurveSimpleSWU_G2(u)
   # 3-isogeny map P'(x', y') to G2 with coordinate P(x, y)
-  result = isogeny_map_G2(pointPrime.x, pointPrime.y)
+  isogeny_map_G2(pointPrime.x, pointPrime.y)
 
 func clearCofactor*(P: var ECP2_BLS12381) =
   ## From any point on the elliptic curve of G2 of BLS12-381

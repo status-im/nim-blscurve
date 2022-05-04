@@ -76,15 +76,15 @@ func fromBytesKnownOnCurve*[T: PublicKey|Signature|ProofOfPossession](
   ## The point is known to be on curve:
   ## - Public key are not checked for infinity points
   ## - PublicKey, Signature, Proof of possessions are not subgroup checked
-  result = obj.point.fromBytes(raw)
+  obj.point.fromBytes(raw)
 
 func toHex*(obj: SecretKey|PublicKey|Signature|ProofOfPossession): string {.inline.} =
   ## Return the hex representation of a BLS signature scheme object
   ## Signature and Proof-of-posessions are serialized in compressed form
   when obj is SecretKey:
-    result = obj.intVal.toHex()
+    obj.intVal.toHex()
   else:
-    result = obj.point.toHex()
+    obj.point.toHex()
 
 func serialize*(
        dst: var openArray[byte],
@@ -94,9 +94,9 @@ func serialize*(
   ## Returns `true` if the export is successful, `false` otherwise
   when obj is SecretKey:
     # TODO: Test if dst is 32 bytes instead of 48 bytes
-    result = obj.intVal.toBytes(dst)
+    obj.intVal.toBytes(dst)
   else:
-    result = obj.point.toBytes(dst)
+    obj.point.toBytes(dst)
 
 const
   RawSecretKeySize = MODBYTES_384 # TODO should be 32

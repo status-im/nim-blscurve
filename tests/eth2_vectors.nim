@@ -12,7 +12,7 @@
 
 import
   # Standard library
-  json, strutils, os, unittest,
+  std/[json, strutils, os, unittest],
   # Status libraries
   stew/byteutils,
   # Public API
@@ -367,7 +367,7 @@ when BLS_BACKEND == BLST and compileOption("threads"):
     var batch: seq[SignatureSet]
 
 
-    proc hash[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.}=
+    proc hash[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.} =
       result.bls_sha256_digest(message)
 
     proc asArray[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.}=

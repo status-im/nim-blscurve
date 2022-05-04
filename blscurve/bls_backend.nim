@@ -59,8 +59,8 @@ else:
   const BLS_BACKEND* = Miracl
 
 when BLS_BACKEND == BLST:
-  import ./blst/blst_min_pubkey_sig_core
-  export blst_min_pubkey_sig_core
+  import ./blst/[blst_min_pubkey_sig_core, blst_recovery]
+  export blst_min_pubkey_sig_core, blst_recovery
 else:
   import ./miracl/miracl_min_pubkey_sig_core
   export miracl_min_pubkey_sig_core

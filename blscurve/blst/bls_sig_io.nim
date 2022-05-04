@@ -37,7 +37,7 @@ func toHex*(
     var bytes{.noinit.}: array[size, byte]
     bytes.blst_p2_compress(obj.point)
 
-  result = bytes.toHex()
+  bytes.toHex()
 
 func fromBytes*(
        obj: var (Signature|ProofOfPossession),
@@ -95,8 +95,8 @@ func fromBytes*(
   # Infinity public keys are not allowed
   if result:
     result = not bool obj.point.blst_p1_affine_is_inf()
-  if result:
-    result = bool obj.point.blst_p1_affine_in_g1()
+    if result:
+      result = bool obj.point.blst_p1_affine_in_g1()
 
 func fromBytesKnownOnCurve*(
        obj: var PublicKey,

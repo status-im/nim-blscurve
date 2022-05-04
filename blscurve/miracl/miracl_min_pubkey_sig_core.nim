@@ -104,7 +104,7 @@ func subgroupCheck*(P: GroupG1 or GroupG2): bool =
   var rP = P
   {.noSideEffect.}:
     rP.mul(CURVE_Order)
-  result = rP.isinf()
+  rP.isinf()
 
 func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ## Generates a public key from a secret key

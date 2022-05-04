@@ -55,7 +55,7 @@ func popProve*(secretKey: SecretKey): ProofOfPossession =
   var pubkey {.noinit.}: PublicKey
   let ok {.used.} = pubkey.publicFromSecret(secretKey)
   assert ok, "The secret key is INVALID, it should be initialized non-zero with keyGen or derive_child_secretKey"
-  result = popProve(secretKey, pubkey)
+  popProve(secretKey, pubkey)
 
 func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
   ## Verify if the proof-of-possession is valid for the public key
@@ -71,7 +71,7 @@ func popVerify*(publicKey: PublicKey, proof: ProofOfPossession): bool =
   # 9. If C1 == C2, return VALID, else return INVALID
   var pk{.noinit.}: array[48, byte]
   pk.rawFromPublic(publicKey)
-  result = coreVerifyNoGroupCheck(publicKey, pk, proof, DST_POP)
+  coreVerifyNoGroupCheck(publicKey, pk, proof, DST_POP)
 
 func sign*[T: byte|char](secretKey: SecretKey, message: openArray[T]): Signature =
   ## Computes a signature
@@ -134,7 +134,7 @@ func aggregateVerify*(
   ##
   ## Compared to the IETF spec API, it is modified to
   ## enforce proper usage of the proof-of-possessions
-  # Note: we can't have openArray of openarrays until openarrays are first-class value types
+  # Note: we can't have openArray of openArrays until openArrays are first-class value types
   if publicKeys.len != proofs.len or publicKeys.len != messages.len:
     return false
   if not(publicKeys.len >= 1):
@@ -161,7 +161,7 @@ func aggregateVerify*(
   ## The proof-of-possession MUST be verified before calling this function.
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
-  # Note: we can't have openArray of openarrays until openarrays are first-class value types
+  # Note: we can't have openArray of openArrays until openArrays are first-class value types
   if publicKeys.len != messages.len:
     return false
   if not(publicKeys.len >= 1):
@@ -185,7 +185,7 @@ func aggregateVerify*[T: string or seq[byte]](
   ## The proof-of-possession MUST be verified before calling this function.
   ## It is recommended to use the overload that accepts a proof-of-possession
   ## to enforce correct usage.
-  # Note: we can't have tuple of openarrays until openarrays are first-class value types
+  # Note: we can't have tuple of openArrays until openArrays are first-class value types
   if not(publicKey_msg_pairs.len >= 1):
     # Spec precondition
     return false

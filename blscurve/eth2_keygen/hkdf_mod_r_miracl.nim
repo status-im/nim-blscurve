@@ -22,7 +22,7 @@ func isZero(seckey: SecretKey): bool {.inline.} =
   ## Returns true if the secret key is zero
   ## Those are invalid
   # The cast is a workaround for private field access
-  result = cast[ptr BIG_384](seckey.unsafeAddr)[].iszilch()
+  cast[ptr BIG_384](seckey.unsafeAddr)[].iszilch()
 
 func hkdf_mod_r*(secretKey: var SecretKey, ikm: openArray[byte], key_info: string): bool =
   ## Ethereum 2 EIP-2333, extracts this from the BLS signature schemes

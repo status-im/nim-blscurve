@@ -53,6 +53,9 @@ task test, "Run all tests":
   # Internal SHA256
   test "-d:BLS_FORCE_BACKEND=blst", "tests/blst_sha256.nim"
 
+  # Key spliting and recovery
+  test "-d:BLS_FORCE_BACKEND=blst", "tests/secret_sharing.nim"
+
   when (defined(windows) and sizeof(pointer) == 4):
     # Eth2 vectors without batch verify
     test "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"

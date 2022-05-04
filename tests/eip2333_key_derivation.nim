@@ -9,7 +9,7 @@
 
 import
   # Standard library
-  unittest,
+  std/unittest,
   # Status libraries
   stew/byteutils, stint,
   # Public API
