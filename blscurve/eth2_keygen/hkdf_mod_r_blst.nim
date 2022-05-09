@@ -18,7 +18,7 @@ import
   # internal
   ../bls_backend,
   ../blst/[blst_lowlevel, sha256_abi],
-  ./hkdf
+  ./hkdf, ./blst_vect
 
 # Note: we can't use HKDF from BLST as it's tagged "static" and so unexported
 
@@ -61,23 +61,6 @@ func limbs_from_be_bytes(
 #endif
 """.}
 
-const srcPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/src"
-
-func redc_mont_256(
-      ret: var vec256,
-      a: vec512,
-      p: vec256,
-      n0: limb_t
-    ) {.importc, header: srcPath & "/vect.h".}
-  # Can use the redcx version with adx support
-
-func mul_mont_sparse_256(
-      ret: var vec256,
-      a, b, p: vec256,
-      n0: limb_t
-    ) {.importc, header: srcPath & "/vect.h".}
-  # Can use the mulx version with adx support
-
 # ----------------------------------------------------------------------
 
 func hkdf_mod_r*[T: char|byte](
@@ -118,8 +101,8 @@ func hkdf_mod_r*[T: char|byte](
     var dseckey: vec512
     limbs_from_be_bytes(dseckey, okm)
     {.noSideEffect.}: # Accessing C global constants wrapped in var
-      redc_mont_256(seckey[], dseckey, BLS12_381_r, r0)
-      mul_mont_sparse_256(seckey[], seckey[], BLS12_381_rRR, BLS12_381_r, r0)
+      redc_mont_256_nim(seckey[], dseckey, BLS12_381_r, r0)
+      mul_mont_sparse_256_nim(seckey[], seckey[], BLS12_381_rRR, BLS12_381_r, r0)
 
     if bool secretKey.vec_is_zero():
       salt.bls_sha256_digest(salt)
