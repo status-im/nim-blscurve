@@ -13,14 +13,14 @@
 ## unit to depend on the vect.h header.
 
 import
-  os
+  os, strutils
 
 type
   limb_t = uint64
   vec256 = array[4, limb_t]
   vec512 = array[8, limb_t]
 
-const srcPath = currentSourcePath.parentDir & "/../../vendor/blst/src"
+const srcPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/src"
 
 # XXX This was copied from hkdf_mod_r_blst.nim ithout much analysis
 #     whether it's actually needed.
