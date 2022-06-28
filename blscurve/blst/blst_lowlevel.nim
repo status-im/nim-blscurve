@@ -12,7 +12,7 @@ import std/os
 {.compile: "../../vendor/blst/build/assembly.S".}
 {.compile: "../../vendor/blst/src/server.c".}
 
-include ./blst_abi
+include ./blst_abi, ./blst_aux_abi
 
 # Extra
 # ------------------------------------------------------------------------------
