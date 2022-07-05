@@ -16,3 +16,5 @@ build/
 # Test vectors
 tests/ef-bls12381-vectors-v*/
 tests/tarballs/
+nimble.develop
+nimble.paths
