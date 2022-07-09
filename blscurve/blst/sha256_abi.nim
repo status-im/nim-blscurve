@@ -6,52 +6,42 @@ import std/[strutils, os]
 const srcPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/src"
 const headerPath = srcPath & "/sha256.h"
 
+{.pragma: importcFunc, cdecl, gcsafe, noSideEffect, raises: [].}
+
 type
   BLST_SHA256_CTX* {.
-    importc: "SHA256_CTX",
-    header: headerPath,
-    incompleteStruct, byref.} = object
+    importc: "SHA256_CTX", header: headerPath, bycopy.} = object
+    h: array[8, cuint]
+    N: culonglong
+    buf: array[64, byte]
+    off: csize_t
 
-## No Nim checks in OpenMP multithreading land, failure allocates an exception.
-## No stacktraces either.
-## For debugging a parallel OpenMP region, put "attachGC"
-## as the first statement after "omp_parallel"
-## Then you can echo strings and reenable stacktraces
-{.push stacktrace:off, checks: off.}
+## This module exports blst sha256 as C symbols, meaning a single definition
+## can be linked with LTO instead of a separate symbol for every TU - it also
+## allows using the library from `nlvm`
+{.compile: "blst_sha256.c".}
 
-# We need to make sure that calls go through this file
-# and don't directly use the underlying "sha256_init"
-# otherwise we can't enforce that "vect.h" is imported
-# everywhere sha256 are used.
-#
-# Furthermore that lead to unnecessary code duplication
-# we want the static header code to be instantiated only in this file.
-#
-# To do this we don't export directly the importc functions
-
-proc vec_zero(ret: pointer, num: csize_t)
-    {.importc, exportc, header: srcPath & "/vect.h", nodecl.}
 proc blst_sha256_init(ctx: var BLST_SHA256_CTX)
-     {.importc: "sha256_init", header: headerPath, cdecl.}
+      {.importc: "blst_sha256_init", header: headerPath, importcFunc.}
 proc blst_sha256_update[T: byte|char](
        ctx: var BLST_SHA256_CTX,
        input: openArray[T]
-     ){.importc: "sha256_update", header: headerPath, cdecl.}
+     ){.importc: "blst_sha256_update", header: headerPath, importcFunc.}
 proc blst_sha256_final(
        digest: var array[32, byte],
        ctx: var BLST_SHA256_CTX
-     ){.importc: "sha256_final", header: headerPath, cdecl.}
+     ){.importc: "blst_sha256_final", header: headerPath, importcFunc.}
 
-proc init*(ctx: var BLST_SHA256_CTX) =
+template init*(ctx: var BLST_SHA256_CTX) =
   blst_sha256_init(ctx)
 
-proc update*[T: byte|char](
+template update*[T: byte|char](
        ctx: var BLST_SHA256_CTX,
        input: openArray[T]
      ) =
   blst_sha256_update(ctx, input)
 
-proc finalize*(digest: var array[32, byte], ctx: var BLST_SHA256_CTX) =
+template finalize*(digest: var array[32, byte], ctx: var BLST_SHA256_CTX) =
   blst_sha256_final(digest, ctx)
 
 proc bls_sha256_digest*[T: byte|char](
