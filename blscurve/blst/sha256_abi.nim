@@ -21,30 +21,30 @@ type
 ## allows using the library from `nlvm`
 {.compile: "blst_sha256.c".}
 
-proc blst_sha256_init(ctx: var BLST_SHA256_CTX)
+func blst_sha256_init(ctx: var BLST_SHA256_CTX)
       {.importc: "blst_sha256_init", header: headerPath, importcFunc.}
-proc blst_sha256_update[T: byte|char](
+func blst_sha256_update[T: byte|char](
        ctx: var BLST_SHA256_CTX,
        input: openArray[T]
      ){.importc: "blst_sha256_update", header: headerPath, importcFunc.}
-proc blst_sha256_final(
+func blst_sha256_final(
        digest: var array[32, byte],
        ctx: var BLST_SHA256_CTX
      ){.importc: "blst_sha256_final", header: headerPath, importcFunc.}
 
-template init*(ctx: var BLST_SHA256_CTX) =
+func init*(ctx: var BLST_SHA256_CTX) =
   blst_sha256_init(ctx)
 
-template update*[T: byte|char](
+func update*[T: byte|char](
        ctx: var BLST_SHA256_CTX,
        input: openArray[T]
      ) =
   blst_sha256_update(ctx, input)
 
-template finalize*(digest: var array[32, byte], ctx: var BLST_SHA256_CTX) =
+func finalize*(digest: var array[32, byte], ctx: var BLST_SHA256_CTX) =
   blst_sha256_final(digest, ctx)
 
-proc bls_sha256_digest*[T: byte|char](
+func bls_sha256_digest*[T: byte|char](
        digest: var array[32, byte],
        input: openArray[T]) =
   var ctx{.noinit.}: BLST_SHA256_CTX
@@ -52,7 +52,7 @@ proc bls_sha256_digest*[T: byte|char](
   ctx.blst_sha256_update(input)
   digest.blst_sha256_final(ctx)
 
-proc bls_sha256_digest*[T, U: byte|char](
+func bls_sha256_digest*[T, U: byte|char](
        digest: var array[32, byte],
        input: openArray[T],
        sepTag: openArray[U]
