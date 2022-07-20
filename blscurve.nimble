@@ -10,7 +10,7 @@ installDirs = @["blscurve", "vendor"]
 installFiles = @["blscurve.nim"]
 
 ### Dependencies
-requires "nim >= 1.0.4",
+requires "nim >= 1.2.0",
          "nimcrypto",
          "stew",
          "https://github.com/status-im/nim-taskpools.git"
