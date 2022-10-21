@@ -16,21 +16,25 @@ type
     buf: array[64, byte]
     off: csize_t
 
+static:
+  # sanity check - should be guaranteed by Nim / C
+  doAssert sizeof(int) == sizeof(csize_t)
+
 ## This module exports blst sha256 as C symbols, meaning a single definition
 ## can be linked with LTO instead of a separate symbol for every TU - it also
 ## allows using the library from `nlvm`
 {.compile: "blst_sha256.c".}
 
 func blst_sha256_init(ctx: var BLST_SHA256_CTX)
-      {.importc: "blst_sha256_init", header: headerPath, importcFunc.}
-func blst_sha256_update[T: byte|char](
+      {.importc: "blst_sha256_init", importcFunc.}
+func blst_sha256_update(
        ctx: var BLST_SHA256_CTX,
-       input: openArray[T]
-     ){.importc: "blst_sha256_update", header: headerPath, importcFunc.}
+       input: pointer, len: csize_t
+     ){.importc: "blst_sha256_update", importcFunc.}
 func blst_sha256_final(
        digest: var array[32, byte],
        ctx: var BLST_SHA256_CTX
-     ){.importc: "blst_sha256_final", header: headerPath, importcFunc.}
+     ){.importc: "blst_sha256_final", importcFunc.}
 
 func init*(ctx: var BLST_SHA256_CTX) =
   blst_sha256_init(ctx)
@@ -39,7 +43,8 @@ func update*[T: byte|char](
        ctx: var BLST_SHA256_CTX,
        input: openArray[T]
      ) =
-  blst_sha256_update(ctx, input)
+  if input.len > 0:
+    blst_sha256_update(ctx, unsafeAddr input[0], input.len.csize_t)
 
 func finalize*(digest: var array[32, byte], ctx: var BLST_SHA256_CTX) =
   blst_sha256_final(digest, ctx)
@@ -49,7 +54,8 @@ func bls_sha256_digest*[T: byte|char](
        input: openArray[T]) =
   var ctx{.noinit.}: BLST_SHA256_CTX
   ctx.blst_sha256_init()
-  ctx.blst_sha256_update(input)
+  if input.len > 0:
+    ctx.blst_sha256_update(unsafeAddr input[0], input.len.csize_t)
   digest.blst_sha256_final(ctx)
 
 func bls_sha256_digest*[T, U: byte|char](
@@ -61,6 +67,8 @@ func bls_sha256_digest*[T, U: byte|char](
   # in ContextMultiAggregateVerify.init()
   var ctx{.noinit.}: BLST_SHA256_CTX
   ctx.blst_sha256_init()
-  ctx.blst_sha256_update(input)
-  ctx.blst_sha256_update(sepTag)
+  if input.len > 0:
+    ctx.blst_sha256_update(unsafeAddr input[0], input.len.csize_t)
+  if sepTag.len > 0:
+    ctx.blst_sha256_update(unsafeAddr sepTag[0], sepTag.len.csize_t)
   digest.blst_sha256_final(ctx)
