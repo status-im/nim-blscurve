@@ -121,7 +121,7 @@ when BLS_BACKEND == BLST:
       var sk: SecretKey
       var ikm: array[32, byte]
       ikm[0] = 0x12
-      discard ikm.keygen(pk, sk)
+      discard ikm.keyGen(pk, sk)
       (cast[blst_p1_affine](pk), cast[blst_scalar](sk))
     let msg = "Mr F was here"
     const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
@@ -183,7 +183,7 @@ else:
       var sk: SecretKey
       var ikm: array[32, byte]
       ikm[0] = 0x12
-      discard ikm.keygen(pk, sk)
+      discard ikm.keyGen(pk, sk)
       (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
     let msg = "Mr F was here"
     const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
@@ -212,7 +212,7 @@ else:
       var sk: SecretKey
       var ikm: array[32, byte]
       ikm[0] = 0x12
-      discard ikm.keygen(pk, sk)
+      discard ikm.keyGen(pk, sk)
       (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
     let msg = "Mr F was here"
     const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"

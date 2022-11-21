@@ -9,8 +9,8 @@ import
 # Curve operations
 benchScalarMultG1(1000)
 benchScalarMultG2(1000)
-benchEcAddG1(1000)
-benchEcAddG2(1000)
+benchECAddG1(1000)
+benchECAddG2(1000)
 separator()
 
 # Pairings
