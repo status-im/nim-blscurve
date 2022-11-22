@@ -163,14 +163,14 @@ when BLS_BACKEND == BLST:
     ctxSave[] = ctx[]
 
     ctx[].blst_pairing_commit()                     # Miller loop
-    let valid = ctx[].blst_pairing_finalVerify(nil) # Final Exponentiation
+    let valid = ctx[].blst_pairing_finalverify(nil) # Final Exponentiation
     doAssert bool valid
 
     # Pairing: e(Q, xP) == e(R, P)
     bench("Pairing (Miller loop + Final Exponentiation)", iters):
       ctx[] = ctxSave[]
       ctx[].blst_pairing_commit()                     # Miller loop
-      let valid = ctx[].blst_pairing_finalVerify(nil) # Final Exponentiation
+      let valid = ctx[].blst_pairing_finalverify(nil) # Final Exponentiation
       # doAssert bool valid
 
 else:
