@@ -1,7 +1,7 @@
 # Cpu Name
 # -------------------------------------------------------
 
-{.passC:"-std=gnu99".} # TODO may conflict with milagro "-std=c99"
+{.passc:"-std=gnu99".} # TODO may conflict with milagro "-std=c99"
 
 proc cpuID(eaxi, ecxi: int32): tuple[eax, ebx, ecx, edx: int32] =
   when defined(vcc):

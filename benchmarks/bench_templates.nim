@@ -65,14 +65,14 @@ proc report(op: string, start, stop: MonoTime, startClk, stopClk: int64, iters: 
     echo &"{op:<67}     {throughput:>15.3f} ops/s    {ns:>9} ns/op"
 
 template bench*(op: string, iters: int, body: untyped): untyped =
-  let start = getMonotime()
+  let start = getMonoTime()
   when SupportsGetTicks:
     let startClk = getTicks()
   for _ in 0 ..< iters:
     body
   when SupportsGetTicks:
     let stopClk = getTicks()
-  let stop = getMonotime()
+  let stop = getMonoTime()
 
   when not SupportsGetTicks:
     let startClk = -1'i64
