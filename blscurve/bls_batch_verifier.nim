@@ -199,7 +199,7 @@ when compileOption("threads"):
   proc reducePartialPairings(
         tp: Taskpool,
         contexts: ptr UncheckedArray[ContextMultiAggregateVerify[DST]],
-        start, stopEx: int): bool =
+        start, stopEx: int): bool {.gcsafe.} =
     ## Parallel logarithmic reduction of partial pairings
     ## start->stopEx describes an exclusive range
     ## of contexts to reduce.
