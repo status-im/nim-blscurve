@@ -203,7 +203,7 @@ when BLS_BACKEND == BLST:
     var secureBlindingBytes: array[32, byte]
     secureBlindingBytes.bls_sha256_digest("Mr F was here")
 
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init()
 
     bench("Serial batch verify " & $numSigs & " msgs by "& $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
@@ -223,7 +223,7 @@ when BLS_BACKEND == BLST:
       hashedMsg.bls_sha256_digest("msg" & $i)
       batch.add((pk, hashedMsg, sk.sign(hashedMsg)))
 
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var secureBlindingBytes: array[32, byte]
     secureBlindingBytes.bls_sha256_digest("Mr F was here")
 

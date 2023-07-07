@@ -67,7 +67,7 @@ suite "Batch verification":
     let (pubkey, seckey) = keyGen(123)
     let sig = seckey.sign(msg)
 
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     batch.add((pubkey, msg, sig))
@@ -76,7 +76,7 @@ suite "Batch verification":
       tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2 (pubkey, message, signature) triplets":
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     batch.addExample(1, "msg1")
@@ -87,7 +87,7 @@ suite "Batch verification":
       tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 - 1 = 15 (pubkey, message, signature) triplets":
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     for i in 0 ..< 15:
@@ -98,7 +98,7 @@ suite "Batch verification":
       tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 = 16 (pubkey, message, signature) triplets":
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     for i in 0 ..< 16:
@@ -109,7 +109,7 @@ suite "Batch verification":
       tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "Verify 2^4 + 1 = 17 (pubkey, message, signature) triplets":
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     for i in 0 ..< 17:
@@ -127,7 +127,7 @@ suite "Batch verification":
 
     let (pubkey2, seckey2) = keyGen(2)
 
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     batch.add((pubkey1, msg1, sig1))
@@ -204,7 +204,7 @@ suite "Batch forged signatures":
   var tp = Taskpool.new(numThreads = 4)
 
   wrappedTest "Single forged pair":
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     batch.genForgedPair(1, "msg1", 2, "msg2")
@@ -214,7 +214,7 @@ suite "Batch forged signatures":
       not tp.batchVerify(batch, fakeRandomBytes)
 
   wrappedTest "One forgery among many signatures":
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
     var rng = initRand(1234)
