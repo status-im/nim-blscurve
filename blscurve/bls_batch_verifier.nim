@@ -378,6 +378,34 @@ when compileOption("threads"):
 
   # Autoselect Batch Verifier
   # ----------------------------------------------------------------------
+  proc batchVerify*(
+        tp: Taskpool,
+        cache: ptr BatchedBLSVerifierCache,
+        setsPtr: ptr UncheckedArray[SignatureSet],
+        numSets: int,
+        secureRandomBytes: ptr array[32, byte]
+      ): bool =
+    ## Verify all signatures in batch at once.
+    ## Returns true if all signatures are correct
+    ## Returns false if there is at least one incorrect signature
+    ##
+    ## This requires securely generated random bytes
+    ## for scalar blinding
+    ## to defend against forged signatures that would not
+    ## verify individually but would verify while aggregated.
+    ##
+    ## The blinding scheme also assumes that the attacker cannot
+    ## resubmit 2^64 times forged (publickey, message, signature) triplets
+    ## against the same `secureRandomBytes`
+    when compileOption("threads"):
+      if tp.numThreads > 1 and numSets >= 3:
+        return tp.batchVerifyParallel(cache, setsPtr, numSets, secureRandomBytes)
+      else:
+        return cache[].batchVerifySerial(
+          setsPtr.toOpenArray(0, numSets - 1), secureRandomBytes[])
+    else:
+      return cache.batchVerifySerial(
+        setsPtr.toOpenArray(0, numSets - 1), secureRandomBytes[])
 
   proc batchVerify*(
         tp: Taskpool,
