@@ -363,7 +363,7 @@ when BLS_BACKEND == BLST and compileOption("threads"):
       signatures = seq[Signature].aggFrom(test, "signatures")
 
     var tp = Taskpool.new(numThreads = 4)
-    var cache: BatchedBLSVerifierCache
+    var cache = BatchedBLSVerifierCache.init(tp)
     var batch: seq[SignatureSet]
 
 
