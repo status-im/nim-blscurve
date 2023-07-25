@@ -14,8 +14,16 @@
 
 {.push raises: [].} # C functions don't raise
 
+const
+  GCC_Compatible = defined(gcc) or defined(clang) or defined(llvm_gcc)
+
 when not defined(cpp) or defined(objc) or defined(js):
-  {.passc: "-std=c99".}
+  when GCC_Compatible and (NimMajor, NimMinor) <= (1,6):
+    # nim-stint asm optimization is using
+    # gnu extensions
+    {.passc: "-std=gnu99".}
+  else:
+    {.passc: "-std=c99".}
 
 import strutils
 from os import DirSep
