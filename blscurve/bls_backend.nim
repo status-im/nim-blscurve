@@ -19,40 +19,15 @@ type BlsBackendKind* = enum
   Miracl
 
 const UseBLST = BLS_FORCE_BACKEND == "auto" or BLS_FORCE_BACKEND == "blst"
-const OnX86 = defined(i386) or defined(amd64)
-const OnARM = defined(arm) or defined(arm64)
 
 when UseBLST:
-  when OnX86:
-    import os, strutils
-    # BLST defaults to SSSE3 for SHA256 (Pentium 4, 2004). To disable that, we
-    # need a "portable" build.
-    #
-    # It also autodetects MULX and ADCX/ADOX for bigints (Intel Broadwell 2015,
-    # AMD Ryzen 2017) by looking at a C preprocessor define (__ADX__) set when
-    # "-march=native" or "-madx" are used on a CPU that supports this extension.
-    when defined(windows):
-      const GccDefines = gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c NUL").output
-    else:
-      const GccDefines = gorgeEx(getEnv("CC", "gcc") & " -march=native -dM -E -x c /dev/null").output
-    const BLSTuseSSSE3 {.intdefine.} = find(GccDefines, "SSSE3") != -1
-    when not BLSTuseSSSE3:
-      static: echo "BLST: not using SSSE3"
-      {.passC: "-D__BLST_PORTABLE__".}
-  elif OnARM:
-    # On ARM, BLST can use hardware SHA256.
-    # This is the case for all ARM 64-bit device except Raspberry Pis.
-    # BLST detects at compile-time the support via
-    # the __ARM_FEATURE_CRYPTO compile-time define
-    #
-    # It is set either with -march=native on a proper CPU
-    # or -march=armv8-a+crypto
-    # and can be disabled with -D__BLST_PORTABLE__
-
-    # {.passC: "-D__BLST_PORTABLE__".}
-    discard
+  when defined(amd64) or defined(arm64):
+    # BLST has assembly routines and detects the most profitable one at runtime
+    # when `__BLST_PORTABLE__` is set
+    {.passc: "-D__BLST_PORTABLE__".}
   else:
-    {.passC: "-D__BLST_NO_ASM__".}
+    # WASM and others - no specialised assembly code available
+    {.passc: "-D__BLST_NO_ASM__".}
   const BLS_BACKEND* = BLST
 else:
   # Miracl
