@@ -148,6 +148,31 @@ proc keyGen(): tuple[pk: PublicKey, sk: SecretKey] =
     b = byte benchRNG.rand(0xFF)
   doAssert ikm.keyGen(result.pk, result.sk)
 
+proc benchAggSigs*(numKeys, iters: int) =
+  ## Verification of N pubkeys signing for 1 message
+  let msg = "Mr F was here"
+
+  var validators = newSeq[PublicKey](numKeys)
+  var sigs = newSeq[Signature](numKeys)
+
+
+  for i in 0 ..< numKeys:
+    let (pk, sk) = keyGen()
+    validators[i] = pk
+
+    sigs[i] = sk.sign(msg)
+
+  bench("BLS agg " & $numKeys & " sigs", iters):
+    var aggSig: AggregateSignature
+    for i in 0..<sigs.len:
+      if i == 0:
+        aggSig.init(sigs[i])
+      else:
+        aggSig.aggregate(sigs[i])
+
+    var finalSig: Signature
+    finalSig.finish(aggSig)
+
 proc benchFastAggregateVerify*(numKeys, iters: int) =
   ## Verification of N pubkeys signing for 1 message
   let msg = "Mr F was here"
@@ -237,6 +262,7 @@ when isMainModule:
   benchDeserSig(1000)
   benchSign(1000)
   benchVerify(1000)
+  benchAggSigs(numKeys = 512, iters = 10)
   benchFastAggregateVerify(numKeys = 128, iters = 10)
 
   when BLS_BACKEND == BLST:
