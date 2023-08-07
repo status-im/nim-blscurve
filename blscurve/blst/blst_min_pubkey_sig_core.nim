@@ -188,7 +188,7 @@ template genAggregatorProcedures(
     return true
 
   proc subtractAll*(dst: var BaseType, elems: openArray[BaseType]) =
-    ## Subtracts all ``elems[0..<elems.len`` from ``dst``.
+    ## Subtracts all ``elems[0..<elems.len]`` from ``dst``.
     if len(elems) == 0:
       return
     var agg{.noinit.}: Aggregate
