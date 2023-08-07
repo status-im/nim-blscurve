@@ -23,7 +23,7 @@ export
 # TODO - MIRACL implementation
 when BLS_BACKEND == BLST:
   export
-    exportUncompressed,
+    exportUncompressed, subtractAll,
     ID, recover, genSecretShare, fromUint32, add
 
 import bls_sig_min_pubkey

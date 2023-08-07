@@ -187,6 +187,17 @@ template genAggregatorProcedures(
     dst.finish(agg)
     return true
 
+  proc subtractAll*(dst: var BaseType, elems: openArray[BaseType]) =
+    ## Subtracts all ``elems[0..<elems.len`` from ``dst``.
+    if len(elems) == 0:
+      return
+    var agg{.noinit.}: Aggregate
+    agg.init(elems[0])
+    agg.aggregate(elems.toOpenArray(1, elems.high))
+    agg.point.`blst _ p1_or_p2 _ cneg`(cbit = 1)
+    agg.aggregate(dst)
+    dst.finish(agg)
+
 genAggregatorProcedures(AggregateSignature, Signature, p2)
 genAggregatorProcedures(AggregatePublicKey, PublicKey, p1)
 

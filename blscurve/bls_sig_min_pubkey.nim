@@ -256,3 +256,18 @@ func fastAggregateVerify*[T: byte|char](
   if not aggAffine.aggregateAll(publicKeys):
     return false
   return coreVerifyNoGroupCheck(aggAffine, message, signature, DST)
+
+func fastAggregateVerify*[T: byte|char](
+        fullParticipationAggregatePublicKey: PublicKey,
+        nonParticipatingPublicKeys: openArray[PublicKey],
+        message: openArray[T],
+        signature: Signature
+      ): bool =
+  ## Verify the aggregate of multiple signatures on the same message
+  ## This function is faster than AggregateVerify
+  ##
+  ## The proof-of-possession MUST be verified before calling this function.
+  ## The caller must ensure that at least one participating public key remains.
+  var aggAffine = fullParticipationAggregatePublicKey
+  aggAffine.subtractAll(nonParticipatingPublicKeys)
+  coreVerifyNoGroupCheck(aggAffine, message, signature, DST)
