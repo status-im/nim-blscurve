@@ -14,6 +14,8 @@ import
 when compileOption("threads"):
   import taskpools, ./parallel_chunks
 
+{.push raises: [].}
+
 # BLS Batch Verifier
 # ----------------------------------------------------------------------
 # Nim supports for view types and openArray in object fields is experimental
