@@ -254,6 +254,13 @@ testGen(aggregate, test):
       "   computed: " & libAggSig.toHex() & "\n" &
       "   expected: " & expectedAgg.val.toHex()
 
+    when BLS_BACKEND == BLST:
+      libAggSig.subtractAll(sigs.val.toOpenArray(1, sigs.val.high))
+      doAssert libAggSig == sigs.val[0], block:
+        "\nSubtracting all but one signature differs from expected \n" &
+        "   computed: " & libAggSig.toHex() & "\n" &
+        "   expected: " & sigs.val[0].toHex()
+
 testGen(fast_aggregate_verify, test):
   let
     expected = bool.getFrom(test, Output)
