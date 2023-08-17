@@ -54,31 +54,21 @@ type
 
     # Per-batch contexts for multithreaded batch verification
     batchContexts: seq[ContextMultiAggregateVerify[DST]]
-    when compileOption("threads"):
-      flows: seq[Flowvar[bool]]
 
 # Serial Batch Verifier
 # ----------------------------------------------------------------------
 
 func init*(T: type BatchedBLSVerifierCache): T =
   ## Initialise the cache for single-threaded usage
-  when compileOption("threads"):
-    BatchedBLSVerifierCache(
-      batchContexts: newSeq[ContextMultiAggregateVerify[DST]](1),
-      flows: @[]
-    )
-  else:
-    BatchedBLSVerifierCache(
-      batchContexts: newSeq[ContextMultiAggregateVerify[DST]](1),
-    )
-
+  BatchedBLSVerifierCache(
+    batchContexts: newSeq[ContextMultiAggregateVerify[DST]](1),
+  )
 
 when compileOption("threads"):
   func init*(T: type BatchedBLSVerifierCache, tp: Taskpool): T =
     ## Initialise the cache for multi-threaded usage
     BatchedBLSVerifierCache(
       batchContexts: newSeq[ContextMultiAggregateVerify[DST]](tp.numThreads),
-      flows: newSeq[Flowvar[bool]](tp.numThreads)
     )
 
 func batchVerifySerial*(
