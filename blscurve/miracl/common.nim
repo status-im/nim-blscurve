@@ -535,7 +535,7 @@ func fromBytes*(res: var BIG_384, a: openArray[byte]): bool =
   let length = if len(a) > MODBYTES_384: MODBYTES_384 else: len(a)
   for i in 0..<length:
     discard BIG_384_fshl(res, 8)
-    res[0] = res[0] + cast[Chunk](a[i])
+    res[0] = res[0] + Chunk(a[i])
   true
 
 func fromBytes*(res: var DBIG_384, a: openArray[byte]): bool =
@@ -547,7 +547,7 @@ func fromBytes*(res: var DBIG_384, a: openArray[byte]): bool =
   zeroMem(res.addr, sizeof(res))
   for rawByte in a:
     BIG_384_dshl(res, 8)
-    res[0] = res[0] + cast[Chunk](rawByte)
+    res[0] = res[0] + Chunk(rawByte)
   true
 
 func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
@@ -556,7 +556,7 @@ func fromHex*(res: var BIG_384, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successful.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError, IndexError:
+  except ValueError:
     # TODO: change to exception-free
     # https://github.com/status-im/nim-blscurve/issues/57
     false
@@ -651,7 +651,7 @@ func fromHex*(res: var ECP2_BLS12381, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successfull.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError, IndexError:
+  except ValueError:
     # TODO: change to exception-free
     # https://github.com/status-im/nim-blscurve/issues/57
     false
@@ -737,7 +737,7 @@ func fromHex*(res: var ECP_BLS12381, a: string): bool {.inline.} =
   ## Returns ``true`` if conversion was successfull.
   try:
     fromBytes(res, hexToSeqByte(a))
-  except ValueError, IndexError:
+  except ValueError:
     # TODO: change to exception-free
     # https://github.com/status-im/nim-blscurve/issues/57
     false
