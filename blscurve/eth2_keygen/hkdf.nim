@@ -82,8 +82,8 @@
 
 import nimcrypto/hmac
 
-func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
-                     prk: var MDigest[T.bits],
+func hkdfExtract*[T;M;S,I: char|byte](ctx: var HMAC[T],
+                     prk: var M, # MDigest[T.bits]
                      salt: openArray[S],
                      ikm: openArray[I],
                      append: static openArray[I]
@@ -108,6 +108,9 @@ func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
   ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].
 
   mixin init, update, finish
+
+  # TODO https://github.com/nim-lang/Nim/issues/22494
+  static: doAssert M.bits == T.bits
   ctx.init(salt)
   ctx.update(ikm)
   when append.len > 0:
@@ -116,8 +119,8 @@ func hkdfExtract*[T;S,I: char|byte](ctx: var HMAC[T],
 
   # ctx.clear() - TODO: very expensive
 
-func hkdfExpand*[T;I,A: char|byte](ctx: var HMAC[T],
-                    prk: MDigest[T.bits],
+func hkdfExpand*[T;M;I,A: char|byte](ctx: var HMAC[T],
+                    prk: M, # MDigest[T.bits]
                     info: openArray[I],
                     append: static openArray[A],
                     output: var openArray[byte]
@@ -141,6 +144,8 @@ func hkdfExpand*[T;I,A: char|byte](ctx: var HMAC[T],
   ## - ctx: a HMAC["cryptographic-hash"] context, for example HMAC[sha256].
   mixin init, update, finish
 
+  # TODO https://github.com/nim-lang/Nim/issues/22494
+  static: doAssert M.bits == T.bits
   const HashLen = T.bits div 8
 
   static: doAssert T.bits >= 0
