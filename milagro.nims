@@ -1,13 +1,13 @@
 #!/usr/bin/env -S nim e
 mode = ScriptMode.Verbose
 
-## ## This script is Nim's replacement for config[32/64].py files of Milagro
+## This script is Nim's replacement for config[32/64].py files of Milagro
 ## library. It performs configuration of BLS381 curve for both 32bit and
 ## 64bit limbs. It also removes random/hash/crypto related functions.
 ##
 ## Usage:
 ##
-## nim -e milagro.nims <srcpath> <dstpath>
+## nim e milagro.nims <srcpath> <dstpath>
 ##
 ## <srcpath> - source path of milagro's C sources. By default current working
 ## path will be used.
