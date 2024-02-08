@@ -13,9 +13,7 @@ import
   # Status libraries
   stew/byteutils, stint,
   # Public API
-  ../blscurve,
-  # Test helpers
-  ./test_locator
+  ../blscurve
 
 proc toDecimal(sk: SecretKey): string =
   # The spec does not use hex but decimal ...

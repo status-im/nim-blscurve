@@ -4,7 +4,7 @@ import
 export
   os, json
 
-const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "ef-bls12381-vectors-v0.1.1"
+const ETH2_DIR = currentSourcePath.rsplit(DirSep, 1)[0] / "ef-bls12381-vectors-v0.1.2"
 
 proc parseTest*(file: string): JsonNode =
   json.parseFile(file)
