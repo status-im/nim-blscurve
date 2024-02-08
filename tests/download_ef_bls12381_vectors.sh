@@ -3,7 +3,7 @@
 set -eu
 
 VERSIONS=(
-  "v0.1.1"
+  "v0.1.2"
 )
 FLAVOURS=(
   "bls_tests_json"

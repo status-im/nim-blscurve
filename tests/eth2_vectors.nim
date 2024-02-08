@@ -369,43 +369,51 @@ when BLS_BACKEND == BLST and compileOption("threads"):
       messages = seq[seq[byte]].aggFrom(test, "messages")
       signatures = seq[Signature].aggFrom(test, "signatures")
 
-    var tp = Taskpool.new(numThreads = 4)
-    var cache = BatchedBLSVerifierCache.init(tp)
-    var batch: seq[SignatureSet]
+    if not pubkeys.ok:
+      # Infinity pubkey in the mix
+      doAssert not expected.val
+
+    else:
+
+      var tp = Taskpool.new(numThreads = 4)
+      var cache = BatchedBLSVerifierCache.init(tp)
+      var batch: seq[SignatureSet]
 
 
-    proc hash[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.} =
-      result.bls_sha256_digest(message)
+      proc hash[T: byte|char](
+          message: openArray[T]): array[32, byte] {.noinit.} =
+        result.bls_sha256_digest(message)
 
-    proc asArray[T: byte|char](message: openArray[T]): array[32, byte] {.noinit.}=
-      result[0 ..< 32] = message
+      proc asArray[T: byte|char](
+          message: openArray[T]): array[32, byte] {.noinit.}=
+        result[0 ..< 32] = message
 
-    let fakeRandomBytes = hash"Mr F was here"
+      let fakeRandomBytes = hash"Mr F was here"
 
-    # Deserialization is OK
-    doAssert pubkeys.ok
-    doAssert messages.ok
-    doAssert signatures.ok
-    doAssert pubkeys.val.len == messages.val.len
-    doAssert pubkeys.val.len == signatures.val.len
+      # Deserialization is OK
+      doAssert pubkeys.ok
+      doAssert messages.ok
+      doAssert signatures.ok
+      doAssert pubkeys.val.len == messages.val.len
+      doAssert pubkeys.val.len == signatures.val.len
 
-    for i in 0 ..< pubkeys.val.len:
-      batch.add((
-        pubkeys.val[i],
-        messages.val[i].asArray(),
-        signatures.val[i]
-      ))
+      for i in 0 ..< pubkeys.val.len:
+        batch.add((
+          pubkeys.val[i],
+          messages.val[i].asArray(),
+          signatures.val[i]
+        ))
 
-    let batchValid = tp.batchVerify(cache, batch, fakeRandomBytes)
-    let batchValid2 = tp.batchVerify(batch, fakeRandomBytes)
+      let batchValid = tp.batchVerify(cache, batch, fakeRandomBytes)
+      let batchValid2 = tp.batchVerify(batch, fakeRandomBytes)
 
-    doAssert batchValid == batchValid2
-    doAssert batchValid == expected.val, block:
-      "\nBatch Verification differs from expected \n" &
-      "   verified? " & $batchValid & "\n" &
-      "   expected: " & $expected.val
+      doAssert batchValid == batchValid2
+      doAssert batchValid == expected.val, block:
+        "\nBatch Verification differs from expected \n" &
+        "   verified? " & $batchValid & "\n" &
+        "   expected: " & $expected.val
 
-    tp.shutdown()
+      tp.shutdown()
 
 suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
   test "[" & BLS_ETH2_SPEC & "] sign(SecretKey, message) -> Signature":

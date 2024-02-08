@@ -7,13 +7,15 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-import ../blscurve, std/strutils
+import ../blscurve
 
 # Infinite signatures serialization
 # A signature may be initialized at an infinity point
 # as a first step before aggregation. Inputs
 
 when BLS_BACKEND == BLST:
+  import std/strutils
+
   echo "\nZero init signatures is serialized as infinity point"
   echo "----------------------------------\n"
   proc test_zero_sig() =

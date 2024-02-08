@@ -7,12 +7,12 @@
 # This file may not be copied, modified, or distributed except according to
 # those terms.
 
-import
-  stew/ptrops,
-  ./bls_backend, ./bls_sig_min_pubkey
+import ./bls_backend, ./bls_sig_min_pubkey
 
 when compileOption("threads"):
-  import taskpools, ./parallel_chunks
+  import
+    stew/ptrops,
+    taskpools, ./parallel_chunks
 
 {.push raises: [].}
 
