@@ -31,7 +31,7 @@ import
   nimcrypto/[hmac, sha2],
   stew/endians2,
   # internal
-  ./milagro, ./common
+  ./miracl, ./common
 
 import ./hash_to_curve
 

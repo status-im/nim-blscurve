@@ -10,7 +10,7 @@
 {.push raises: [Defect].}
 
 import stew/[byteutils]
-import milagro
+import miracl
 
 var CURVE_Order* {.importc: "CURVE_Order_BLS12381".}: BIG_384
 var FIELD_Modulus* {.importc: "Modulus_BLS12381".}: BIG_384

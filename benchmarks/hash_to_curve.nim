@@ -17,7 +17,7 @@ when BLS_BACKEND == BLST:
     ../blscurve/blst/blst_abi
 else:
   import
-    ../blscurve/miracl/[common, milagro],
+    ../blscurve/miracl/[common, miracl],
     ../blscurve/miracl/hash_to_curve
 
 # ############################################################
