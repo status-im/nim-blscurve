@@ -15,7 +15,7 @@ import
   nimcrypto/[hmac, sha2], stew/endians2,
   # internal
   ../bls_backend,
-  ../miracl/[common, milagro],
+  ../miracl/[common, miracl],
   ./hkdf
 
 func isZero(seckey: SecretKey): bool {.inline.} =

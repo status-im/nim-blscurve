@@ -36,7 +36,7 @@ import
   # Status libraries
   nimcrypto/[sha2, hash], stew/endians2,
   # Internal
-  ./milagro, ./common
+  ./miracl, ./common
 
 func ceilDiv(a, b: int): int =
   ## ceil division
