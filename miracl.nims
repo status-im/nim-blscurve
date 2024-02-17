@@ -1,15 +1,15 @@
 #!/usr/bin/env -S nim e
 mode = ScriptMode.Verbose
 
-## This script is Nim's replacement for config[32/64].py files of Milagro
+## This script is Nim's replacement for config[32/64].py files of Miracl
 ## library. It performs configuration of BLS381 curve for both 32bit and
 ## 64bit limbs. It also removes random/hash/crypto related functions.
 ##
 ## Usage:
 ##
-## nim e milagro.nims <srcpath> <dstpath>
+## nim e miracl.nims <srcpath> <dstpath>
 ##
-## <srcpath> - source path of milagro's C sources. By default current working
+## <srcpath> - source path of miracl's C sources. By default current working
 ## path will be used.
 ## <dstpath> - destination path where two directories `32` and `64` will be
 ## created and populated with generated BLS381 sources. By default current
@@ -622,4 +622,4 @@ curveSet(srcPath, dstPath64, "381", "BLS12381", "BLS12381", "58", "1", "-3",
          "-1", "NOT_SPECIAL", "0", "WEIERSTRASS", "0", "BLS12_CURVE",
          "M_TYPE", "NEGATIVEX", "69", "65", "128")
 
-echo "SUCCESS: Milagro source files was successfully prepared!"
+echo "SUCCESS: Miracl source files was successfully prepared!"

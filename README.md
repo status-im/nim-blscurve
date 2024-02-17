@@ -66,7 +66,7 @@ binaries destined for older CPUs, pass `-d:BLSTuseSSSE3=0` to the Nim compiler.
 To keep track of upstream MIRACL Core:
 
 - Update the submodule.
-- Execute `nim e milagro.nims vendor/miracl-core/c blscurve/miracl/csources`
+- Execute `nim e miracl.nims vendor/miracl-core/c blscurve/miracl/csources`
 - Test
 - Commit
 
