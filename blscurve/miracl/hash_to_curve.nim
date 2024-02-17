@@ -453,16 +453,16 @@ func clearCofactor*(P: var ECP2_BLS12381) =
   # - Psi (ψ) - untwist-Frobenius-Twist function
   # - Addition-chain: https://en.wikipedia.org/wiki/Addition_chain / https://en.wikipedia.org/wiki/Addition-chain_exponentiation
   #
-  # Budroni's paper mention an implementation in Milagro of BLS G2 hashmaps.
+  # Budroni's paper mention an implementation in Miracl of BLS G2 hashmaps.
   # We reuse the relevant clearCofactor routines from ``ECP2_BLS12381_mapit``
-  # In Milagro terms: "Q -> x2Q -xQ -Q +F(xQ -Q) +F(F(2Q))"
+  # In Miracl terms: "Q -> x2Q -xQ -Q +F(xQ -Q) +F(F(2Q))"
   #
   # We use the notation from Riad Wahby
   # "P -> (x^2 - x - 1) P + (x - 1) psi(P) + psi(psi(2P))"
   #
   # with:
-  # - P     (Wahby), Q   (Milagro) being the input point
-  # - psi() (Wahby), F() (Milagro) being the untwist-Frobenius-twist mapping
+  # - P     (Wahby), Q   (Miracl) being the input point
+  # - psi() (Wahby), F() (Miracl) being the untwist-Frobenius-twist mapping
   #
   # Note: CurveNegX = -x
   {.noSideEffect.}:

@@ -510,7 +510,7 @@ proc toBytes*(a: BIG_384, res: var openArray[byte]): bool =
   if len(res) == MODBYTES_384:
     var c: BIG_384
     BIG_384_copy(c, a)
-    # BIG_384_norm() function in Milagro operates inplace.
+    # BIG_384_norm() function in Miracl operates inplace.
     discard BIG_384_norm(c)
     for i in countdown(MODBYTES_384 - 1, 0):
       res[i] = byte(c[0] and 0xFF)
@@ -542,7 +542,7 @@ func fromBytes*(res: var DBIG_384, a: openArray[byte]): bool =
   ## Unserialize double big integer from ``a`` to ``res``.
   ## Length of ``a`` must be at least ``2*MODBYTES_384_29``.
 
-  # TODO: there is no length check in Milagro BIG_384_29_dfromBytesLen
+  # TODO: there is no length check in Miracl BIG_384_29_dfromBytesLen
   #       is that normal?
   zeroMem(res.addr, sizeof(res))
   for rawByte in a:

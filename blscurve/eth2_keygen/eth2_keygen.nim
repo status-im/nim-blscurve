@@ -90,7 +90,7 @@ when BLS_BACKEND == Miracl:
 
     # 3. not_IKM = flip_bits(parent_SK)
     # We can flip the bit of the IKM instead
-    # as flipping bits of milagro representation (Montgomery)
+    # as flipping bits of miracl representation (Montgomery)
     # doesn't make sense
     var not_ikm {.noinit.}: array[32, byte]
     for i in 0 ..< 32:
