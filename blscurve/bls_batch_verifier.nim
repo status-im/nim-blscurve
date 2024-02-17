@@ -29,7 +29,7 @@ when compileOption("threads"):
 # hence 176B only
 #
 # TODO: Once ContextMultiAggregateVerify is implemented
-# for Milagro/Miracl, this wouldn't need to be in the BLST specific file
+# for Miracl, this wouldn't need to be in the BLST specific file
 
 type
   SignatureSet* = tuple[pubkey: PublicKey, message: array[32, byte], signature: Signature]

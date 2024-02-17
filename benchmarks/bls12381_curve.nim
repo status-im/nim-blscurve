@@ -196,7 +196,7 @@ else:
     let generator = generator1()
     let Q = hashToG2(msg, domainSepTag)
     # Pairing: e(Q, xP) == e(R, P)
-    bench("Pairing (Milagro builtin double pairing)", iters):
+    bench("Pairing (Miracl builtin double pairing)", iters):
       let valid = doublePairing(
         Q, pubkey,
         sig, generator
