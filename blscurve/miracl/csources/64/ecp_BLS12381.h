@@ -37,6 +37,17 @@ extern const BIG_384_58 CURVE_B_BLS12381;     /**< Elliptic curve B parameter */
 extern const BIG_384_58 CURVE_Order_BLS12381; /**< Elliptic curve group order */
 extern const BIG_384_58 CURVE_Cof_BLS12381;   /**< Elliptic curve cofactor */
 
+extern const BIG_384_58 CURVE_Ad_BLS12381;
+extern const BIG_384_58 CURVE_Bd_BLS12381;
+extern const BIG_384_58 PC_BLS12381[];
+
+extern const BIG_384_58 CURVE_Adr_BLS12381;
+extern const BIG_384_58 CURVE_Adi_BLS12381;
+extern const BIG_384_58 CURVE_Bdr_BLS12381;
+extern const BIG_384_58 CURVE_Bdi_BLS12381;
+extern const BIG_384_58 PCR_BLS12381[];
+extern const BIG_384_58 PCI_BLS12381[];
+
 /* Generator point on G1 */
 extern const BIG_384_58 CURVE_Gx_BLS12381; /**< x-coordinate of generator point in group G1  */
 extern const BIG_384_58 CURVE_Gy_BLS12381; /**< y-coordinate of generator point in group G1  */

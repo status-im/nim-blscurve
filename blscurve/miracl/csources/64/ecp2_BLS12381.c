@@ -21,6 +21,7 @@
 /* SU=m, m is Stack Usage */
 
 #include "ecp2_BLS12381.h"
+#include "ecp_BLS12381.h"
 
 int ECP2_BLS12381_isinf(ECP2_BLS12381 *P)
 {
@@ -657,21 +658,119 @@ void ECP2_BLS12381_hap2point(ECP2_BLS12381 *Q,BIG_384_58 h)
 */
 /* Constant time Map to Point in G2 */
 void ECP2_BLS12381_map2point(ECP2_BLS12381 *Q,FP2_BLS12381 *H)
-{ // SWU method. Assumes p=3 mod 4.
+{ // SSWU plus isogenies method
 
-    int sgn,ne;
+    int i,k,sgn,ne,isox,isoy,iso=HTC_ISO_G2_BLS12381;
     FP2_BLS12381 X1,X2,X3,W,Y,T,A,NY;
     FP_BLS12381 Z,s;
+#if HTC_ISO_G2_BLS12381 != 0
+    FP2_BLS12381 ZZ,Ad,Bd;
+    FP2_BLS12381 xnum,xden,ynum,yden;
+    FP2_BLS12381_from_ints(&ZZ,RIADZG2A_BLS12381,RIADZG2B_BLS12381);
+
+    FP2_BLS12381_rcopy(&Ad,CURVE_Adr_BLS12381,CURVE_Adi_BLS12381);
+    FP2_BLS12381_rcopy(&Bd,CURVE_Bdr_BLS12381,CURVE_Bdi_BLS12381);
 
     FP2_BLS12381_one(&NY);
     FP2_BLS12381_copy(&T,H);
     sgn=FP2_BLS12381_sign(&T);
 
-    FP_BLS12381_from_int(&Z,RIADZG2_BLS12381);
+    FP2_BLS12381_sqr(&T,&T);
+    FP2_BLS12381_mul(&T,&T,&ZZ);
+    FP2_BLS12381_add(&W,&T,&NY);
+    FP2_BLS12381_norm(&W);
+
+    FP2_BLS12381_mul(&W,&W,&T);
+    FP2_BLS12381_mul(&A,&Ad,&W);
+    FP2_BLS12381_inv(&A,&A);
+    FP2_BLS12381_add(&W,&W,&NY);
+    FP2_BLS12381_norm(&W);
+    FP2_BLS12381_mul(&W,&W,&Bd);
+    FP2_BLS12381_neg(&W,&W);
+    FP2_BLS12381_norm(&W);
+
+    FP2_BLS12381_mul(&X2,&W,&A);
+    FP2_BLS12381_mul(&X3,&T,&X2);
+
+    FP2_BLS12381_sqr(&W,&X3); FP2_BLS12381_add(&W,&W,&Ad); FP2_BLS12381_norm(&W); FP2_BLS12381_mul(&W,&W,&X3); FP2_BLS12381_add(&W,&W,&Bd); FP2_BLS12381_norm(&W);  // w=x^3+Ax+B
+    FP2_BLS12381_cmove(&X2,&X3,FP2_BLS12381_qr(&W));                    
+    FP2_BLS12381_sqr(&W,&X2); FP2_BLS12381_add(&W,&W,&Ad); FP2_BLS12381_norm(&W); FP2_BLS12381_mul(&W,&W,&X2); FP2_BLS12381_add(&W,&W,&Bd); FP2_BLS12381_norm(&W);
+    FP2_BLS12381_sqrt(&Y,&W);  
+
+    ne=FP2_BLS12381_sign(&Y)^sgn;
+    FP2_BLS12381_neg(&NY,&Y); FP2_BLS12381_norm(&NY);
+    FP2_BLS12381_cmove(&Y,&NY,ne);
+
+// (X2,Y) is on isogenous curve
+
+    k=0;
+    isox=iso;
+    isoy=3*(iso-1)/2;
+
+// xnum
+    FP2_BLS12381_rcopy(&xnum,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+    for (i=0;i<isox;i++)
+    {
+        FP2_BLS12381_mul(&xnum,&xnum,&X2); 
+        FP2_BLS12381_rcopy(&W,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+        FP2_BLS12381_add(&xnum,&xnum,&W); FP2_BLS12381_norm(&xnum);
+    }
+
+// xden
+    FP2_BLS12381_copy(&xden,&X2);
+    FP2_BLS12381_rcopy(&W,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+    FP2_BLS12381_add(&xden,&xden,&W); FP2_BLS12381_norm(&xden);
+    for (i=0;i<isox-2;i++)
+    {
+        FP2_BLS12381_mul(&xden,&xden,&X2);
+        FP2_BLS12381_rcopy(&W,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+        FP2_BLS12381_add(&xden,&xden,&W); FP2_BLS12381_norm(&xden);
+    }
+
+// ynum
+        FP2_BLS12381_rcopy(&ynum,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+        for (i=0;i<isoy;i++)
+        {
+            FP2_BLS12381_mul(&ynum,&ynum,&X2); 
+            FP2_BLS12381_rcopy(&W,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+            FP2_BLS12381_add(&ynum,&ynum,&W); FP2_BLS12381_norm(&ynum);
+        }
+
+// yden 
+        FP2_BLS12381_copy(&yden,&X2);
+        FP2_BLS12381_rcopy(&W,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+        FP2_BLS12381_add(&yden,&yden,&W); FP2_BLS12381_norm(&yden);
+      
+        for (i=0;i<isoy-1;i++)
+        {
+            FP2_BLS12381_mul(&yden,&yden,&X2); 
+            FP2_BLS12381_rcopy(&W,PCR_BLS12381[k],PCI_BLS12381[k]); k++;
+            FP2_BLS12381_add(&yden,&yden,&W); FP2_BLS12381_norm(&yden);
+        }
+
+        FP2_BLS12381_mul(&ynum,&ynum,&Y);
+
+
+
+        FP2_BLS12381_mul(&T,&xnum,&yden);
+        FP2_BLS12381_copy(&(Q->x),&T);
+
+        FP2_BLS12381_mul(&T,&ynum,&xden);
+        FP2_BLS12381_copy(&(Q->y),&T);
+
+        FP2_BLS12381_mul(&T,&xden,&yden);
+        FP2_BLS12381_copy(&(Q->z),&T);
+
+#else
+    FP2_BLS12381_one(&NY);
+    FP2_BLS12381_copy(&T,H);
+    sgn=FP2_BLS12381_sign(&T);
+
+    FP_BLS12381_from_int(&Z,RIADZG2A_BLS12381);
     FP2_BLS12381_from_FP(&A,&Z);
     ECP2_BLS12381_rhs(&A,&A);  // A=g(Z)
 
-   if (CURVE_B_I_BLS12381==4 && SEXTIC_TWIST_BLS12381==M_TYPE && RIADZG2_BLS12381==-1)
+   if (CURVE_B_I_BLS12381==4 && SEXTIC_TWIST_BLS12381==M_TYPE && RIADZG2A_BLS12381==-1 && RIADZG2B_BLS12381==0)
     { // special case for BLS12381
         FP2_BLS12381_from_ints(&W,2,1);
     } else {
@@ -704,7 +803,7 @@ void ECP2_BLS12381_map2point(ECP2_BLS12381 *Q,FP2_BLS12381 *H)
     FP2_BLS12381_mul(&W,&W,&Y);
     FP2_BLS12381_mul(&W,&W,&NY);     // tv5=u*tv1*tv3*tv4*Z*sqrt(-3)
 
-    FP2_BLS12381_from_ints(&X1,RIADZG2_BLS12381,0);
+    FP2_BLS12381_from_ints(&X1,RIADZG2A_BLS12381,RIADZG2B_BLS12381);
     FP2_BLS12381_copy(&X3,&X1);
     FP2_BLS12381_neg(&X1,&X1); FP2_BLS12381_norm(&X1); FP2_BLS12381_div2(&X1,&X1); // -Z/2
     FP2_BLS12381_copy(&X2,&X1);
@@ -732,6 +831,7 @@ void ECP2_BLS12381_map2point(ECP2_BLS12381 *Q,FP2_BLS12381 *H)
     FP2_BLS12381_cmove(&Y,&W,ne);
 
     ECP2_BLS12381_set(Q,&X3,&Y);
+#endif
 }
 
 /* Map octet to point */
@@ -829,10 +929,8 @@ int ECP2_BLS12381_generator(ECP2_BLS12381 *G)
 {
     FP2_BLS12381 wx, wy;
 
-    FP_BLS12381_rcopy(&(wx.a), CURVE_Pxa_BLS12381);
-    FP_BLS12381_rcopy(&(wx.b), CURVE_Pxb_BLS12381);
-    FP_BLS12381_rcopy(&(wy.a), CURVE_Pya_BLS12381);
-    FP_BLS12381_rcopy(&(wy.b), CURVE_Pyb_BLS12381);
+    FP2_BLS12381_rcopy(&wx,CURVE_Pxa_BLS12381,CURVE_Pxb_BLS12381);
+    FP2_BLS12381_rcopy(&wy,CURVE_Pya_BLS12381,CURVE_Pyb_BLS12381);
 
     return ECP2_BLS12381_set(G, &wx, &wy);
 }

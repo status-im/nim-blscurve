@@ -36,8 +36,11 @@
 #define CURVE_A_BLS12381 0
 #define PAIRING_FRIENDLY_BLS12381 BLS12_CURVE
 #define CURVE_SECURITY_BLS12381 128
+#define HTC_ISO_BLS12381 0
 
 #if PAIRING_FRIENDLY_BLS12381 != NOT_PF
+
+#define HTC_ISO_G2_BLS12381 0
 //#define USE_GLV_BLS12381     /**< Note this method is patented (GLV), so maybe you want to comment this out */
 //#define USE_GS_G2_BLS12381 /**< Well we didn't patent it :) But may be covered by GLV patent :( */
 #define USE_GS_GT_BLS12381 /**< Not patented, so probably OK to always use this */

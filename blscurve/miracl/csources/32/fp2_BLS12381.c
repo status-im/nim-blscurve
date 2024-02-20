@@ -133,6 +133,12 @@ void FP2_BLS12381_one(FP2_BLS12381 *w)
     FP2_BLS12381_from_FP(w, &one);
 }
 
+void FP2_BLS12381_rcopy(FP2_BLS12381 *w,const BIG_384_29 a,const BIG_384_29 b)
+{
+    FP_BLS12381_rcopy(&(w->a),a);
+    FP_BLS12381_rcopy(&(w->b),b);
+}
+
 int FP2_BLS12381_sign(FP2_BLS12381 *w)
 {
     int p1,p2;

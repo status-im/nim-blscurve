@@ -151,6 +151,7 @@ extern void FP_BLS12381_redc(BIG_384_58 x, FP_BLS12381 *y);
  */
 extern void FP_BLS12381_one(FP_BLS12381 *x);
 
+
 /**	@brief returns "sign" of an FP
  *
 	@param x FP number

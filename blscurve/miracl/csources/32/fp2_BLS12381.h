@@ -125,6 +125,14 @@ extern void FP2_BLS12381_zero(FP2_BLS12381 *x);
  */
 extern void FP2_BLS12381_one(FP2_BLS12381 *x);
 
+/**	@brief Copy from ROM to an FP2
+ *
+	@param w FP2 number to be copied to
+	@param a BIG real part to be copied from ROM
+	@param b BIG imag part to be copied from ROM
+ */
+extern void FP2_BLS12381_rcopy(FP2_BLS12381 *w,const BIG_384_29 a,const BIG_384_29 b);
+
 /**	@brief Sign of FP2
  *
 	@param x FP2 instance

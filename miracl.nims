@@ -316,14 +316,14 @@ proc clearFiles(dst, tb, tf, tc, base: string) =
     if system.fileExists(item):
       rmFile(item)
 
-# curveset("381","BLS12381","BLS12381","58","1",["-3","-1"],"NOT_SPECIAL","0","WEIERSTRASS","0","BLS12_CURVE","M_TYPE","NEGATIVEX","69","65","128")
+# curveset("381","BLS12381","BLS12381","58","1",["-3","-1","0"],"NOT_SPECIAL","0","WEIERSTRASS","0","BLS12_CURVE","M_TYPE","NEGATIVEX","69","65","128")
 # pfcurve_selected=True
 # nbt = 381
 # tf = BLS12381
 # tc = BLS12381
 # base = 58
 # m8 = 1
-# rz0, rz1 = [-3, -1]
+# rz, rz2a, rz2b, hc, hc2 = [-3, -1, 0, 0, 0]
 # mt = "NOT_SPECIAL"
 # qi = "0"
 # ct = "WEIERSTRASS"
@@ -339,8 +339,10 @@ proc logWriteFile(name: string, data: string) =
   echo "Writing data to file [", name, "]"
   writeFile(name, data)
 
-proc curveSet(src, dst, nbt, tf, tc, base, m8, rz0, rz1, mt, qi, ct, ca, pf,
-              stw, sx, g2, ab, cs: string) =
+proc curveSet(
+    src, dst, nbt, tf, tc, base, m8: string,
+    rz: openArray[string],
+    mt, qi, ct, ca, pf, stw, sx, g2, ab, cs: string) =
   let inbt = parseInt(nbt)
   let itb = int(inbt + (8 - (inbt mod 8)) mod 8)
   let inb = int(itb div 8)
@@ -384,8 +386,32 @@ proc curveSet(src, dst, nbt, tf, tc, base, m8, rz0, rz1, mt, qi, ct, ca, pf,
   data = data.replace("@M8@", m8)
   data = data.replace("@MT@", mt)
 
-  data = data.replace("@RZ@", rz0)
-  data = data.replace("@RZ2@", rz1)
+  # Get Hash-to-Curve Z for G1 and G2
+  var
+    hc = "0"
+    hc2 = "0"
+  case rz.len:
+  of 2:  # Z followed by SSWU isogeny degree
+    data = data.replace("@RZ@", rz[0])
+    data = data.replace("@RZ2A@", "0")
+    data = data.replace("@RZ2B@", "0")
+    hc = rz[1]
+  of 3:  # Z for G1 followed by Z for G2 (for SVDW)
+    data = data.replace("@RZ@", rz[0])
+    data = data.replace("@RZ2A@", rz[1])
+    data = data.replace("@RZ2B@", rz[2])
+  of 5:  # Z for G1, Z for G2, SSWU isogeny degree for G1, SSWU isogeny degree for G2
+    data = data.replace("@RZ@", rz[0])
+    data = data.replace("@RZ2A@", rz[1])
+    data = data.replace("@RZ2B@", rz[2])
+    hc = rz[3]
+    hc2 = rz[4]
+  of 1:  # just Z for SSWU, or indicates RFC7748 or Generic for Elligator
+    data = data.replace("@RZ@", rz[0])
+    data = data.replace("@RZ2A@", "0")
+    data = data.replace("@RZ2B@", "0")
+  else:
+    discard
 
   let intQi = parseInt(qi)
   let itw = intQi mod 10
@@ -419,6 +445,10 @@ proc curveSet(src, dst, nbt, tf, tc, base, m8, rz0, rz1, mt, qi, ct, ca, pf,
   data = data.replace("@CS@", cs)
   data = data.replace("@AB@", ab)
   data = data.replace("@G2@", g2)
+
+  data = data.replace("@HC@", hc)
+  data = data.replace("@HC2@", hc2)
+
   logWriteFile(fnameh, data)
 
   # big.c & big.h
@@ -614,12 +644,16 @@ else:
   clearFiles(dstPath64, tb, tf, tc, base64)
 
 ## Generating 32bit version of library.
-curveSet(srcPath, dstPath32, "381", "BLS12381", "BLS12381", "29", "1", "-3",
-         "-1", "NOT_SPECIAL", "0", "WEIERSTRASS", "0", "BLS12_CURVE",
-         "M_TYPE", "NEGATIVEX", "69", "65", "128")
+curveSet(
+  srcPath, dstPath32, "381", "BLS12381", "BLS12381", "29", "1",
+  ["-3", "-1", "0"],
+  "NOT_SPECIAL", "0", "WEIERSTRASS", "0", "BLS12_CURVE",
+  "M_TYPE", "NEGATIVEX", "69", "65", "128")
 ## Generating 64bit version of library
-curveSet(srcPath, dstPath64, "381", "BLS12381", "BLS12381", "58", "1", "-3",
-         "-1", "NOT_SPECIAL", "0", "WEIERSTRASS", "0", "BLS12_CURVE",
-         "M_TYPE", "NEGATIVEX", "69", "65", "128")
+curveSet(
+  srcPath, dstPath64, "381", "BLS12381", "BLS12381", "58", "1",
+  ["-3", "-1", "0"],
+  "NOT_SPECIAL", "0", "WEIERSTRASS", "0", "BLS12_CURVE",
+  "M_TYPE", "NEGATIVEX", "69", "65", "128")
 
 echo "SUCCESS: Miracl source files was successfully prepared!"
