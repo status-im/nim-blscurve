@@ -16,8 +16,6 @@
 #   approach, since the size of (PK_1, ..., PK_n, signature) is
 #   dominated by the public keys even for small n.
 
-# We expose the same API as MIRACL
-#
 # Design:
 # - We check public keys and signatures at deserialization
 #   - non-zero
@@ -401,8 +399,8 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
 # Ultimately this can be merged with the internal ContextCoreAggregateVerify
 # but:
 # - The previous code was audited
-# - For now we only support BLST
-#   though MIRACL is straightforward, context merge is just a FP12 multiplication
+# - For now we only support BLST but other backends may be straightforward,
+#   context merge is just a FP12 multiplication
 #   since GT is a multiplicative group.
 # - we need to hold cryptographycally secure
 #   random bytes to protect against forged signatures

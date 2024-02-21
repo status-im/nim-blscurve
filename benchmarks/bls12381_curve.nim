@@ -15,10 +15,6 @@ import
 when BLS_BACKEND == BLST:
   import
     ../blscurve/blst/blst_abi
-else:
-  import
-    ../blscurve/miracl/[common, miracl],
-    ../blscurve/miracl/hash_to_curve
 
 # ############################################################
 #
@@ -43,18 +39,6 @@ proc benchScalarMultG1*(iters: int) =
 
     bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
       x.blst_p1_mult(x, scalar, 255)
-  else:
-    var x = generator1()
-    var scal{.noinit.}: array[32, byte]
-    for val in scal.mitems:
-      val = byte benchRNG.rand(0xFF)
-
-    var scalar{.noinit.}: BIG_384
-    doAssert scalar.fromBytes(scal)
-    scalar.BIG_384_mod(CURVE_Order)
-
-    bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
-      x.mul(scalar)
 
 proc benchScalarMultG2*(iters: int) =
   when BLS_BACKEND == BLST:
@@ -70,18 +54,6 @@ proc benchScalarMultG2*(iters: int) =
 
     bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
       x.blst_p2_mult(x, scalar, 255)
-  else:
-    var x = generator2()
-    var scal{.noinit.}: array[32, byte]
-    for val in scal.mitems:
-      val = byte benchRNG.rand(0xFF)
-
-    var scalar{.noinit.}: BIG_384
-    doAssert scalar.fromBytes(scal)
-    scalar.BIG_384_mod(CURVE_Order)
-
-    bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
-      x.mul(scalar)
 
 proc benchECAddG1*(iters: int) =
   when BLS_BACKEND == BLST:
@@ -91,12 +63,6 @@ proc benchECAddG1*(iters: int) =
 
     bench("EC add G1 (constant-time)", iters):
       x.blst_p1_add_or_double(x, y)
-  else:
-    var x = generator1()
-    var y = generator1()
-
-    bench("EC add G1 (constant-time)", iters):
-      x.add(y)
 
 proc benchECAddG2*(iters: int) =
   when BLS_BACKEND == BLST:
@@ -106,12 +72,6 @@ proc benchECAddG2*(iters: int) =
 
     bench("EC add G2 (constant-time)", iters):
       x.blst_p2_add_or_double(x, y)
-  else:
-    var x = generator2()
-    var y = generator2()
-
-    bench("EC add G2 (constant-time)", iters):
-      x.add(y)
 
 when BLS_BACKEND == BLST:
 
@@ -173,65 +133,6 @@ when BLS_BACKEND == BLST:
       let valid = ctx[].blst_pairing_finalverify(nil) # Final Exponentiation
       # doAssert bool valid
 
-else:
-
-  proc benchMiraclPairingViaDoublePairing*(iters: int) =
-    ## Builtin Miracl Double-Pairing implementation
-    # Ideally we don't depend on the bls_signature_scheme but it's much simpler
-    let (pubkey, seckey) = block:
-      var pk: PublicKey
-      var sk: SecretKey
-      var ikm: array[32, byte]
-      ikm[0] = 0x12
-      discard ikm.keyGen(pk, sk)
-      (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
-    let msg = "Mr F was here"
-    const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-
-    # Signing
-    var sig = hashToG2(msg, domainSepTag)
-    sig.mul(seckey)
-
-    # Verification
-    let generator = generator1()
-    let Q = hashToG2(msg, domainSepTag)
-    # Pairing: e(Q, xP) == e(R, P)
-    bench("Pairing (Miracl builtin double pairing)", iters):
-      let valid = doublePairing(
-        Q, pubkey,
-        sig, generator
-      )
-      # doAssert valid
-
-  proc benchMiraclPairingViaMultiPairing*(iters: int) =
-    ## MultiPairing implementation
-    ## Using deferred Miller loop + Final Exponentiation
-    # Ideally we don't depend on the bls_signature_scheme but it's much simpler
-    let (pubkey, seckey) = block:
-      var pk: PublicKey
-      var sk: SecretKey
-      var ikm: array[32, byte]
-      ikm[0] = 0x12
-      discard ikm.keyGen(pk, sk)
-      (cast[ECP_BLS12381](pk), cast[BIG_384](sk))
-    let msg = "Mr F was here"
-    const domainSepTag = "BLS_SIG_BLS12381G2-SHA256-SSWU-RO_POP_"
-
-    # Signing
-    var sig = hashToG2(msg, domainSepTag)
-    sig.mul(seckey)
-
-    # Verification
-    let generator = generator1()
-    let Q = hashToG2(msg, domainSepTag)
-    # Pairing: e(Q, xP) == e(R, P)
-    bench("Pairing (Multi-Pairing with delayed Miller and Exp)", iters):
-      let valid = multiPairing(
-        Q, pubkey,
-        sig, generator
-      )
-      # doAssert valid
-
 when isMainModule:
   benchScalarMultG1(1000)
   benchScalarMultG2(1000)
@@ -240,6 +141,3 @@ when isMainModule:
 
   when BLS_BACKEND == BLST:
     benchBLSTPairing(5000)
-  else:
-    benchMiraclPairingViaDoublePairing(1000)
-    benchMiraclPairingViaMultiPairing(1000)

@@ -441,4 +441,3 @@ suite "ETH 2.0 " & BLS_ETH2_SPEC & " test vectors - " & $BLS_BACKEND:
   echo "  [SKIP] [v1.0.0] HashToG2 tests"
   # We skip the hashToG2 tests since they are lower-level than the nim-blscurve library.
   # They are also implicitly tested by sign/verify.
-  # For our own implementation using Miracl, tests are in blscurve/miracl/hash_to_curve.nim

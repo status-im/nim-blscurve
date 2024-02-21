@@ -16,9 +16,6 @@ separator()
 # Pairings
 when BLS_BACKEND == BLST:
   benchBLSTPairing(1000)
-else:
-  benchMiraclPairingViaDoublePairing(1000)
-  benchMiraclPairingViaMultiPairing(1000)
 separator()
 
 # Hash-to-curve implementation

@@ -20,7 +20,6 @@ export
   fromHex, fromBytes, fromBytesKnownOnCurve,
   toHex, serialize, exportRaw
 
-# TODO - MIRACL implementation
 when BLS_BACKEND == BLST:
   export
     exportUncompressed, subtractAll,

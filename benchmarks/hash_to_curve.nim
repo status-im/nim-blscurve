@@ -15,10 +15,6 @@ import
 when BLS_BACKEND == BLST:
   import
     ../blscurve/blst/blst_abi
-else:
-  import
-    ../blscurve/miracl/[common, miracl],
-    ../blscurve/miracl/hash_to_curve
 
 # ############################################################
 #
@@ -43,11 +39,6 @@ proc benchHashToG2*(iters: int) =
         aug = ""
       )
       Paff.blst_p2_to_affine(P)
-  else:
-    var point: ECP2_BLS12381
-
-    bench("Hash to G2 (Draft #9)", iters):
-      point = hashToG2(msg, dst)
 
 when isMainModule:
   benchHashToG2(1000)

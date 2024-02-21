@@ -18,12 +18,7 @@ import
 proc toDecimal(sk: SecretKey): string =
   # The spec does not use hex but decimal ...
   var asBytes: array[32, byte]
-  when BLS_BACKEND == Miracl:
-    var tmp: array[48, byte]
-    let ok = tmp.serialize(sk)
-    doAssert ok
-    asBytes[0 .. 31] = tmp.toOpenArray(48-32, 48-1)
-  else:
+  when BLS_BACKEND == BLST:
     let ok = asBytes.serialize(sk)
 
   let asInt = readUintBE[256](asBytes)

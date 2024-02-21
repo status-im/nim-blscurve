@@ -35,26 +35,16 @@ proc run(args, path: string) =
 
 ### tasks
 task test, "Run all tests":
-  # Debug - test intermediate computations
-  # run "", "blscurve/miracl/hkdf.nim"
-  # run "", "blscurve/miracl/draft_v5/hash_to_curve_draft_v5.nim"
-  # run "", "blscurve/miracl/hash_to_curve.nim"
-
   # Internal BLS API - IETF standard
   # run "", "tests/hash_to_curve_v7.nim"
 
   # Serialization
-  run "-d:BLS_FORCE_BACKEND=miracl", "tests/serialization.nim"
-  # Public BLS API - IETF standard / Ethereum2.0 v1.0.0
-  run "-d:BLS_FORCE_BACKEND=miracl", "tests/eth2_vectors.nim"
-  # key Derivation - EIP 2333
-  run "-d:BLS_FORCE_BACKEND=miracl", "tests/eip2333_key_derivation.nim"
-  # Secret key to pubkey
-  run "-d:BLS_FORCE_BACKEND=miracl", "tests/priv_to_pub.nim"
-
   run "-d:BLS_FORCE_BACKEND=blst", "tests/serialization.nim"
-  # run "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
+  # Public BLS API - IETF standard / Ethereum2.0 v1.0.0
+  run "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
+  # key Derivation - EIP 2333
   run "-d:BLS_FORCE_BACKEND=blst", "tests/eip2333_key_derivation.nim"
+  # Secret key to pubkey
   run "-d:BLS_FORCE_BACKEND=blst", "tests/priv_to_pub.nim"
 
   # Internal SHA256
@@ -79,9 +69,6 @@ task test, "Run all tests":
     # on 32-bit for asm volatile, this might be due to
     # incorrect RDTSC call in benchmark
     when defined(arm64) or defined(amd64):
-      run "--threads:on -d:BLS_FORCE_BACKEND=miracl -d:danger --warnings:off",
-          "benchmarks/bench_all.nim"
-
       run "--threads:on -d:BLS_FORCE_BACKEND=blst -d:danger --warnings:off",
           "benchmarks/bench_all.nim"
 
