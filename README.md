@@ -55,20 +55,10 @@ v9 and v7 are protocol compatible but have cosmetic changes (naming variables, p
 ## Backend
 
 This library uses:
-- [SupraNational BLST](https://github.com/supranational/blst) on x86-64 and ARM64
-- [MIRACL Core](https://github.com/miracl/core) on all other platforms.
+- [SupraNational BLST](https://github.com/supranational/blst) on all platforms.
 
 BLST uses SSSE3 by default, if supported on the host. To disable that, when building
 binaries destined for older CPUs, pass `-d:BLSTuseSSSE3=0` to the Nim compiler.
-
-### Keeping track of upstream
-
-To keep track of upstream MIRACL Core:
-
-- Update the submodule.
-- Execute `nim e miracl.nims vendor/miracl-core/c blscurve/miracl/csources`
-- Test
-- Commit
 
 ### Executing the test suite
 
@@ -117,4 +107,3 @@ at your option. These files may not be copied, modified, or distributed except a
 ### Dependencies
 
 - SupraNational BLST is distributed under the Apache License, Version 2.0
-- MIRACL Core is distributed under the Apache License, Version 2.0

@@ -10,13 +10,11 @@
 const BLS_FORCE_BACKEND*{.strdefine.} = "auto"
 
 static: doAssert BLS_FORCE_BACKEND == "auto" or
-                 BLS_FORCE_BACKEND == "miracl" or
                  BLS_FORCE_BACKEND == "blst",
-                 """Only "auto", "blst" and "miracl" backends are valid."""
+                 """Only "auto" and "blst" backends are valid."""
 
 type BlsBackendKind* = enum
   BLST
-  Miracl
 
 const UseBLST = BLS_FORCE_BACKEND == "auto" or BLS_FORCE_BACKEND == "blst"
 
@@ -29,13 +27,7 @@ when UseBLST:
     # WASM and others - no specialised assembly code available
     {.passc: "-D__BLST_NO_ASM__".}
   const BLS_BACKEND* = BLST
-else:
-  # Miracl
-  const BLS_BACKEND* = Miracl
 
 when BLS_BACKEND == BLST:
   import ./blst/[blst_min_pubkey_sig_core, blst_recovery]
   export blst_min_pubkey_sig_core, blst_recovery
-else:
-  import ./miracl/miracl_min_pubkey_sig_core
-  export miracl_min_pubkey_sig_core

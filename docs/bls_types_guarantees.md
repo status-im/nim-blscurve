@@ -15,7 +15,7 @@ An internal procedure `hkdf_mod_r` guarantees that the secret keys is below the 
 **On deserialization via:**
 - `fromBytes` and `fromHex`
 
-The input is checked for `0 < SK < r` with both BLST and Miracl backend.
+The input is checked for `0 < SK < r` with BLST backend.
 
 There is no other public API to create a SecretKey instance.
 
@@ -33,10 +33,9 @@ Note: `publicFromSecret` rechecks the `0 < SK < r` guaranteed by the `SecretKey`
 **On deserialization via:**
 - `fromBytes` and `fromHex`
 
-The input is checked against both conditions with both BLST and MIRACL backend.
+The input is checked against both conditions with BLST backend.
 - Procedures in `bls_sig_io.nim`:
   - `fromBytes` and `fromHex`
 - BLST: `blst_p1_affine_is_inf` and subgroup checks `blst_p1_affine_in_g1`
-- MIRACL: `isinf` and `subgroupCheck`
 
 There is no other public API to create a PublicKey instance.
