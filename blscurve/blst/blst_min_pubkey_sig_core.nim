@@ -332,9 +332,7 @@ func commit(ctx: var ContextCoreAggregateVerify) {.inline.} =
   ## This MUST be done:
   ## - before merging 2 pairing contexts (for example when distributing computation)
   ## - before finalVerify
-  blst_pairing_commit(
-    cast[ptr blst_opaque](addr ctx.c),
-  )
+  blst_pairing_commit(cast[ptr blst_opaque](addr ctx.c))
 
 func finalVerify(ctx: var ContextCoreAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
@@ -476,7 +474,8 @@ func init*[T: char|byte](
   ## so that from a single source of randomness
   ## each thread is seeded with a different state when
   ## used in a multithreading context
-  ctx.c.blst_pairing_init(
+  blst_pairing_init(
+    cast[ptr blst_opaque](addr ctx.c)
     hash_or_encode = kHash,
     ctx.DomainSepTag
   ) # C1 = 1 (identity element)
@@ -538,7 +537,8 @@ func update*[T: char|byte](
       ctx.secureBlinding.bls_sha256_digest(ctx.secureBlinding)
     blindingScalar.blst_scalar_from_lendian(blindingAsArray[])
 
-  BLST_SUCCESS == ctx.c.blst_pairing_chk_n_mul_n_aggr_pk_in_g1(
+  BLST_SUCCESS == blst_pairing_chk_n_mul_n_aggr_pk_in_g1(
+    cast[ptr blst_opaque](addr ctx.c),
     publicKey.point.unsafeAddr,
     pk_grpchk = false, # Already grouped checked
     signature.point.unsafeAddr,
@@ -555,7 +555,7 @@ func commit*(ctx: var ContextMultiAggregateVerify) {.inline.} =
   ## This MUST be done:
   ## - before merging 2 pairing contexts (for example when distributing computation)
   ## - before finalVerify
-  ctx.c.blst_pairing_commit()
+  blst_pairing_commit(cast[ptr blst_opaque](addr ctx.c))
 
 func merge*(
        ctx_into: var ContextMultiAggregateVerify,

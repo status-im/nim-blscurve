@@ -83,7 +83,7 @@ const
 type
   limb_t* = uint64
   blst_scalar* {.importc: "blst_scalar", completeStruct, blstheader, byref.} = object
-    l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8))), byte]
+    l* {.importc: "b".}: array[typeof(256)(typeof(256)(256 / typeof(256)(8))), byte]
   blst_fr* {.byref.} = object
     l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8)) /
         typeof(256)(sizeof((limb_t)))), limb_t]
