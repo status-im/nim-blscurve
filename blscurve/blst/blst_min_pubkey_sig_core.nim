@@ -262,11 +262,13 @@ func coreVerifyNoGroupCheck*[T: byte|char](
   ## This assumes that the Public Key and Signatures
   ## have been pre group checked (likely on deserialization)
   var ctx{.noinit.}: blst_pairing
-  ctx.blst_pairing_init(
+  blst_pairing_init(
+    cast[ptr blst_opaque](addr ctx),
     hash_or_encode = kHash,
     domainSepTag
   )
-  let ok = BLST_SUCCESS == ctx.blst_pairing_chk_n_aggr_pk_in_g1(
+  let ok = BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+    cast[ptr blst_opaque](addr ctx),
     publicKey.point.unsafeAddr,
     pk_grpchk = false, # Already grouped checked
     sig_or_proof.point.unsafeAddr,
@@ -277,8 +279,8 @@ func coreVerifyNoGroupCheck*[T: byte|char](
   if not ok:
     return false
 
-  ctx.blst_pairing_commit()
-  bool ctx.blst_pairing_finalverify(nil)
+  blst_pairing_commit(cast[ptr blst_opaque](addr ctx))
+  bool blst_pairing_finalverify(cast[ptr blst_opaque](addr ctx), nil)
 
 # Core aggregate operations
 # Aggregate Batch of (Publickeys, Messages, Signatures)
@@ -304,7 +306,8 @@ type
 
 func init*(ctx: var ContextCoreAggregateVerify) {.inline.} =
   ## initialize an aggregate verification context
-  ctx.c.blst_pairing_init(
+  blst_pairing_init(
+    cast[ptr blst_opaque](addr ctx.c),
     hash_or_encode = kHash,
     ctx.DomainSepTag
   ) # C1 = 1 (identity element)
@@ -313,7 +316,8 @@ func update*[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
        message: openArray[T]): bool {.inline.} =
-  BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
+  BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+    cast[ptr blst_opaque](addr ctx.c),
     publicKey.point.unsafeAddr,
     pk_grpchk = false, # Already grouped checked
     signature = nil,
@@ -328,11 +332,13 @@ func commit(ctx: var ContextCoreAggregateVerify) {.inline.} =
   ## This MUST be done:
   ## - before merging 2 pairing contexts (for example when distributing computation)
   ## - before finalVerify
-  ctx.c.blst_pairing_commit()
+  blst_pairing_commit(
+    cast[ptr blst_opaque](addr ctx.c),
+  )
 
 func finalVerify(ctx: var ContextCoreAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
-  bool ctx.c.blst_pairing_finalverify(nil)
+  bool blst_pairing_finalverify(cast[ptr blst_opaque](addr ctx.c), nil)
 
 func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or AggregateSignature): bool =
   # Implementation strategy
@@ -365,7 +371,8 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
   # use a Miller loop internally and Miller loops are **very** costly.
 
   when signature is Signature:
-    result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
+    result = BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+      cast[ptr blst_opaque](addr ctx.c),
       PK = nil,
       pk_grpchk = false, # Already grouped checked
       signature.point.unsafeAddr,
@@ -377,7 +384,8 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
     block:
       var sig{.noinit.}: blst_p2_affine
       sig.blst_p2_to_affine(signature.point)
-      result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
+      result = BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+        cast[ptr blst_opaque](addr ctx.c),
         PK = nil,
         pk_grpchk = false, # Already grouped checked
         sig.point.unsafeAddr,
@@ -562,7 +570,9 @@ func merge*(
 
 func finalVerify*(ctx: var ContextMultiAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
-  result = bool ctx.c.blst_pairing_finalverify(nil)
+  result = bool blst_pairing_finalverify(
+    cast[ptr blst_opaque](addr ctx.c),
+    nil)
 
 func getScalar*(sk: SecretKey): blst_scalar =
   return sk.scalar

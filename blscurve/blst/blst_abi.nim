@@ -5,6 +5,7 @@ import std/[strutils, os]
 const headerPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/bindings/blst.h"
 
 {.pragma: blst, importc, header: headerPath.}
+{.pragma: blstheader, header: headerPath.}
 
 type CTbool* = distinct cint
   ## Boolean for constant-time protected use-cases
@@ -81,7 +82,7 @@ const
 # https://github.com/nim-lang/Nim/issues/9940
 type
   limb_t* = uint64
-  blst_scalar* {.byref.} = object
+  blst_scalar* {.importc: "blst_scalar", completeStruct, blstheader, byref.} = object
     l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8))), byte]
   blst_fr* {.byref.} = object
     l*: array[typeof(256)(typeof(256)(256 / typeof(256)(8)) /
@@ -98,25 +99,25 @@ type
   blst_fp6* {.byref.} = object
     fp2*: array[3, blst_fp2]
 
-  blst_fp12* {.byref.} = object
+  blst_fp12* {.importc: "blst_fp12", blstheader, byref.} = object
     fp6*: array[2, blst_fp6]
 
-  blst_p1* {.byref.} = object
+  blst_p1* {.importc: "blst_p1", blstheader, byref.} = object
     ## BLS12-381-specifc point operations.
     x*: blst_fp
     y*: blst_fp
     z*: blst_fp
 
-  blst_p1_affine* {.byref.} = object
+  blst_p1_affine* {.importc: "blst_p1_affine", blstheader, byref.} = object
     x*: blst_fp
     y*: blst_fp
 
-  blst_p2* {.byref.} = object
+  blst_p2* {.importc: "blst_p2", blstheader, byref.} = object
     x*: blst_fp2
     y*: blst_fp2
     z*: blst_fp2
 
-  blst_p2_affine* {.byref.} = object
+  blst_p2_affine* {.importc: "blst_p2_affine", blstheader, byref.} = object
     x*: blst_fp2
     y*: blst_fp2
 
@@ -124,6 +125,8 @@ type
   AggregatedSignature {.union.} = object
     e1: blst_p1
     e2: blst_p2
+
+  blst_opaque* {.importc: "struct blst_opaque", blstheader.} = object
 
   blst_pairing* = object
     # "blst_pairing" in header is defined as
@@ -368,8 +371,12 @@ proc blst_pairing_sizeof*(): uint
 proc blst_pairing_init*[T: byte|char](new_ctx: var blst_pairing,
                         hash_or_encode: HashOrEncode,
                         domainSepTag: openArray[T])
+proc blst_pairing_init*[T: byte|char](new_ctx: ptr blst_opaque,
+                        hash_or_encode: HashOrEncode,
+                        domainSepTag: openArray[T])
 proc blst_pairing_get_dst*(ctx: blst_pairing): ptr UncheckedArray[byte]
 proc blst_pairing_commit*(ctx: var blst_pairing)
+proc blst_pairing_commit*(ctx: ptr blst_opaque)
 proc blst_pairing_aggregate_pk_in_g2*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p2_affine;
@@ -418,6 +425,15 @@ proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
                                      msg: openArray[T],
                                      aug: openArray[U]
                                      ): BLST_ERROR
+proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
+                                     ctx: ptr blst_opaque,
+                                     PK: ptr blst_p1_affine,
+                                     pk_grpchk: bool,
+                                     signature: ptr blst_p2_affine,
+                                     sig_grpchk: bool,
+                                     msg: openArray[T],
+                                     aug: openArray[U]
+                                     ): BLST_ERROR
 proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p1_affine;
@@ -439,6 +455,7 @@ proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](
                                      ): BLST_ERROR
 proc blst_pairing_merge*(ctx: var blst_pairing; ctx1: blst_pairing): BLST_ERROR
 proc blst_pairing_finalverify*(ctx: var blst_pairing; gtsig: ptr blst_fp12): CTbool
+proc blst_pairing_finalverify*(ctx: ptr blst_opaque; gtsig: ptr blst_fp12): CTbool
 
 #   Customarily applications aggregate signatures separately.
 #    In which case application would have to pass NULLs for |signature|
