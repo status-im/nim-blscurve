@@ -39,10 +39,12 @@ func `+`(a: blst_fr, b: blst_fr): blst_fr =
   result.blst_fr_add(a, b)
 
 func `*=`(a: var blst_p2; s: blst_fr) =
-  a.blst_p2_mult(a, s.toScalar(), 255)
+  let scalar = s.toScalar()
+  a.blst_p2_mult(a, cast[ptr byte](unsafeAddr scalar), 255)
 
 func `*`(a: blst_p2; s: blst_fr): blst_p2=
-  result.blst_p2_mult(a, s.toScalar(), 255)
+  let scalar = s.toScalar()
+  result.blst_p2_mult(a, cast[ptr byte](unsafeAddr scalar), 255)
 
 func `+=`(a: var blst_p2; b: blst_p2) =
   a.blst_p2_add(a, b)

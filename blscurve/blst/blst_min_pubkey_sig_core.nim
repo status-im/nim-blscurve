@@ -475,7 +475,7 @@ func init*[T: char|byte](
   ## each thread is seeded with a different state when
   ## used in a multithreading context
   blst_pairing_init(
-    cast[ptr blst_opaque](addr ctx.c)
+    cast[ptr blst_opaque](addr ctx.c),
     hash_or_encode = kHash,
     ctx.DomainSepTag
   ) # C1 = 1 (identity element)
@@ -543,7 +543,7 @@ func update*[T: char|byte](
     pk_grpchk = false, # Already grouped checked
     signature.point.unsafeAddr,
     sig_grpchk = false, # Already grouped checked
-    scalar = blindingScalar,
+    scalar = cast[ptr byte](addr blindingScalar),
     nbits = blindingBits, # Use only the first 64 bits for blinding
     message,
     aug = ""
@@ -564,7 +564,9 @@ func merge*(
   ## This MUST be preceded by "commit" on each ContextMultiAggregateVerify
   ## There shouldn't be a use-case where ``ctx_from`` is reused afterwards
   ## hence it is marked as sink.
-  return BLST_SUCCESS == ctx_into.c.blst_pairing_merge(ctx_from.c)
+  return BLST_SUCCESS == blst_pairing_merge(
+    cast[ptr blst_opaque](addr ctx_into.c),
+    cast[ptr blst_opaque](unsafeAddr ctx_from.c))
 
 {.pop.} # stacktraces and checks off
 

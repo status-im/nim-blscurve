@@ -38,7 +38,7 @@ proc benchScalarMultG1*(iters: int) =
     scalar.blst_scalar_from_bendian(scal)
 
     bench("Scalar multiplication G1 (255-bit, constant-time)", iters):
-      x.blst_p1_mult(x, scalar, 255)
+      x.blst_p1_mult(x, cast[ptr byte](addr scalar), 255)
 
 proc benchScalarMultG2*(iters: int) =
   when BLS_BACKEND == BLST:
@@ -53,7 +53,7 @@ proc benchScalarMultG2*(iters: int) =
     scalar.blst_scalar_from_bendian(scal)
 
     bench("Scalar multiplication G2 (255-bit, constant-time)", iters):
-      x.blst_p2_mult(x, scalar, 255)
+      x.blst_p2_mult(x, cast[ptr byte](addr scalar), 255)
 
 proc benchECAddG1*(iters: int) =
   when BLS_BACKEND == BLST:
@@ -101,17 +101,20 @@ when BLS_BACKEND == BLST:
 
     # Verification
     let ctx = createU(blst_pairing) # Heap to avoid stack smashing
-    ctx[].blst_pairing_init(
+    blst_pairing_init(
+      cast[ptr blst_opaque](ctx),
       hash_or_encode = kHash,
       domainSepTag
     )
-    doAssert BLST_SUCCESS == ctx[].blst_pairing_aggregate_pk_in_g1(
+    doAssert BLST_SUCCESS == blst_pairing_aggregate_pk_in_g1(
+      cast[ptr blst_opaque](ctx),
       PK = pubkey.unsafeAddr,
       signature = nil,
       msg,
       aug = ""
     )
-    doAssert BLST_SUCCESS == ctx[].blst_pairing_aggregate_pk_in_g1(
+    doAssert BLST_SUCCESS == blst_pairing_aggregate_pk_in_g1(
+      cast[ptr blst_opaque](ctx),
       PK = nil,
       signature = sig.unsafeAddr,
       msg = "",
@@ -122,15 +125,15 @@ when BLS_BACKEND == BLST:
     let ctxSave = createU(blst_pairing)
     ctxSave[] = ctx[]
 
-    ctx[].blst_pairing_commit()                     # Miller loop
-    let valid = ctx[].blst_pairing_finalverify(nil) # Final Exponentiation
+    blst_pairing_commit(cast[ptr blst_opaque](ctx))                     # Miller loop
+    let valid = blst_pairing_finalverify(cast[ptr blst_opaque](ctx), nil) # Final Exponentiation
     doAssert bool valid
 
     # Pairing: e(Q, xP) == e(R, P)
     bench("Pairing (Miller loop + Final Exponentiation)", iters):
       ctx[] = ctxSave[]
-      ctx[].blst_pairing_commit()                     # Miller loop
-      let valid = ctx[].blst_pairing_finalverify(nil) # Final Exponentiation
+      blst_pairing_commit(cast[ptr blst_opaque](ctx))                     # Miller loop
+      let valid = blst_pairing_finalverify(cast[ptr blst_opaque](ctx), nil) # Final Exponentiation
       # doAssert bool valid
 
 when isMainModule:
