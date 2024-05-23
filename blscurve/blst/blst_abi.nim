@@ -368,15 +368,21 @@ proc blst_final_exp*(ret: var blst_fp12; f: blst_fp12)
 proc blst_precompute_lines*(Qlines: var array[68, blst_fp6]; Q: blst_p2_affine)
 proc blst_miller_loop_lines*(ret: var blst_fp12; Qlines: array[68, blst_fp6]; P: blst_p1_affine)
 proc blst_pairing_sizeof*(): uint
-proc blst_pairing_init*[T: byte|char](new_ctx: var blst_pairing,
-                        hash_or_encode: HashOrEncode,
-                        domainSepTag: openArray[T])
+
 proc blst_pairing_init*[T: byte|char](new_ctx: ptr blst_opaque,
                         hash_or_encode: HashOrEncode,
                         domainSepTag: openArray[T])
+proc blst_pairing_init*[T: byte|char](new_ctx: var blst_pairing,
+                        hash_or_encode: HashOrEncode,
+                        domainSepTag: openArray[T]) =
+  blst_pairing_init(cast[ptr blst_opaque](addr new_ctx), hash_or_encode,
+                    domainSepTag)
+
 proc blst_pairing_get_dst*(ctx: blst_pairing): ptr UncheckedArray[byte]
-proc blst_pairing_commit*(ctx: var blst_pairing)
 proc blst_pairing_commit*(ctx: ptr blst_opaque)
+proc blst_pairing_commit*(ctx: var blst_pairing) =
+  cast[ptr blst_opaque](addr ctx)
+
 proc blst_pairing_aggregate_pk_in_g2*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p2_affine;
@@ -417,15 +423,6 @@ proc blst_pairing_aggregate_pk_in_g1*[T,U: byte|char](
                                      msg: openArray[T];
                                      aug: openArray[U]): BLST_ERROR
 proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
-                                     ctx: var blst_pairing,
-                                     PK: ptr blst_p1_affine,
-                                     pk_grpchk: bool,
-                                     signature: ptr blst_p2_affine,
-                                     sig_grpchk: bool,
-                                     msg: openArray[T],
-                                     aug: openArray[U]
-                                     ): BLST_ERROR
-proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
                                      ctx: ptr blst_opaque,
                                      PK: ptr blst_p1_affine,
                                      pk_grpchk: bool,
@@ -434,6 +431,18 @@ proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
                                      msg: openArray[T],
                                      aug: openArray[U]
                                      ): BLST_ERROR
+proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
+                                     ctx: var blst_pairing,
+                                     PK: ptr blst_p1_affine,
+                                     pk_grpchk: bool,
+                                     signature: ptr blst_p2_affine,
+                                     sig_grpchk: bool,
+                                     msg: openArray[T],
+                                     aug: openArray[U]
+                                     ): BLST_ERROR =
+  blst_pairing_chk_n_aggr_pk_in_g1(
+    cast[ptr blst_opaque](addr ctx), PK, pk_grpchk, signature, sig_grpchk, msg,
+    aug)
 proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p1_affine;
@@ -454,8 +463,10 @@ proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](
                                      aug: openArray[U]
                                      ): BLST_ERROR
 proc blst_pairing_merge*(ctx: var blst_pairing; ctx1: blst_pairing): BLST_ERROR
-proc blst_pairing_finalverify*(ctx: var blst_pairing; gtsig: ptr blst_fp12): CTbool
 proc blst_pairing_finalverify*(ctx: ptr blst_opaque; gtsig: ptr blst_fp12): CTbool
+proc blst_pairing_finalverify*(ctx: var blst_pairing;
+                               gtsig: ptr blst_fp12): CTbool =
+  blst_pairing_finalverify(cast[ptr blst_opaque](addr ctx), gtsig)
 
 #   Customarily applications aggregate signatures separately.
 #    In which case application would have to pass NULLs for |signature|
