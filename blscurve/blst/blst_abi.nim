@@ -5,6 +5,7 @@ import std/[strutils, os]
 const headerPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/bindings/blst.h"
 
 {.pragma: blst, importc, header: headerPath.}
+{.pragma: blstheader, header: headerPath.}
 
 type CTbool* = distinct cint
   ## Boolean for constant-time protected use-cases
@@ -157,6 +158,8 @@ type
     Q: array[8, blst_p2_affine]
     P: array[8, blst_p1_affine]
 
+  cblst_pairing* {.importc: "blst_pairing", header: headerPath, byref.} = object
+
 var
   # Generators
   BLS12_381_G1* {.blst.}: blst_p1_affine
@@ -266,6 +269,7 @@ proc blst_p2_add_affine*(dst: var blst_p2; a: blst_p2; b: blst_p2_affine)
 proc blst_p2_add_or_double_affine*(dst: var blst_p2; a: blst_p2; b: blst_p2_affine)
 proc blst_p2_double*(dst: var blst_p2; a: blst_p2)
 proc blst_p2_mult*(dst: var blst_p2; p: blst_p2; scalar: blst_scalar; nbits: uint)
+# proc blst_p2_mult*(dst: var blst_p2; p: blst_p2; scalar: ptr byte; nbits: uint)
 proc blst_p2_cneg*(p: var blst_p2; cbit: uint)
 proc blst_p2_to_affine*(dst: var blst_p2_affine; src: blst_p2)
 proc blst_p2_from_affine*(dst: var blst_p2; src: blst_p2_affine)
@@ -365,11 +369,15 @@ proc blst_final_exp*(ret: var blst_fp12; f: blst_fp12)
 proc blst_precompute_lines*(Qlines: var array[68, blst_fp6]; Q: blst_p2_affine)
 proc blst_miller_loop_lines*(ret: var blst_fp12; Qlines: array[68, blst_fp6]; P: blst_p1_affine)
 proc blst_pairing_sizeof*(): uint
-proc blst_pairing_init*[T: byte|char](new_ctx: var blst_pairing,
+# proc blst_pairing_init*[T: byte|char](new_ctx: var blst_pairing,
+#                         hash_or_encode: HashOrEncode,
+#                         domainSepTag: openArray[T])
+proc blst_pairing_init*[T: byte|char](new_ctx: ptr cblst_pairing,
                         hash_or_encode: HashOrEncode,
                         domainSepTag: openArray[T])
 proc blst_pairing_get_dst*(ctx: blst_pairing): ptr UncheckedArray[byte]
-proc blst_pairing_commit*(ctx: var blst_pairing)
+proc blst_pairing_commit*(ctx: ptr cblst_pairing)
+# proc blst_pairing_commit*(ctx: var blst_pairing)
 proc blst_pairing_aggregate_pk_in_g2*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p2_affine;
@@ -410,7 +418,7 @@ proc blst_pairing_aggregate_pk_in_g1*[T,U: byte|char](
                                      msg: openArray[T];
                                      aug: openArray[U]): BLST_ERROR
 proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
-                                     ctx: var blst_pairing,
+                                     ctx: ptr cblst_pairing,
                                      PK: ptr blst_p1_affine,
                                      pk_grpchk: bool,
                                      signature: ptr blst_p2_affine,
@@ -418,6 +426,15 @@ proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
                                      msg: openArray[T],
                                      aug: openArray[U]
                                      ): BLST_ERROR
+# proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
+#                                      ctx: var blst_pairing,
+#                                      PK: ptr blst_p1_affine,
+#                                      pk_grpchk: bool,
+#                                      signature: ptr blst_p2_affine,
+#                                      sig_grpchk: bool,
+#                                      msg: openArray[T],
+#                                      aug: openArray[U]
+#                                      ): BLST_ERROR
 proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](
                                      ctx: var blst_pairing;
                                      PK: ptr blst_p1_affine;
@@ -427,18 +444,31 @@ proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](
                                      msg: openArray[T];
                                      aug: openArray[U]
                                      ): BLST_ERROR
+# proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](
+#                                      ctx: var blst_pairing,
+#                                      PK: ptr blst_p1_affine,
+#                                      pk_grpchk: bool,
+#                                      signature: ptr blst_p2_affine,
+#                                      sig_grpchk: bool,
+#                                      scalar: blst_scalar, nbits: uint,
+#                                      msg: openArray[T],
+#                                      aug: openArray[U]
+#                                      ): BLST_ERROR
 proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](
-                                     ctx: var blst_pairing,
+                                     ctx: ptr cblst_pairing,
                                      PK: ptr blst_p1_affine,
                                      pk_grpchk: bool,
                                      signature: ptr blst_p2_affine,
                                      sig_grpchk: bool,
-                                     scalar: blst_scalar, nbits: uint,
+                                     scalar: ptr byte, nbits: uint,
                                      msg: openArray[T],
                                      aug: openArray[U]
                                      ): BLST_ERROR
-proc blst_pairing_merge*(ctx: var blst_pairing; ctx1: blst_pairing): BLST_ERROR
-proc blst_pairing_finalverify*(ctx: var blst_pairing; gtsig: ptr blst_fp12): CTbool
+
+# proc blst_pairing_merge*(ctx: var blst_pairing; ctx1: blst_pairing): BLST_ERROR
+proc blst_pairing_merge*(ctx: ptr cblst_pairing; ctx1: ptr cblst_pairing): BLST_ERROR
+proc blst_pairing_finalverify*(ctx: ptr cblst_pairing; gtsig: ptr blst_fp12): CTbool
+# proc blst_pairing_finalverify*(ctx: var blst_pairing; gtsig: ptr blst_fp12): CTbool
 
 #   Customarily applications aggregate signatures separately.
 #    In which case application would have to pass NULLs for |signature|
