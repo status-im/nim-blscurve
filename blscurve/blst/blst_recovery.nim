@@ -13,52 +13,61 @@ type
     point: blst_scalar
 
 func fromUint32*(T: type ID, value: array[8, uint32]): T =
-  result.point.blst_scalar_from_uint32(value)
+  blst_scalar_from_uint32(toCV(result.point, cblst_scalar), value)
 
 func `/`(a: blst_fr, b: blst_fr): blst_fr =
   var t: blst_fr
-  blst_fr_eucl_inverse(t, b)
-  result.blst_fr_mul(a, t)
+  blst_fr_eucl_inverse(toCV(t, cblst_fr), toCC(b, cblst_fr))
+  blst_fr_mul(toCV(result, cblst_fr), toCC(a, cblst_fr), toCC(t, cblst_fr))
 
 func toScalar(a: blst_fr): blst_scalar =
-  result.blst_scalar_from_fr(a)
+  blst_scalar_from_fr(toCV(result, cblst_scalar), toCC(a, cblst_fr))
 
 func `*=`(a: var blst_fr, b: blst_fr) =
-  a.blst_fr_mul(a, b)
+  blst_fr_mul(toCV(a, cblst_fr), toCC(a, cblst_fr), toCC(b, cblst_fr))
 
 func `*`(a: blst_fr, b: blst_fr): blst_fr=
-  result.blst_fr_mul(a, b)
+  blst_fr_mul(toCV(result, cblst_fr), toCC(a, cblst_fr), toCC(b, cblst_fr))
 
 func `-`(a: blst_fr, b: blst_fr): blst_fr=
-  result.blst_fr_sub(a, b)
+  blst_fr_sub(toCV(result, cblst_fr), toCC(a, cblst_fr), toCC(b, cblst_fr))
 
 func `+=`(a: var blst_fr, b: blst_fr) =
-  a.blst_fr_add(a, b)
+  blst_fr_add(toCV(a, cblst_fr), toCC(a, cblst_fr), toCC(b, cblst_fr))
 
 func `+`(a: blst_fr, b: blst_fr): blst_fr =
-  result.blst_fr_add(a, b)
+  blst_fr_add(toCV(result, cblst_fr), toCC(a, cblst_fr), toCC(b, cblst_fr))
 
 func `*=`(a: var blst_p2; s: blst_fr) =
-  a.blst_p2_mult(a, s.toScalar(), 255)
+  let scalar = s.toScalar()
+  blst_p2_mult(toCV(a, cblst_p2), toCC(a, cblst_p2),
+               unsafeAddr scalar.b[0], 255)
 
-func `*`(a: blst_p2; s: blst_fr): blst_p2=
-  result.blst_p2_mult(a, s.toScalar(), 255)
+func `*`(a: blst_p2; s: blst_fr): blst_p2 =
+  let scalar = s.toScalar()
+  blst_p2_mult(toCV(result, cblst_p2), toCC(a, cblst_p2),
+               unsafeAddr scalar.b[0], 255)
 
 func `+=`(a: var blst_p2; b: blst_p2) =
-  a.blst_p2_add(a, b)
+  blst_p2_add(toCV(a, cblst_p2), toCC(a, cblst_p2), toCC(b, cblst_p2))
 
 func toFr(sk: SecretKey): blst_fr =
-  result.blst_fr_from_scalar(sk.getScalar)
+  let scalar = sk.getScalar()
+  blst_fr_from_scalar(toCV(result, cblst_fr), toCC(scalar, cblst_scalar))
 
 func toFr(id: ID): blst_fr =
-  result.blst_fr_from_scalar(id.point)
+  blst_fr_from_scalar(toCV(result, cblst_fr), toCC(id.point, cblst_scalar))
 
 func toP2(s: Signature): blst_p2 =
-  result.blst_p2_from_affine(s.getPoint)
+  let point = s.getPoint()
+  blst_p2_from_affine(toCV(result, cblst_p2), toCC(point, cblst_p2_affine))
 
 func add*(a: SecretKey, b: SecretKey): SecretKey =
   var r: blst_fr
-  blst_fr_add(r, a.toFr, b.toFr)
+  let
+    afr = a.toFr()
+    bfr = b.toFr()
+  blst_fr_add(toCV(r, cblst_fr), toCC(afr, cblst_fr), toCC(bfr, cblst_fr))
   SecretKey.fromFr(r)
 
 func evaluatePolynomial(cfs: openArray[blst_fr], x: blst_fr): blst_fr =

@@ -6,12 +6,12 @@ const auxHeaderPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../..
 {.push cdecl, importc, header: headerPath.}
 
 proc blst_derive_master_eip2333*[T: byte|char](
-  out_SK: var blst_scalar,
+  out_SK: ptr cblst_scalar,
   IKM: openArray[T])
 
 proc blst_derive_child_eip2333*(
-  out_SK: var blst_scalar,
-  SK: blst_scalar,
+  out_SK: ptr cblst_scalar,
+  SK: ptr cblst_scalar,
   child_index: uint32)
 
 {.pop.}

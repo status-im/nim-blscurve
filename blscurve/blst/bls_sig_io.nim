@@ -23,19 +23,19 @@ func toHex*(
   when obj is SecretKey:
     const size = 32
     var bytes{.noinit.}: array[size, byte]
-    bytes.blst_bendian_from_scalar(obj.scalar)
+    bytes.blst_bendian_from_scalar(toCC(obj.scalar, cblst_scalar))
   elif obj is PublicKey:
     const size = 48
     var bytes{.noinit.}: array[size, byte]
-    bytes.blst_p1_affine_compress(obj.point)
+    bytes.blst_p1_affine_compress(toCC(obj.point, cblst_p1_affine))
   elif obj is (Signature or ProofOfPossession):
     const size = 96
     var bytes{.noinit.}: array[size, byte]
-    bytes.blst_p2_affine_compress(obj.point)
+    bytes.blst_p2_affine_compress(toCC(obj.point, cblst_p2_affine))
   elif obj is AggregateSignature:
     const size = 96
     var bytes{.noinit.}: array[size, byte]
-    bytes.blst_p2_compress(obj.point)
+    bytes.blst_p2_compress(toCC(obj.point, cblst_p2))
 
   bytes.toHex()
 
@@ -48,14 +48,14 @@ func fromBytes*(
   ## Returns true on success and false otherwise
   result =
     when raw.len == 96:
-      obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
+      blst_p2_uncompress(toCV(obj.point, cblst_p2_affine), raw) == BLST_SUCCESS
     elif raw.len == 192:
-      obj.point.blst_p2_deserialize(raw) == BLST_SUCCESS
+      blst_p2_deserialize(toCV(obj.point, cblst_p2_affine), raw) == BLST_SUCCESS
     else: false
 
   # Infinity signatures are allowed if we receive an empty aggregated signature
   if result:
-    result = bool obj.point.blst_p2_affine_in_g2()
+    result = bool blst_p2_affine_in_g2(toCV(obj.point, cblst_p2_affine))
 
 func fromBytesKnownOnCurve*(
        obj: var (Signature|ProofOfPossession),
@@ -68,9 +68,9 @@ func fromBytesKnownOnCurve*(
   ## The point is known to be on curve and is not group checked
   result =
     when raw.len == 96:
-      obj.point.blst_p2_uncompress(raw) == BLST_SUCCESS
+      toCV(obj.point, cblst_p2_affine).blst_p2_uncompress(raw) == BLST_SUCCESS
     elif raw.len == 192:
-      obj.point.blst_p2_deserialize(raw) == BLST_SUCCESS
+      toCV(obj.point, cblst_p2_affine).blst_p2_deserialize(raw) == BLST_SUCCESS
     else: false
   # Infinity signatures are allowed if we receive an empty aggregated signature
 
@@ -87,16 +87,16 @@ func fromBytes*(
   ## Returns true on success and false otherwise
   result =
     when raw.len == 48:
-      obj.point.blst_p1_uncompress(raw) == BLST_SUCCESS
+      toCV(obj.point, cblst_p1_affine).blst_p1_uncompress(raw) == BLST_SUCCESS
     elif raw.len == 96:
-      obj.point.blst_p1_deserialize(raw) == BLST_SUCCESS
+      toCV(obj.point, cblst_p1_affine).blst_p1_deserialize(raw) == BLST_SUCCESS
     else: false
 
   # Infinity public keys are not allowed
   if result:
-    result = not bool obj.point.blst_p1_affine_is_inf()
+    result = not bool toCV(obj.point, cblst_p1_affine).blst_p1_affine_is_inf()
     if result:
-      result = bool obj.point.blst_p1_affine_in_g1()
+      result = bool toCV(obj.point, cblst_p1_affine).blst_p1_affine_in_g1()
 
 func fromBytesKnownOnCurve*(
        obj: var PublicKey,
@@ -107,14 +107,14 @@ func fromBytesKnownOnCurve*(
   ## Returns true on success and false otherwise
   result =
     when raw.len == 48:
-      obj.point.blst_p1_uncompress(raw) == BLST_SUCCESS
+      toCV(obj.point, cblst_p1_affine).blst_p1_uncompress(raw) == BLST_SUCCESS
     elif raw.len == 96:
-      obj.point.blst_p1_deserialize(raw) == BLST_SUCCESS
+      toCV(obj.point, cblst_p1_affine).blst_p1_deserialize(raw) == BLST_SUCCESS
     else: false
 
   # Infinity public keys are not allowed
   if result:
-    result = not bool obj.point.blst_p1_affine_is_inf()
+    result = not bool blst_p1_affine_is_inf(toCC(obj.point, cblst_p1_affine))
 
   # Skipped - Known on curve
   # if result:
@@ -155,15 +155,15 @@ func fromBytes*(
   ## Returns true on success and false otherwise
   const L = 32
   when raw is array:
-    obj.scalar.blst_scalar_from_bendian(raw)
+    blst_scalar_from_bendian(toCV(obj.scalar, cblst_scalar), raw)
   else:
     if raw.len != 32:
       return false
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
-    obj.scalar.blst_scalar_from_bendian(pa[])
+    blst_scalar_from_bendian(toCV(obj.scalar, cblst_scalar), pa[])
   if obj.vec_is_zero():
     return false
-  if not obj.scalar.blst_sk_check().bool:
+  if not blst_sk_check(toCC(obj.scalar, cblst_scalar)).bool:
     return false
   return true
 
@@ -197,8 +197,8 @@ func serialize*(
   ## Serialize the input `obj` in raw binary form and write it
   ## in `dst`.
   ## Returns `true` if the export is succesful, `false` otherwise
-  blst_bendian_from_scalar(dst, obj.scalar)
-  return true
+  blst_bendian_from_scalar(dst, toCC(obj.scalar, cblst_scalar))
+  true
 
 func serialize*(
        dst: var array[48, byte],
@@ -208,8 +208,8 @@ func serialize*(
   ## Returns `true` if the export is successful, `false` otherwise
   ## Note: this overload will serialize to the compressed format most commonly
   ## used.
-  blst_p1_affine_compress(dst, obj.point)
-  return true
+  blst_p1_affine_compress(dst, toCC(obj.point, cblst_p1_affine))
+  true
 
 func serialize*(
        dst: var array[96, byte],
@@ -219,7 +219,7 @@ func serialize*(
   ## Returns `true` if the export is successful, `false` otherwise
   ## Note: this overload willl serialize to an uncompressed format that is
   ## faster to deserialize but takes up more space.
-  blst_p1_affine_serialize(dst, obj.point)
+  blst_p1_affine_serialize(dst, toCC(obj.point, cblst_p1_affine))
   return true
 
 func serialize*(
@@ -230,7 +230,7 @@ func serialize*(
   ## Returns `true` if the export is successful, `false` otherwise
   ## Note: this overload will serialize to the compressed format most commonly
   ## used.
-  blst_p2_affine_compress(dst, obj.point)
+  blst_p2_affine_compress(dst, toCC(obj.point, cblst_p2_affine))
   return true
 
 func serialize*(
@@ -241,7 +241,7 @@ func serialize*(
   ## Returns `true` if the export is successful, `false` otherwise
   ## Note: this overload willl serialize to an uncompressed format that is
   ## faster to deserialize but takes up more space.
-  blst_p2_affine_serialize(dst, obj.point)
+  blst_p2_affine_serialize(dst, toCC(obj.point, cblst_p2_affine))
   return true
 
 func exportRaw*(secretKey: SecretKey): array[32, byte] {.inline, noinit.}=
