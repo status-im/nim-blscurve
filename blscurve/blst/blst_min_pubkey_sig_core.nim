@@ -94,9 +94,11 @@ func `==`*(a, b: SecretKey): bool {.error: "Comparing secret keys is not allowed
 func `==`*(a, b: PublicKey or Signature or ProofOfPossession): bool {.inline.} =
   ## Check if 2 BLS signature scheme objects are equal
   when a.point is blst_p1_affine:
-    bool blst_p1_affine_is_equal(a.point, b.point)
+    bool blst_p1_affine_is_equal(toCC(a.point, cblst_p1_affine),
+                                 toCC(b.point, cblst_p1_affine))
   else:
-    bool blst_p2_affine_is_equal(a.point, b.point)
+    bool blst_p2_affine_is_equal(toCC(a.point, cblst_p2_affine),
+                                 toCC(b.point, cblst_p2_affine))
 
 # IO
 # ----------------------------------------------------------------------
@@ -123,16 +125,16 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ##   an invalid secretkey in the first place.
   if seckey.vec_is_zero():
     return false
-  if not seckey.scalar.blst_sk_check().bool:
+  if not blst_sk_check(toCC(seckey.scalar, cblst_scalar)).bool:
     return false
   var pk {.noinit.}: blst_p1
-  pk.blst_sk_to_pk_in_g1(seckey.scalar)
-  pubkey.point.blst_p1_to_affine(pk)
-  return true
+  blst_sk_to_pk_in_g1(toCV(pk, cblst_p1), toCC(seckey.scalar, cblst_scalar))
+  blst_p1_to_affine(toCV(pubkey.point, cblst_p1_affine), toCC(pk, cblst_p1))
+  true
 
 func rawFromPublic*(raw: var array[48, byte], pubkey: PublicKey) {.inline.} =
   ## Dump a public key to raw bytes compressed form
-  raw.blst_p1_affine_compress(pubkey.point)
+  raw.blst_p1_affine_compress(toCC(pubkey.point, cblst_p1_affine))
 
 # Aggregate
 # ----------------------------------------------------------------------
@@ -144,28 +146,35 @@ template genAggregatorProcedures(
          ): untyped =
   func init*(agg: var Aggregate, elem: BaseType) {.inline.} =
     ## Initialize an aggregate signature or public key
-    agg.point.`blst _ p1_or_p2 _ from_affine`(elem.point)
+    `blst _ p1_or_p2 _ from_affine`(
+      toCV(agg.point, `cblst _ p1_or_p2`),
+      toCC(elem.point, `cblst _ p1_or_p2 _ affine`))
 
   func aggregate*(agg: var Aggregate, elem: BaseType) {.inline.} =
     ## Aggregates an element ``elem`` into ``agg``
     # Precondition n >= 1 is respected
-    agg.point.`blst _ p1_or_p2 _ add_or_double_affine`(
-      agg.point,
-      elem.point
+    `blst _ p1_or_p2 _ add_or_double_affine`(
+      toCV(agg.point, `cblst _ p1_or_p2`),
+      toCC(agg.point, `cblst _ p1_or_p2`),
+      toCC(elem.point, `cblst _ p1_or_p2 _ affine`)
     )
 
   proc aggregate*(agg: var Aggregate, elems: openArray[BaseType]) =
     ## Aggregates an array of elements `elems` into `agg`
     # Precondition n >= 1 is respected even if elems.len == 0
     for e in elems:
-      agg.point.`blst _ p1_or_p2 _ add_or_double_affine`(
-        agg.point,
-        e.point
+      `blst _ p1_or_p2 _ add_or_double_affine`(
+        toCV(agg.point, `cblst _ p1_or_p2`),
+        toCC(agg.point, `cblst _ p1_or_p2`),
+        toCC(e.point, `cblst _ p1_or_p2 _ affine`)
       )
 
   proc finish*(dst: var BaseType, src: Aggregate) {.inline.} =
     ## Canonicalize the Aggregate into a BaseType element
-    dst.point.`blst _ p1_or_p2 _ to_affine`(src.point)
+    `blst _ p1_or_p2 _ to_affine`(
+      toCV(dst.point, `cblst _ p1_or_p2 _ affine`),
+      toCC(src.point, `cblst _ p1_or_p2`)
+    )
 
   proc aggregateAll*(dst: var BaseType, elems: openArray[BaseType]): bool =
     ## Returns the aggregate of ``elems[0..<elems.len]``.
@@ -183,7 +192,7 @@ template genAggregatorProcedures(
     agg.init(elems[0])
     agg.aggregate(elems.toOpenArray(1, elems.high))
     dst.finish(agg)
-    return true
+    true
 
   proc subtractAll*(dst: var BaseType, elems: openArray[BaseType]) =
     ## Subtracts all ``elems[0..<elems.len]`` from ``dst``.
@@ -192,7 +201,10 @@ template genAggregatorProcedures(
     var agg{.noinit.}: Aggregate
     agg.init(elems[0])
     agg.aggregate(elems.toOpenArray(1, elems.high))
-    agg.point.`blst _ p1_or_p2 _ cneg`(cbit = 1)
+    `blst _ p1_or_p2 _ cneg`(
+      toCV(agg.point, `cblst _ p1_or_p2`),
+      cbit = 1
+    )
     agg.aggregate(dst)
     dst.finish(agg)
 
@@ -227,14 +239,16 @@ func coreSign*[T: byte|char](
   # 2. R = SK * Q
   # 3. signature = point_to_signature(R)
   # 4. return signature
-  var sig{.noinit.}: blst_p2
-  sig.blst_hash_to_g2(
-    message,
-    domainSepTag,
-    aug = ""
+  var
+    sig {.noinit.}: blst_p2
+
+  blst_hash_to_g2(toCV(sig, cblst_p2), message, domainSepTag, aug = "")
+  blst_sign_pk_in_g1(
+    toCV(sig, cblst_p2),
+    toCC(sig, cblst_p2),
+    toCC(secretKey.scalar, cblst_scalar)
   )
-  sig.blst_sign_pk_in_g1(sig, secretKey.scalar)
-  signature.point.blst_p2_to_affine(sig)
+  blst_p2_to_affine(toCV(signature.point, cblst_p2_affine), toCC(sig, cblst_p2))
 
 func coreVerify*[T: byte|char](
        publicKey: PublicKey,
@@ -262,14 +276,16 @@ func coreVerifyNoGroupCheck*[T: byte|char](
   ## This assumes that the Public Key and Signatures
   ## have been pre group checked (likely on deserialization)
   var ctx{.noinit.}: blst_pairing
-  ctx.blst_pairing_init(
+  blst_pairing_init(
+    toCV(ctx, cblst_pairing),
     hash_or_encode = kHash,
     domainSepTag
   )
-  let ok = BLST_SUCCESS == ctx.blst_pairing_chk_n_aggr_pk_in_g1(
-    publicKey.point.unsafeAddr,
+  let ok = BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+    toCV(ctx, cblst_pairing),
+    toCC(publicKey.point, cblst_p1_affine),
     pk_grpchk = false, # Already grouped checked
-    sig_or_proof.point.unsafeAddr,
+    toCC(sig_or_proof.point, cblst_p2_affine),
     sig_grpchk = false, # Already grouped checked
     message,
     aug = ""
@@ -277,8 +293,8 @@ func coreVerifyNoGroupCheck*[T: byte|char](
   if not ok:
     return false
 
-  ctx.blst_pairing_commit()
-  bool ctx.blst_pairing_finalverify(nil)
+  blst_pairing_commit(toCV(ctx, cblst_pairing))
+  bool blst_pairing_finalverify(toCV(ctx, cblst_pairing), nil)
 
 # Core aggregate operations
 # Aggregate Batch of (Publickeys, Messages, Signatures)
@@ -304,7 +320,8 @@ type
 
 func init*(ctx: var ContextCoreAggregateVerify) {.inline.} =
   ## initialize an aggregate verification context
-  ctx.c.blst_pairing_init(
+  blst_pairing_init(
+    toCV(ctx.c, cblst_pairing),
     hash_or_encode = kHash,
     ctx.DomainSepTag
   ) # C1 = 1 (identity element)
@@ -313,8 +330,9 @@ func update*[T: char|byte](
        ctx: var ContextCoreAggregateVerify,
        publicKey: PublicKey,
        message: openArray[T]): bool {.inline.} =
-  BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
-    publicKey.point.unsafeAddr,
+  BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+    toCV(ctx.c, cblst_pairing),
+    toCC(publicKey.point, cblst_p1_affine),
     pk_grpchk = false, # Already grouped checked
     signature = nil,
     sig_grpchk = false, # Already grouped checked
@@ -328,11 +346,11 @@ func commit(ctx: var ContextCoreAggregateVerify) {.inline.} =
   ## This MUST be done:
   ## - before merging 2 pairing contexts (for example when distributing computation)
   ## - before finalVerify
-  ctx.c.blst_pairing_commit()
+  blst_pairing_commit(toCV(ctx.c, cblst_pairing))
 
 func finalVerify(ctx: var ContextCoreAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
-  bool ctx.c.blst_pairing_finalverify(nil)
+  bool blst_pairing_finalverify(toCV(ctx.c, cblst_pairing), nil)
 
 func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or AggregateSignature): bool =
   # Implementation strategy
@@ -365,10 +383,11 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
   # use a Miller loop internally and Miller loops are **very** costly.
 
   when signature is Signature:
-    result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
+    result = BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+      toCV(ctx.c, cblst_pairing),
       PK = nil,
       pk_grpchk = false, # Already grouped checked
-      signature.point.unsafeAddr,
+      toCC(signature.point, cblst_p2_affine),
       sig_grpchk = false, # Already grouped checked
       msg = "",
       aug = ""
@@ -377,10 +396,11 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
     block:
       var sig{.noinit.}: blst_p2_affine
       sig.blst_p2_to_affine(signature.point)
-      result = BLST_SUCCESS == ctx.c.blst_pairing_chk_n_aggr_pk_in_g1(
+      result = BLST_SUCCESS == blst_pairing_chk_n_aggr_pk_in_g1(
+        toCV(ctx.c, cblst_pairing),
         PK = nil,
         pk_grpchk = false, # Already grouped checked
-        sig.point.unsafeAddr,
+        toCC(sig.point, cblst_p2_affine),
         sig_grpchk = false, # Already grouped checked
         msg = "",
         aug = ""
@@ -468,7 +488,8 @@ func init*[T: char|byte](
   ## so that from a single source of randomness
   ## each thread is seeded with a different state when
   ## used in a multithreading context
-  ctx.c.blst_pairing_init(
+  blst_pairing_init(
+    toCV(ctx.c, cblst_pairing),
     hash_or_encode = kHash,
     ctx.DomainSepTag
   ) # C1 = 1 (identity element)
@@ -528,14 +549,16 @@ func update*[T: char|byte](
     while blindingAsU64[] == 0:
       # Ensure that the least significant bytes are non-zero
       ctx.secureBlinding.bls_sha256_digest(ctx.secureBlinding)
-    blindingScalar.blst_scalar_from_lendian(blindingAsArray[])
+    blst_scalar_from_lendian(toCV(blindingScalar, cblst_scalar),
+                             blindingAsArray[])
 
-  BLST_SUCCESS == ctx.c.blst_pairing_chk_n_mul_n_aggr_pk_in_g1(
-    publicKey.point.unsafeAddr,
+  BLST_SUCCESS == blst_pairing_chk_n_mul_n_aggr_pk_in_g1(
+    toCV(ctx.c, cblst_pairing),
+    toCC(publicKey.point, cblst_p1_affine),
     pk_grpchk = false, # Already grouped checked
-    signature.point.unsafeAddr,
+    toCC(signature.point, cblst_p2_affine),
     sig_grpchk = false, # Already grouped checked
-    scalar = blindingScalar,
+    scalar = addr blindingScalar.b[0],
     nbits = blindingBits, # Use only the first 64 bits for blinding
     message,
     aug = ""
@@ -547,7 +570,7 @@ func commit*(ctx: var ContextMultiAggregateVerify) {.inline.} =
   ## This MUST be done:
   ## - before merging 2 pairing contexts (for example when distributing computation)
   ## - before finalVerify
-  ctx.c.blst_pairing_commit()
+  blst_pairing_commit(toCV(ctx.c, cblst_pairing))
 
 func merge*(
        ctx_into: var ContextMultiAggregateVerify,
@@ -556,20 +579,22 @@ func merge*(
   ## This MUST be preceded by "commit" on each ContextMultiAggregateVerify
   ## There shouldn't be a use-case where ``ctx_from`` is reused afterwards
   ## hence it is marked as sink.
-  return BLST_SUCCESS == ctx_into.c.blst_pairing_merge(ctx_from.c)
+  BLST_SUCCESS == blst_pairing_merge(
+    toCV(ctx_into.c, cblst_pairing),
+    toCC(ctx_from.c, cblst_pairing))
 
 {.pop.} # stacktraces and checks off
 
 func finalVerify*(ctx: var ContextMultiAggregateVerify): bool {.inline.} =
   ## Verify a whole batch of (PublicKey, message, Signature) triplets.
-  result = bool ctx.c.blst_pairing_finalverify(nil)
+  bool blst_pairing_finalverify(toCV(ctx.c, cblst_pairing), nil)
 
 func getScalar*(sk: SecretKey): blst_scalar =
-  return sk.scalar
+  sk.scalar
 
 func fromFr*(t: typedesc[SecretKey], pt: blst_fr): SecretKey =
   var transformed: blst_scalar
-  transformed.blst_scalar_from_fr(pt)
+  blst_scalar_from_fr(toCV(transformed, cblst_scalar), toCC(pt, cblst_fr))
   SecretKey(scalar: transformed)
 
 func getPoint*(sig: Signature): blst_p2_affine =
@@ -577,5 +602,5 @@ func getPoint*(sig: Signature): blst_p2_affine =
 
 func fromP2*(s: typedesc[Signature], pt: blst_p2): Signature =
   var transformed: blst_p2_affine
-  transformed.blst_p2_to_affine(pt)
+  blst_p2_to_affine(toCV(transformed, cblst_p2_affine), toCC(pt, cblst_p2))
   Signature(point: transformed)

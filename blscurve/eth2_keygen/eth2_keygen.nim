@@ -27,8 +27,9 @@ when BLS_BACKEND == BLST:
           index: uint32
       ): bool =
     ## Child Key derivation function
-    childSecretKey.asScalar().blst_derive_child_eip2333(
-      parentSecretKey.asScalar(),
+    blst_derive_child_eip2333(
+      toCV(childSecretKey, cblst_scalar),
+      toCC(parentSecretKey, cblst_scalar),
       index
     )
     return true
@@ -41,7 +42,8 @@ when BLS_BACKEND == BLST:
     if ikm.len < 32:
       return false
 
-    masterSecretKey.asScalar().blst_derive_master_eip2333(
+    blst_derive_master_eip2333(
+      toCV(masterSecretKey, cblst_scalar),
       ikm
     )
     return true

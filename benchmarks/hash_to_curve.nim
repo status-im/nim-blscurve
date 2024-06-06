@@ -33,12 +33,13 @@ proc benchHashToG2*(iters: int) =
     var Paff: blst_p2_affine
 
     bench("Hash to G2 (Draft #9) + affine conversion", iters):
-      P.blst_hash_to_g2(
+      blst_hash_to_g2(
+        toCV(P, cblst_p2),
         msg,
         dst,
         aug = ""
       )
-      Paff.blst_p2_to_affine(P)
+      blst_p2_to_affine(toCV(Paff, cblst_p2_affine), toCC(P, cblst_p2))
 
 when isMainModule:
   benchHashToG2(1000)

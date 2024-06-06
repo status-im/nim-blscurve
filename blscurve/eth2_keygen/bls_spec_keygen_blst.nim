@@ -69,5 +69,6 @@ func keyGen*(ikm: openArray[byte], publicKey: var PublicKey, secretKey: var Secr
     return false
 
   # The cast is a workaround for private field access
-  cast[ptr blst_scalar](secretKey.addr)[].blst_keygen(ikm, info = "")
+
+  blst_keygen(toCV(secretKey, cblst_scalar), ikm, info = "")
   publicKey.publicFromSecret(secretKey)

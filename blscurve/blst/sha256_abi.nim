@@ -3,14 +3,14 @@
 
 import std/[strutils, os]
 
-const srcPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/src"
-const headerPath = srcPath & "/sha256.h"
+const srcPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0]
+const headerPath = srcPath & "/blst_sha256.h"
 
 {.pragma: importcFunc, cdecl, gcsafe, noSideEffect, raises: [].}
 
 type
   BLST_SHA256_CTX* {.
-    importc: "SHA256_CTX", header: headerPath, bycopy.} = object
+    importc: "BLST_SHA256_CTX", header: headerPath, bycopy.} = object
     h: array[8, cuint]
     N: culonglong
     buf: array[64, byte]
