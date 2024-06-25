@@ -29,9 +29,9 @@ proc build(args, path: string) =
   exec nimc & " " & lang & " " & cfg & " " & flags & " " & args & " " & path
 
 proc run(args, path: string) =
-  build args & " -r", path
+  build args & " --mm:refc -r", path
   if (NimMajor, NimMinor) > (1, 6):
-    build args & " --mm:refc -r", path
+    build args & " --mm:orc -r", path
 
 ### tasks
 task test, "Run all tests":
@@ -55,7 +55,7 @@ task test, "Run all tests":
 
   when (defined(windows) and sizeof(pointer) == 4):
     # Eth2 vectors without batch verify
-    run "-d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
+    run "--threads:off -d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
   else:
     run "--threads:on -d:BLS_FORCE_BACKEND=blst", "tests/eth2_vectors.nim"
 
