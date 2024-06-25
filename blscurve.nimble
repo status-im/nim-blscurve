@@ -13,6 +13,7 @@ installFiles = @["blscurve.nim"]
 requires "nim >= 1.6.0",
          "nimcrypto",
          "stew",
+         "results",
          "taskpools >= 0.0.5"
 
 let nimc = getEnv("NIMC", "nim") # Which nim compiler to use
