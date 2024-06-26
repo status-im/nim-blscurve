@@ -1,6 +1,7 @@
 import
   sequtils,
-  stew/[results, objects],
+  results,
+  stew/objects,
   ./blst_lowlevel,
   ./blst_min_pubkey_sig_core
 
