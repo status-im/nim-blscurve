@@ -63,7 +63,7 @@ binaries destined for older CPUs, pass `-d:BLSTuseSSSE3=0` to the Nim compiler.
 ### Executing the test suite
 
 We recommend working within the nimbus build environment described here:
-https://github.com/status-im/nim-beacon-chain/
+https://github.com/status-im/nimbus-eth2
 
 To execute the test suite, just navigate to the root of this repo and execute:
 
@@ -72,7 +72,7 @@ nimble test
 ```
 
 > Please note that within the nimbus build environment, the repository will
-  be located in `nim-beacon-chain/vendor/nim-blscurve`.
+  be located in `nimbus-eth2/vendor/nim-blscurve`.
 
 ### Executing the fuzzing tests
 
