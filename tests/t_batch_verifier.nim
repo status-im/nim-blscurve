@@ -178,7 +178,10 @@ proc genForgedPair(batch: var seq[SignatureSet],
   # 1. Create -S'. Note: if P has elliptic affine coordinates (x, y) then -P is (x, -y)
   var neg_sigp = sigp
   let neg_sigp_ptr = cast[ptr blst_p2_affine](neg_sigp.addr)
-  blst_fp2_cneg(toCV(neg_sigp_ptr[].y, cblst_fp2), toCC(neg_sigp_ptr[].y, cblst_fp2), 1)
+  blst_fp2_cneg(
+    toCV(neg_sigp_ptr[].y, cblst_fp2),
+    toCC(neg_sigp_ptr[].y, cblst_fp2),
+    flag = true)
 
   # 2. Forge signatures S1+S' and S2-S'
   var forgedSig1s, forgedSig2ns: Signature
