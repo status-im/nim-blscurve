@@ -203,7 +203,7 @@ template genAggregatorProcedures(
     agg.aggregate(elems.toOpenArray(1, elems.high))
     `blst _ p1_or_p2 _ cneg`(
       toCV(agg.point, `cblst _ p1_or_p2`),
-      cbit = 1
+      cbit = true
     )
     agg.aggregate(dst)
     dst.finish(agg)
