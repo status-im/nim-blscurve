@@ -13,14 +13,14 @@
 
 // Nim does not support annotating pointer destinations with C `const`.
 //
-// This leads to errors on certain platforms and toolchains, e.g.:
+// This leads to errors on certain platforms and toolchains
+// when interacting with APIs involving nested pointers, e.g.:
 //     expected 'const blst_p1_affine * const*'
 //     but argument is of type 'blst_p1_affine **'
 //     [-Wincompatible-pointer-types]
 //
 // To prevent these issues, offending function signatures are replaced
 // with ones that lack C `const` annotations.
-
 
 #define blst_p1s_to_affine blst_p1s_to_affine_replaced
 #define blst_p1s_add blst_p1s_add_replaced
