@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018-Present Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -135,6 +135,46 @@ suite "Batch verification":
     check:
       not tp.batchVerify(cache, batch, fakeRandomBytes)
       not tp.batchVerify(batch, fakeRandomBytes)
+
+  wrappedTest "Combining multiple signatures":
+    const numSigs = 100'u64
+    let msg = hash"msg"
+    var
+      pubkeys: seq[PublicKey]
+      sigs: seq[Signature]
+      batch: seq[SignatureSet]
+    for i in 0 ..< numSigs:
+      let
+        (pubkey, seckey) = keyGen(i)
+        sig = seckey.sign(msg)
+      pubkeys.add pubkey
+      sigs.add sig
+      batch.add((pubkey, msg, sig))
+
+    # Regular API (may use different backend)
+    var cache = BatchedBLSVerifierCache.init(tp)
+    check:
+      tp.batchVerify(cache, batch, fakeRandomBytes)
+      tp.batchVerify(batch, fakeRandomBytes)
+
+    # Direct use of multiscalar API
+    block:
+      let
+        multiSet = MultiSignatureSet.init(pubkeys, msg, sigs)
+        sigset = multiSet.combine(fakeRandomBytes)
+      check:
+        tp.batchVerify(cache, @[sigset], fakeRandomBytes)
+        tp.batchVerify(@[sigset], fakeRandomBytes)
+
+    # Ensure that shuffled signatures are rejected
+    sigs.shuffle()
+    block:
+      let
+        multiSet = MultiSignatureSet.init(pubkeys, msg, sigs)
+        sigset = multiSet.combine(fakeRandomBytes)
+      check:
+        not tp.batchVerify(cache, @[sigset], fakeRandomBytes)
+        not tp.batchVerify(@[sigset], fakeRandomBytes)
 
   tp.shutdown()
 

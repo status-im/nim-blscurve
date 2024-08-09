@@ -1,5 +1,5 @@
 # Nim-BLST
-# Copyright (c) 2020 Status Research & Development GmbH
+# Copyright (c) 2020-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -504,6 +504,9 @@ func init*[T: char|byte](
       secureRandomBytes
     )
 
+func advanceSecureBlinding(secureRandomBytes: var array[32, byte]) =
+  secureRandomBytes.bls_sha256_digest(secureRandomBytes)
+
 func update*[T: char|byte](
          ctx: var ContextMultiAggregateVerify,
          publicKey: PublicKey,
@@ -545,10 +548,10 @@ func update*[T: char|byte](
     let blindingAsU64 = cast[ptr uint64](ctx.secureBlinding.addr)
     let blindingAsArray = cast[ptr array[32, byte]](ctx.secureBlinding.addr)
 
-    ctx.secureBlinding.bls_sha256_digest(ctx.secureBlinding)
+    ctx.secureBlinding.advanceSecureBlinding()
     while blindingAsU64[] == 0:
       # Ensure that the least significant bytes are non-zero
-      ctx.secureBlinding.bls_sha256_digest(ctx.secureBlinding)
+      ctx.secureBlinding.advanceSecureBlinding()
     blst_scalar_from_lendian(toCV(blindingScalar, cblst_scalar),
                              blindingAsArray[])
 
@@ -563,6 +566,79 @@ func update*[T: char|byte](
     message,
     aug = ""
   )
+
+func combine*(
+         secureRandomBytes: array[32, byte],
+         publicKeys: openArray[PublicKey],
+         signatures: openArray[Signature],
+       ): tuple[publicKey: PublicKey, signature: Signature] =
+  ## Combine a set of signatures that all pertain to the same message
+  ## into a single linear combination
+  ##
+  ## Assumes that all public keys and signatures
+  ## have been group checked and that no public key is infinity
+  doAssert publicKeys.len == signatures.len
+  let numEntries = publicKeys.len.uint
+  case numEntries
+  of 0:
+    raiseAssert "Must provide at least 1 signature"
+  of 1:
+    (publicKeys[0], signatures[0])
+  else:
+    # Generate different blinding scalars for each entry
+    var
+      secureBlinding = secureRandomBytes
+      blindingScalars = newSeqUninitialized[uint64](numEntries)
+      numAvailableScalars = 0
+    for i in 0 ..< numEntries:
+      while true:
+        const maxScalars = sizeof(secureBlinding) div sizeof(uint64)
+        let src = cast[ptr array[maxScalars, uint64]](secureBlinding.addr)
+        if numAvailableScalars == 0:
+          secureBlinding.advanceSecureBlinding()
+          numAvailableScalars = maxScalars
+        dec numAvailableScalars
+        if src[numAvailableScalars] != 0:
+          blindingScalars[i] = src[numAvailableScalars]
+          break
+
+    # Create linear combination of public keys / signatures
+    # https://github.com/supranational/blst/blob/v0.3.13/bindings/rust/src/pippenger-no_std.rs
+    static:  # Ensure no padding between items
+      doAssert sizeof(publicKeys[0]) == sizeof(publicKeys[0].point)
+      doAssert sizeof(signatures[0]) == sizeof(signatures[0].point)
+    let  # NULL-terminated lists of pointers to lists of values
+      publicKeysRef = [toCC(publicKeys[0], cblst_p1_affine), nil]
+      signaturesRef = [toCC(signatures[0], cblst_p2_affine), nil]
+      scalarsRef = [toCC(blindingScalars[0], byte), nil]
+    var
+      scratch = newSeqUninitialized[limb_t]((max(
+        blst_p1s_mult_pippenger_scratch_sizeof(numEntries).int,
+        blst_p2s_mult_pippenger_scratch_sizeof(numEntries).int
+      ) + sizeof(limb_t) - 1) div sizeof(limb_t))
+      publicKey {.noinit.}: PublicKey
+      signature {.noinit.}: Signature
+    block:
+      var combinedPublicKey {.noinit.}: AggregatePublicKey
+      blst_p1s_mult_pippenger(
+        toCV(combinedPublicKey, cblst_p1),
+        publicKeysRef[0].unsafeAddr,
+        numEntries,
+        scalarsRef[0].unsafeAddr,
+        nbits = 64,
+        scratch[0].addr)
+      publicKey.finish combinedPublicKey
+    block:
+      var combinedSignature {.noinit.}: AggregateSignature
+      blst_p2s_mult_pippenger(
+        toCV(combinedSignature, cblst_p2),
+        signaturesRef[0].unsafeAddr,
+        numEntries,
+        scalarsRef[0].unsafeAddr,
+        nbits = 64,
+        scratch[0].addr)
+      signature.finish combinedSignature
+    (publicKey, signature)
 
 func commit*(ctx: var ContextMultiAggregateVerify) {.inline.} =
   ## Consolidate all init/update operations done so far

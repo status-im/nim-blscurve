@@ -320,43 +320,49 @@ proc blst_p2_affine_is_inf*(a: ptr cblst_p2_affine): CTbool
 proc blst_p2_affine_generator*(): ptr cblst_p2_affine
 
 # Multi-scalar multiplications and other multi-point operations.
-proc blst_p1s_to_affine*(dst: UncheckedArray[cblst_p1_affine]; points: cblst_p1;
+proc blst_p1s_to_affine*(dst: ptr cblst_p1_affine; points: ptr ptr cblst_p1;
                          npoints: uint)
-proc blst_p1s_add*(ret: ptr cblst_p1; points: cblst_p1_affine; npoints: uint)
+proc blst_p1s_add*(ret: ptr cblst_p1;
+                   points: ptr ptr cblst_p1_affine; npoints: uint)
 proc blst_p1s_mult_wbits_precompute_sizeof*(wbits: uint; npoints: uint): uint
-proc blst_p1s_mult_wbits_precompute*(table: UncheckedArray[cblst_p1_affine];
-                                     wbits: uint; points: cblst_p1_affine;
+proc blst_p1s_mult_wbits_precompute*(table: ptr cblst_p1_affine; wbits: uint;
+                                     points: ptr ptr cblst_p1_affine;
                                      npoints: uint)
 proc blst_p1s_mult_wbits_scratch_sizeof*(npoints: uint): uint
-proc blst_p1s_mult_wbits*(ret: ptr cblst_p1;
-                          table: UncheckedArray[cblst_p1_affine]; wbits: uint;
-                          npoints: uint; scalars: byte; nbits: uint;
+proc blst_p1s_mult_wbits*(ret: ptr cblst_p1; table: ptr cblst_p1_affine;
+                          wbits: uint; npoints: uint;
+                          scalars: ptr ptr byte; nbits: uint;
                           scratch: ptr limb_t)
 proc blst_p1s_mult_pippenger_scratch_sizeof*(npoints: uint): uint
-proc blst_p1s_mult_pippenger*(ret: ptr cblst_p1; points: cblst_p1_affine;
-                              npoints: uint; scalars: byte; nbits: uint;
+proc blst_p1s_mult_pippenger*(ret: ptr cblst_p1;
+                              points: ptr ptr cblst_p1_affine; npoints: uint;
+                              scalars: ptr ptr byte; nbits: uint;
                               scratch: ptr limb_t)
-proc blst_p1s_tile_pippenger*(ret: ptr cblst_p1; points: cblst_p1_affine;
-                              npoints: uint; scalars: byte; nbits: uint;
+proc blst_p1s_tile_pippenger*(ret: ptr cblst_p1;
+                              points: ptr ptr cblst_p1_affine; npoints: uint;
+                              scalars: ptr ptr byte; nbits: uint;
                               scratch: ptr limb_t; bit0: uint; window: uint)
-proc blst_p2s_to_affine*(dst: UncheckedArray[cblst_p2_affine]; points: cblst_p2;
+proc blst_p2s_to_affine*(dst: ptr cblst_p2_affine; points: ptr ptr cblst_p2;
                          npoints: uint)
-proc blst_p2s_add*(ret: ptr cblst_p2; points: cblst_p2_affine; npoints: uint)
+proc blst_p2s_add*(ret: ptr cblst_p2;
+                   points: ptr ptr cblst_p2_affine; npoints: uint)
 proc blst_p2s_mult_wbits_precompute_sizeof*(wbits: uint; npoints: uint): uint
-proc blst_p2s_mult_wbits_precompute*(table: UncheckedArray[cblst_p2_affine];
-                                     wbits: uint; points: cblst_p2_affine;
+proc blst_p2s_mult_wbits_precompute*(table: ptr cblst_p2_affine; wbits: uint;
+                                     points: ptr ptr cblst_p2_affine;
                                      npoints: uint)
 proc blst_p2s_mult_wbits_scratch_sizeof*(npoints: uint): uint
-proc blst_p2s_mult_wbits*(ret: ptr cblst_p2;
-                          table: UncheckedArray[cblst_p2_affine]; wbits: uint;
-                          npoints: uint; scalars: byte; nbits: uint;
+proc blst_p2s_mult_wbits*(ret: ptr cblst_p2; table: ptr cblst_p2_affine;
+                          wbits: uint; npoints: uint;
+                          scalars: ptr ptr byte; nbits: uint;
                           scratch: ptr limb_t)
 proc blst_p2s_mult_pippenger_scratch_sizeof*(npoints: uint): uint
-proc blst_p2s_mult_pippenger*(ret: ptr cblst_p2; points: cblst_p2_affine;
-                              npoints: uint; scalars: byte; nbits: uint;
+proc blst_p2s_mult_pippenger*(ret: ptr cblst_p2;
+                              points: ptr ptr cblst_p2_affine; npoints: uint;
+                              scalars: ptr ptr byte; nbits: uint;
                               scratch: ptr limb_t)
-proc blst_p2s_tile_pippenger*(ret: ptr cblst_p2; points: cblst_p2_affine;
-                              npoints: uint; scalars: byte; nbits: uint;
+proc blst_p2s_tile_pippenger*(ret: ptr cblst_p2;
+                              points: ptr ptr cblst_p2_affine; npoints: uint;
+                              scalars: ptr ptr byte; nbits: uint;
                               scratch: ptr limb_t; bit0: uint; window: uint)
 
 # Hash-to-curve operations.
@@ -446,8 +452,8 @@ proc blst_sign_pk_in_g2*(out_sig: ptr cblst_p1; hash: ptr cblst_p1;
 
 proc blst_miller_loop*(ret: ptr cblst_fp12; Q: ptr cblst_p2_affine;
                        P: ptr cblst_p1_affine)
-proc blst_miller_loop_n*(ret: ptr cblst_fp12; Qs: cblst_p2_affine;
-                         Ps: cblst_p1_affine; n: uint)
+proc blst_miller_loop_n*(ret: ptr cblst_fp12; Qs: ptr ptr cblst_p2_affine;
+                         Ps: ptr ptr cblst_p1_affine; n: uint)
 proc blst_final_exp*(ret: ptr cblst_fp12; f: ptr cblst_fp12)
 proc blst_precompute_lines*(Qlines: var array[68, cblst_fp6]; Q: ptr cblst_p2_affine)
 proc blst_miller_loop_lines*(ret: ptr cblst_fp12; Qlines: array[68, cblst_fp6];
