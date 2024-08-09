@@ -2,7 +2,7 @@
 # Manual edits
 import std/[strutils, os]
 
-const headerPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/bindings/blst.h"
+const headerPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/blst+nim.h"
 
 {.pragma: blst, importc, header: headerPath.}
 {.pragma: blstheader, header: headerPath.}

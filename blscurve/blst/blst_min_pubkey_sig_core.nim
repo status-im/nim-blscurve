@@ -567,21 +567,6 @@ func update*[T: char|byte](
     aug = ""
   )
 
-template ignoringIncompatiblePointerTypes(body: untyped): untyped =
-  # Nim does not support annotating pointer destinations with C `const`
-  {.emit: """
-    #ifdef __clang__
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-    #endif
-    """.}
-  body
-  {.emit: """
-    #ifdef __clang__
-    #pragma GCC diagnostic pop
-    #endif
-    """.}
-
 func combine*(
          secureRandomBytes: array[32, byte],
          publicKeys: openArray[PublicKey],
@@ -635,29 +620,23 @@ func combine*(
       signature {.noinit.}: Signature
     block:
       var combinedPublicKey {.noinit.}: AggregatePublicKey
-      ignoringIncompatiblePointerTypes:
-        # expected 'const blst_p1_affine * const*'
-        # but argument is of type 'blst_p1_affine **'
-        blst_p1s_mult_pippenger(
-          toCV(combinedPublicKey, cblst_p1),
-          publicKeysRef[0].unsafeAddr,
-          numEntries,
-          scalarsRef[0].unsafeAddr,
-          nbits = 64,
-          scratch[0].addr)
+      blst_p1s_mult_pippenger(
+        toCV(combinedPublicKey, cblst_p1),
+        publicKeysRef[0].unsafeAddr,
+        numEntries,
+        scalarsRef[0].unsafeAddr,
+        nbits = 64,
+        scratch[0].addr)
       publicKey.finish combinedPublicKey
     block:
       var combinedSignature {.noinit.}: AggregateSignature
-      ignoringIncompatiblePointerTypes:
-        # expected 'const blst_p2_affine * const*'
-        # but argument is of type 'blst_p2_affine **'
-        blst_p2s_mult_pippenger(
-          toCV(combinedSignature, cblst_p2),
-          signaturesRef[0].unsafeAddr,
-          numEntries,
-          scalarsRef[0].unsafeAddr,
-          nbits = 64,
-          scratch[0].addr)
+      blst_p2s_mult_pippenger(
+        toCV(combinedSignature, cblst_p2),
+        signaturesRef[0].unsafeAddr,
+        numEntries,
+        scalarsRef[0].unsafeAddr,
+        nbits = 64,
+        scratch[0].addr)
       signature.finish combinedSignature
     (publicKey, signature)
 
