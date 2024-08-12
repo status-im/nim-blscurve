@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018 Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -209,10 +209,51 @@ when BLS_BACKEND == BLST:
       hashedMsg.bls_sha256_digest("msg" & $i)
       triplets.add (pk, hashedMsg, sk.sign(hashedMsg))
 
-    bench("BLS verif of " & $numSigs & " msgs by "& $numSigs & " pubkeys", iters):
+    bench("BLS verif of " & $numSigs & " msgs by " & $numSigs & " pubkeys", iters):
       for i in 0 ..< triplets.len:
         let ok = triplets[i].pubkey.verify(triplets[i].msg, triplets[i].sig)
         doAssert ok
+
+  proc batchVerifyMultiSameMessage*(numSigs, iters: int) =
+    ## Verification of N pubkeys signing the same message
+
+    var hashedMsg: array[32, byte]
+    hashedMsg.bls_sha256_digest("msg")
+
+    var
+      pks: seq[PublicKey]
+      sigs: seq[Signature]
+      multiSet {.noinit.}: MultiSignatureSet
+    for i in 0 ..< numSigs:
+      let
+        (pk, sk) = keyGen()
+        sig = sk.sign(hashedMsg)
+      pks.add pk
+      sigs.add sig
+      if i == 0:
+        multiSet = MultiSignatureSet.init((pk, hashedMsg, sig))
+      else:
+        multiSet.add((pk, hashedMsg, sig))
+
+    # With blinding (more secure, but slower)
+    var secureBlindingBytes: array[32, byte]
+    secureBlindingBytes.bls_sha256_digest("Mr F was here")
+    bench("BLS verif of " & $numSigs & " sigs of same msg by " & $numSigs & " pubkeys (with blinding)", iters):
+      let
+        triplet = multiSet.combine(secureBlindingBytes)
+        ok = triplet.pubkey.verify(triplet.message, triplet.signature)
+      doAssert ok
+
+    # Without blinding (not secure, but benched for comparison)
+    bench("BLS verif of " & $numSigs & " sigs of same msg by " & $numSigs & " pubkeys", iters):
+      var
+        pubkey {.noinit.}: PublicKey
+        signature {.noinit.}: Signature
+      let ok =
+        pubkey.aggregateAll(pks) and
+        signature.aggregateAll(sigs) and
+        pubkey.verify(hashedMsg, signature)
+      doAssert ok
 
   proc batchVerifyMultiBatchedSerial*(numSigs, iters: int) =
     ## Verification of N pubkeys signing for N messages
@@ -230,7 +271,7 @@ when BLS_BACKEND == BLST:
 
     var cache = BatchedBLSVerifierCache.init()
 
-    bench("Serial batch verify " & $numSigs & " msgs by "& $numSigs & " pubkeys (with blinding)", iters):
+    bench("Serial batch verify " & $numSigs & " msgs by " & $numSigs & " pubkeys (with blinding)", iters):
       secureBlindingBytes.bls_sha256_digest(secureBlindingBytes)
       let ok = cache.batchVerifySerial(batch, secureBlindingBytes)
       doAssert ok
@@ -277,16 +318,19 @@ when isMainModule:
 
     # Simulate Block verification (at most 6 signatures per block)
     batchVerifyMulti(numSigs = 6, iters = 10)
+    batchVerifyMultiSameMessage(numSigs = 6, iters = 10)
     batchVerifyMultiBatchedSerial(numSigs = 6, iters = 10)
     batchVerifyMultiBatchedParallel(numSigs = 6, iters = 10, nthreads)
 
     # Simulate 10 blocks verification
     batchVerifyMulti(numSigs = 60, iters = 10)
+    batchVerifyMultiSameMessage(numSigs = 60, iters = 10)
     batchVerifyMultiBatchedSerial(numSigs = 60, iters = 10)
     batchVerifyMultiBatchedParallel(numSigs = 60, iters = 10, nthreads)
 
     # Simulate 30 blocks verification
     batchVerifyMulti(numSigs = 180, iters = 10)
+    batchVerifyMultiSameMessage(numSigs = 180, iters = 10)
     batchVerifyMultiBatchedSerial(numSigs = 180, iters = 10)
     batchVerifyMultiBatchedParallel(numSigs = 180, iters = 10, nthreads)
 

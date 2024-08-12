@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018-Present Status Research & Development GmbH
+# Copyright (c) 2018-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -39,11 +39,25 @@ type
     ## if `signature` is the corresponding AggregateSignature
     ## on the same `message`
     ##
-    ## This assumes that `message`
-    ## is the output of a fixed size hash function.
+    ## This assumes that `message` is the output of a fixed size hash function.
     ##
     ## `pubkey` and `signature` are assumed to be grouped checked
     ## which is guaranteed at deserialization from bytes or hex
+
+  MultiSignatureSet* = object
+    ## A set of signatures that all pertain to the same `message`.
+    ##
+    ## `pubkeys` can contain aggregate publickeys (via `aggregateAll`)
+    ## if `signatures` contains the corresponding AggregateSignature
+    ## on the same `message`
+    ##
+    ## This assumes that `message` is the output of a fixed size hash function.
+    ##
+    ## `pubkeys` and `signatures` are assumed to be grouped checked
+    ## which is guaranteed at deserialization from bytes or hex
+    pubkeys: seq[PublicKey]
+    message: array[32, byte]
+    signatures: seq[Signature]
 
   BatchedBLSVerifierCache* {.requiresInit.} = object
     ## This types hold temporary contexts
@@ -56,6 +70,40 @@ type
 
 # Serial Batch Verifier
 # ----------------------------------------------------------------------
+
+func init*(
+       T: type MultiSignatureSet,
+       pubkeys: seq[PublicKey],
+       message: array[32, byte],
+       signatures: seq[Signature]
+     ): MultiSignatureSet =
+  doAssert pubkeys.len == signatures.len
+  doAssert pubkeys.len > 0
+  MultiSignatureSet(
+    pubkeys: pubkeys,
+    message: message,
+    signatures: signatures,
+  )
+
+func init*(T: type MultiSignatureSet, sigset: SignatureSet): MultiSignatureSet =
+  MultiSignatureSet(
+    pubkeys: @[sigset.pubkey],
+    message: sigset.message,
+    signatures: @[sigset.signature],
+  )
+
+func add*(multiSet: var MultiSignatureSet, sigset: SignatureSet) =
+  doAssert multiSet.message == sigset.message
+  multiSet.pubkeys.add sigset.pubkey
+  multiSet.signatures.add sigset.signature
+
+func combine*(
+          multiSet: MultiSignatureSet,
+          secureRandomBytes: array[32, byte]
+        ): SignatureSet =
+  let (pubkey, signature) = secureRandomBytes
+    .combine(multiSet.pubkeys, multiSet.signatures)
+  (pubkey, multiSet.message, signature)
 
 func init*(T: type BatchedBLSVerifierCache): T =
   ## Initialise the cache for single-threaded usage
