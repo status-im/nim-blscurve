@@ -1,7 +1,7 @@
 # blst_aux.h lists unstable interfaces that might be promoted to blst.h depending on their worthiness
 # This assumes blst_abi is included
 
-const auxHeaderPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/bindings/blst.h"
+const auxHeaderPath = currentSourcePath.rsplit({DirSep, AltSep}, 1)[0] & "/../../vendor/blst/bindings/blst_aux.h"
 
 {.push cdecl, importc, header: headerPath.}
 
@@ -15,4 +15,3 @@ proc blst_derive_child_eip2333*(
   child_index: uint32)
 
 {.pop.}
-
