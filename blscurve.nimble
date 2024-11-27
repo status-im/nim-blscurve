@@ -73,5 +73,9 @@ task test, "Run all tests":
       run "--threads:on -d:BLS_FORCE_BACKEND=blst -d:danger --warnings:off",
           "benchmarks/bench_all.nim"
 
+      # Build but don't run MSM bench, it's slow
+      build "-d:BLS_FORCE_BACKEND=blst -d:danger --warnings:off",
+          "benchmarks/bls12381_msm_g1.nim"
+
 task bench, "Run benchmarks":
   run "--threads:on -d:danger --warnings:off", "benchmarks/bench_all.nim"
