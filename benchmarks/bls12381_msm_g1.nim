@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018 Status Research & Development GmbH
+# Copyright (c) 2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -55,8 +55,8 @@ proc benchECmsmG1*(numPoints, iters: int) =
     let coefs00 = [coefs0, nil]
 
     blst_p1s_mult_pippenger(r.addr, ps00[0].unsafeAddr, ps.len.uint,
-                                coefs00[0].unsafeAddr, 255,
-                                scratch)
+                            coefs00[0].unsafeAddr, 255,
+                            scratch)
 
 
   bench("EC MSM G1 - " & $numPoints, iters):
