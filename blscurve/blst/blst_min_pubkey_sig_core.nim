@@ -588,7 +588,10 @@ func combine*(
     # Generate different blinding scalars for each entry
     var
       secureBlinding = secureRandomBytes
-      blindingScalars = newSeqUninitialized[uint64](numEntries)
+      blindingScalars = when (NimMajor, NimMinor) < (2, 2):
+                          newSeqUninitialized[uint64](numEntries)
+                        else:
+                          newSeqUninit[uint64](numEntries)
       numAvailableScalars = 0
     for i in 0 ..< numEntries:
       while true:
@@ -611,11 +614,14 @@ func combine*(
       publicKeysRef = [toCC(publicKeys[0], cblst_p1_affine), nil]
       signaturesRef = [toCC(signatures[0], cblst_p2_affine), nil]
       scalarsRef = [toCC(blindingScalars[0], byte), nil]
+      scratch_size = max(blst_p1s_mult_pippenger_scratch_sizeof(numEntries).int,
+                         blst_p2s_mult_pippenger_scratch_sizeof(numEntries).int
+                        ) + sizeof(limb_t) - 1
     var
-      scratch = newSeqUninitialized[limb_t]((max(
-        blst_p1s_mult_pippenger_scratch_sizeof(numEntries).int,
-        blst_p2s_mult_pippenger_scratch_sizeof(numEntries).int
-      ) + sizeof(limb_t) - 1) div sizeof(limb_t))
+      scratch = when (NimMajor, NimMinor) < (2, 2):
+                  newSeqUninitialized[limb_t](scratch_size)
+                else:
+                  newSeqUninit[limb_t](scratch_size)
       publicKey {.noinit.}: PublicKey
       signature {.noinit.}: Signature
     block:
