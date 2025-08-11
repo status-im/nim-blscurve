@@ -153,11 +153,11 @@ func fromBytes*(
   ## Initialize a BLS secret key from
   ## its raw bytes representation.
   ## Returns true on success and false otherwise
-  const L = 32
   when raw is array:
     blst_scalar_from_bendian(toCV(obj.scalar, cblst_scalar), raw)
   else:
-    if raw.len != 32:
+    const L = 32
+    if raw.len != L:
       return false
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
     blst_scalar_from_bendian(toCV(obj.scalar, cblst_scalar), pa[])
