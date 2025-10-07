@@ -18,7 +18,7 @@ type HashOrEncode* {.size: sizeof(cint).} = enum
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 # ------------------------------------------------------------------------------------------------
-# Generated @ 2025-06-06T15:43:12+02:00
+# Generated @ 2025-10-07T11:27:06+02:00
 # Command line:
 #   ~/.nimble/pkgs2/nimterop-0.6.13/nimterop/toast -n -p --prefix=_ --typemap=bool=int32 -G=@\bin\b=src -G=@\bout\b=dst -o=blscurve/blst/blst_abi_candidate.nim vendor/blst/bindings/blst.h
 
