@@ -86,10 +86,12 @@ const
 # https://github.com/nim-lang/Nim/issues/9940
 type
   limb_t* = uint64
-  blst_scalar*  = object
+  blst_scalar* = object
     b*: array[256 div 8, byte]
+
   blst_fr* = object
     l*: array[256 div 8 div sizeof(limb_t), limb_t]
+
   blst_fp* = object
     l*: array[384 div 8 div sizeof(limb_t), limb_t]
 
@@ -104,7 +106,7 @@ type
     fp6*: array[2, blst_fp6]
 
   blst_p1* = object
-    ## BLS12-381-specifc point operations.
+    ## BLS12-381-specific point operations.
     x*: blst_fp
     y*: blst_fp
     z*: blst_fp
@@ -320,8 +322,8 @@ proc blst_p2_affine_is_inf*(a: ptr cblst_p2_affine): CTbool
 proc blst_p2_affine_generator*(): ptr cblst_p2_affine
 
 # Multi-scalar multiplications and other multi-point operations.
-proc blst_p1s_to_affine*(dst: ptr cblst_p1_affine; points: ptr ptr cblst_p1;
-                         npoints: uint)
+proc blst_p1s_to_affine*(dst: ptr cblst_p1_affine;
+                         points: ptr ptr cblst_p1; npoints: uint)
 proc blst_p1s_add*(ret: ptr cblst_p1;
                    points: ptr ptr cblst_p1_affine; npoints: uint)
 proc blst_p1s_mult_wbits_precompute_sizeof*(wbits: uint; npoints: uint): uint
@@ -342,8 +344,8 @@ proc blst_p1s_tile_pippenger*(ret: ptr cblst_p1;
                               points: ptr ptr cblst_p1_affine; npoints: uint;
                               scalars: ptr ptr byte; nbits: uint;
                               scratch: ptr limb_t; bit0: uint; window: uint)
-proc blst_p2s_to_affine*(dst: ptr cblst_p2_affine; points: ptr ptr cblst_p2;
-                         npoints: uint)
+proc blst_p2s_to_affine*(dst: ptr cblst_p2_affine;
+                         points: ptr ptr cblst_p2; npoints: uint)
 proc blst_p2s_add*(ret: ptr cblst_p2;
                    points: ptr ptr cblst_p2_affine; npoints: uint)
 proc blst_p2s_mult_wbits_precompute_sizeof*(wbits: uint; npoints: uint): uint
@@ -521,7 +523,7 @@ proc blst_aggregate_in_g2*(dst: ptr cblst_p2; src: ptr cblst_p2;
 proc blst_aggregated_in_g1*(dst: ptr cblst_fp12; signature: ptr cblst_p1_affine)
 proc blst_aggregated_in_g2*(dst: ptr cblst_fp12; signature: ptr cblst_p2_affine)
 
-#   "One-shot" CoreVerify entry points.
+# "One-shot" CoreVerify entry points.
 proc blst_core_verify_pk_in_g1*[T,U,V: byte|char](pk: ptr cblst_p1_affine;
                                                   signature: ptr cblst_p2_affine;
                                                   hash_or_encode: HashOrEncode;
