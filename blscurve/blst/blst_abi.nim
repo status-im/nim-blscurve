@@ -86,54 +86,55 @@ const
 # https://github.com/nim-lang/Nim/issues/9940
 type
   limb_t* = uint64
+
+  cblst_scalar* {.importc: "blst_scalar", blstheader.} = object
   blst_scalar* = object
     b*: array[256 div 8, byte]
 
+  cblst_fr* {.importc: "blst_fr", blstheader.} = object
   blst_fr* = object
     l*: array[256 div 8 div sizeof(limb_t), limb_t]
 
+  cblst_fp* {.importc: "blst_fp", blstheader.} = object
   blst_fp* = object
     l*: array[384 div 8 div sizeof(limb_t), limb_t]
 
+  cblst_fp2* {.importc: "blst_fp2", blstheader.} = object
   blst_fp2* = object
     ## 0 is "real" part, 1 is "imaginary"
     fp*: array[2, blst_fp]
 
+  cblst_fp6* {.importc: "blst_fp6", blstheader.} = object
   blst_fp6* = object
     fp2*: array[3, blst_fp2]
 
+  cblst_fp12* {.importc: "blst_fp12", blstheader.} = object
   blst_fp12* = object
     fp6*: array[2, blst_fp6]
 
+  cblst_p1* {.importc: "blst_p1", blstheader.} = object
   blst_p1* = object
     ## BLS12-381-specific point operations.
     x*: blst_fp
     y*: blst_fp
     z*: blst_fp
 
+  cblst_p1_affine* {.importc: "blst_p1_affine", blstheader.} = object
   blst_p1_affine* = object
     x*: blst_fp
     y*: blst_fp
 
+  cblst_p2* {.importc: "blst_p2", blstheader.} = object
   blst_p2* = object
     x*: blst_fp2
     y*: blst_fp2
     z*: blst_fp2
 
+  cblst_p2_affine* {.importc: "blst_p2_affine", blstheader.} = object
   blst_p2_affine* = object
     x*: blst_fp2
     y*: blst_fp2
 
-  cblst_scalar* {.importc: "blst_scalar", blstheader.} = object
-  cblst_fr* {.importc: "blst_fr", blstheader.} = object
-  cblst_fp* {.importc: "blst_fp", blstheader.} = object
-  cblst_fp2* {.importc: "blst_fp2", blstheader.} = object
-  cblst_fp6* {.importc: "blst_fp6", blstheader.} = object
-  cblst_fp12* {.importc: "blst_fp12", blstheader.} = object
-  cblst_p1* {.importc: "blst_p1", blstheader.} = object
-  cblst_p1_affine* {.importc: "blst_p1_affine", blstheader.} = object
-  cblst_p2* {.importc: "blst_p2", blstheader.} = object
-  cblst_p2_affine* {.importc: "blst_p2_affine", blstheader.} = object
   cblst_pairing* {.importc: "blst_pairing", blstheader.} = object
 
 template toCV*(v: untyped, t: typedesc): untyped =
@@ -198,17 +199,14 @@ proc blst_scalar_from_lendian*(dst: ptr cblst_scalar; a: array[32, byte])
 proc blst_lendian_from_scalar*(dst: var array[32, byte]; a: ptr cblst_scalar)
 proc blst_scalar_fr_check*(a: ptr cblst_scalar): CTbool
 proc blst_sk_check*(a: ptr cblst_scalar): CTbool
-proc blst_sk_add_n_check*(dst: ptr cblst_scalar; a: ptr cblst_scalar;
-                          b: ptr cblst_scalar): CTbool
-proc blst_sk_sub_n_check*(dst: ptr cblst_scalar; a: ptr cblst_scalar;
-                          b: ptr cblst_scalar): CTbool
-proc blst_sk_mul_n_check*(dst: ptr cblst_scalar; a: ptr cblst_scalar;
-                          b: ptr cblst_scalar): CTbool
+proc blst_sk_add_n_check*(dst: ptr cblst_scalar; a: ptr cblst_scalar; b: ptr cblst_scalar): CTbool
+proc blst_sk_sub_n_check*(dst: ptr cblst_scalar; a: ptr cblst_scalar; b: ptr cblst_scalar): CTbool
+proc blst_sk_mul_n_check*(dst: ptr cblst_scalar; a: ptr cblst_scalar; b: ptr cblst_scalar): CTbool
 proc blst_sk_inverse*(dst: ptr cblst_scalar; a: ptr cblst_scalar)
-proc blst_scalar_from_le_bytes*[T: byte|char](dst: ptr cblst_scalar;
-                                              src: openArray[T]): CTbool
-proc blst_scalar_from_be_bytes*[T: byte|char](dst: ptr cblst_scalar;
-                                              src: openArray[T]): CTbool
+proc blst_scalar_from_le_bytes*[T: byte|char](
+    dst: ptr cblst_scalar; src: openArray[T]): CTbool
+proc blst_scalar_from_be_bytes*[T: byte|char](
+    dst: ptr cblst_scalar; src: openArray[T]): CTbool
 
 # BLS12-381-specific Fr operations (Modulo curve order)
 proc blst_fr_add*(ret: ptr cblst_fr; a: ptr cblst_fr; b: ptr cblst_fr)
@@ -264,8 +262,7 @@ proc blst_fp2_sqrt*(ret: ptr cblst_fp2; a: ptr cblst_fp2): CTbool
 proc blst_fp12_sqr*(ret: ptr cblst_fp12; a: ptr cblst_fp12)
 proc blst_fp12_cyclotomic_sqr*(ret: ptr cblst_fp12; a: ptr cblst_fp12)
 proc blst_fp12_mul*(ret: ptr cblst_fp12; a: ptr cblst_fp12; b: ptr cblst_fp12)
-proc blst_fp12_mul_by_xy00z0*(ret: ptr cblst_fp12; a: ptr cblst_fp12;
-                              xy00z0: ptr cblst_fp6)
+proc blst_fp12_mul_by_xy00z0*(ret: ptr cblst_fp12; a: ptr cblst_fp12; xy00z0: ptr cblst_fp6)
 proc blst_fp12_conjugate*(a: ptr cblst_fp12)
 proc blst_fp12_inverse*(ret: ptr cblst_fp12; a: ptr cblst_fp12)
 proc blst_fp12_frobenius_map*(ret: ptr cblst_fp12; a: ptr cblst_fp12; n: uint)
@@ -279,11 +276,9 @@ proc blst_fp12_one*(): ptr cblst_fp12
 proc blst_p1_add*(dst: ptr cblst_p1; a: ptr cblst_p1; b: ptr cblst_p1)
 proc blst_p1_add_or_double*(dst: ptr cblst_p1; a: ptr cblst_p1; b: ptr cblst_p1)
 proc blst_p1_add_affine*(dst: ptr cblst_p1; a: ptr cblst_p1; b: ptr cblst_p1_affine)
-proc blst_p1_add_or_double_affine*(dst: ptr cblst_p1; a: ptr cblst_p1;
-                                   b: ptr cblst_p1_affine)
+proc blst_p1_add_or_double_affine*(dst: ptr cblst_p1; a: ptr cblst_p1; b: ptr cblst_p1_affine)
 proc blst_p1_double*(dst: ptr cblst_p1; a: ptr cblst_p1)
-proc blst_p1_mult*(dst: ptr cblst_p1; p: ptr cblst_p1;
-                   scalar: ptr byte; nbits: uint)
+proc blst_p1_mult*(dst: ptr cblst_p1; p: ptr cblst_p1; scalar: ptr byte; nbits: uint)
 proc blst_p1_cneg*(p: ptr cblst_p1; cbit: bool)
 proc blst_p1_to_affine*(dst: ptr cblst_p1_affine; src: ptr cblst_p1)
 proc blst_p1_from_affine*(dst: ptr cblst_p1; src: ptr cblst_p1_affine)
@@ -302,11 +297,9 @@ proc blst_p1_affine_generator*(): ptr cblst_p1_affine
 proc blst_p2_add*(dst: ptr cblst_p2; a: ptr cblst_p2; b: ptr cblst_p2)
 proc blst_p2_add_or_double*(dst: ptr cblst_p2; a: ptr cblst_p2; b: ptr cblst_p2)
 proc blst_p2_add_affine*(dst: ptr cblst_p2; a: ptr cblst_p2; b: ptr cblst_p2_affine)
-proc blst_p2_add_or_double_affine*(dst: ptr cblst_p2; a: ptr cblst_p2;
-                                   b: ptr cblst_p2_affine)
+proc blst_p2_add_or_double_affine*(dst: ptr cblst_p2; a: ptr cblst_p2; b: ptr cblst_p2_affine)
 proc blst_p2_double*(dst: ptr cblst_p2; a: ptr cblst_p2)
-proc blst_p2_mult*(dst: ptr cblst_p2; p: ptr cblst_p2;
-                   scalar: ptr byte; nbits: uint)
+proc blst_p2_mult*(dst: ptr cblst_p2; p: ptr cblst_p2; scalar: ptr byte; nbits: uint)
 proc blst_p2_cneg*(p: ptr cblst_p2; cbit: bool)
 proc blst_p2_to_affine*(dst: ptr cblst_p2_affine; src: ptr cblst_p2)
 proc blst_p2_from_affine*(dst: ptr cblst_p2; src: ptr cblst_p2_affine)
@@ -322,70 +315,40 @@ proc blst_p2_affine_is_inf*(a: ptr cblst_p2_affine): CTbool
 proc blst_p2_affine_generator*(): ptr cblst_p2_affine
 
 # Multi-scalar multiplications and other multi-point operations.
-proc blst_p1s_to_affine*(dst: ptr cblst_p1_affine;
-                         points: ptr ptr cblst_p1; npoints: uint)
-proc blst_p1s_add*(ret: ptr cblst_p1;
-                   points: ptr ptr cblst_p1_affine; npoints: uint)
+proc blst_p1s_to_affine*(dst: ptr cblst_p1_affine; points: ptr ptr cblst_p1; npoints: uint)
+proc blst_p1s_add*(ret: ptr cblst_p1; points: ptr ptr cblst_p1_affine; npoints: uint)
 proc blst_p1s_mult_wbits_precompute_sizeof*(wbits: uint; npoints: uint): uint
-proc blst_p1s_mult_wbits_precompute*(table: ptr cblst_p1_affine; wbits: uint;
-                                     points: ptr ptr cblst_p1_affine;
-                                     npoints: uint)
+proc blst_p1s_mult_wbits_precompute*(table: ptr cblst_p1_affine; wbits: uint; points: ptr ptr cblst_p1_affine; npoints: uint)
 proc blst_p1s_mult_wbits_scratch_sizeof*(npoints: uint): uint
-proc blst_p1s_mult_wbits*(ret: ptr cblst_p1; table: ptr cblst_p1_affine;
-                          wbits: uint; npoints: uint;
-                          scalars: ptr ptr byte; nbits: uint;
-                          scratch: ptr limb_t)
+proc blst_p1s_mult_wbits*(ret: ptr cblst_p1; table: ptr cblst_p1_affine; wbits: uint; npoints: uint; scalars: ptr ptr byte; nbits: uint; scratch: ptr limb_t)
 proc blst_p1s_mult_pippenger_scratch_sizeof*(npoints: uint): uint
-proc blst_p1s_mult_pippenger*(ret: ptr cblst_p1;
-                              points: ptr ptr cblst_p1_affine; npoints: uint;
-                              scalars: ptr ptr byte; nbits: uint;
-                              scratch: ptr limb_t)
-proc blst_p1s_tile_pippenger*(ret: ptr cblst_p1;
-                              points: ptr ptr cblst_p1_affine; npoints: uint;
-                              scalars: ptr ptr byte; nbits: uint;
-                              scratch: ptr limb_t; bit0: uint; window: uint)
-proc blst_p2s_to_affine*(dst: ptr cblst_p2_affine;
-                         points: ptr ptr cblst_p2; npoints: uint)
-proc blst_p2s_add*(ret: ptr cblst_p2;
-                   points: ptr ptr cblst_p2_affine; npoints: uint)
+proc blst_p1s_mult_pippenger*(ret: ptr cblst_p1; points: ptr ptr cblst_p1_affine; npoints: uint; scalars: ptr ptr byte; nbits: uint; scratch: ptr limb_t)
+proc blst_p1s_tile_pippenger*(ret: ptr cblst_p1; points: ptr ptr cblst_p1_affine; npoints: uint; scalars: ptr ptr byte; nbits: uint; scratch: ptr limb_t; bit0: uint; window: uint)
+proc blst_p2s_to_affine*(dst: ptr cblst_p2_affine; points: ptr ptr cblst_p2; npoints: uint)
+proc blst_p2s_add*(ret: ptr cblst_p2; points: ptr ptr cblst_p2_affine; npoints: uint)
 proc blst_p2s_mult_wbits_precompute_sizeof*(wbits: uint; npoints: uint): uint
-proc blst_p2s_mult_wbits_precompute*(table: ptr cblst_p2_affine; wbits: uint;
-                                     points: ptr ptr cblst_p2_affine;
-                                     npoints: uint)
+proc blst_p2s_mult_wbits_precompute*(table: ptr cblst_p2_affine; wbits: uint; points: ptr ptr cblst_p2_affine; npoints: uint)
 proc blst_p2s_mult_wbits_scratch_sizeof*(npoints: uint): uint
-proc blst_p2s_mult_wbits*(ret: ptr cblst_p2; table: ptr cblst_p2_affine;
-                          wbits: uint; npoints: uint;
-                          scalars: ptr ptr byte; nbits: uint;
-                          scratch: ptr limb_t)
+proc blst_p2s_mult_wbits*(ret: ptr cblst_p2; table: ptr cblst_p2_affine; wbits: uint; npoints: uint; scalars: ptr ptr byte; nbits: uint; scratch: ptr limb_t)
 proc blst_p2s_mult_pippenger_scratch_sizeof*(npoints: uint): uint
-proc blst_p2s_mult_pippenger*(ret: ptr cblst_p2;
-                              points: ptr ptr cblst_p2_affine; npoints: uint;
-                              scalars: ptr ptr byte; nbits: uint;
-                              scratch: ptr limb_t)
-proc blst_p2s_tile_pippenger*(ret: ptr cblst_p2;
-                              points: ptr ptr cblst_p2_affine; npoints: uint;
-                              scalars: ptr ptr byte; nbits: uint;
-                              scratch: ptr limb_t; bit0: uint; window: uint)
+proc blst_p2s_mult_pippenger*(ret: ptr cblst_p2; points: ptr ptr cblst_p2_affine; npoints: uint; scalars: ptr ptr byte; nbits: uint; scratch: ptr limb_t)
+proc blst_p2s_tile_pippenger*(ret: ptr cblst_p2; points: ptr ptr cblst_p2_affine; npoints: uint; scalars: ptr ptr byte; nbits: uint; scratch: ptr limb_t; bit0: uint; window: uint)
 
 # Hash-to-curve operations.
 proc blst_map_to_g1*(dst: ptr cblst_p1; u: ptr cblst_fp; v: ptr cblst_fp)
 proc blst_map_to_g2*(dst: ptr cblst_p2; u: ptr cblst_fp2; v: ptr cblst_fp2)
-proc blst_encode_to_g1*[T,U,V: byte|char](dst: ptr cblst_p1;
-                                          msg: openArray[T];
-                                          DST: openArray[U];
-                                          aug: openArray[V])
-proc blst_hash_to_g1*[T,U,V: byte|char](dst: ptr cblst_p1;
-                                        msg: openArray[T];
-                                        DST: openArray[U];
-                                        aug: openArray[V])
-proc blst_encode_to_g2*[T,U,V: byte|char](dst: ptr cblst_p2;
-                                          msg: openArray[T];
-                                          DST: openArray[U];
-                                          aug: openArray[V])
-proc blst_hash_to_g2*[T,U,V: byte|char](dst: ptr cblst_p2;
-                                        msg: openArray[T];
-                                        DST: openArray[U];
-                                        aug: openArray[V])
+proc blst_encode_to_g1*[T,U,V: byte|char](
+    dst: ptr cblst_p1;
+    msg: openArray[T]; DST: openArray[U]; aug: openArray[V])
+proc blst_hash_to_g1*[T,U,V: byte|char](
+    dst: ptr cblst_p1;
+    msg: openArray[T]; DST: openArray[U]; aug: openArray[V])
+proc blst_encode_to_g2*[T,U,V: byte|char](
+    dst: ptr cblst_p2;
+    msg: openArray[T]; DST: openArray[U]; aug: openArray[V])
+proc blst_hash_to_g2*[T,U,V: byte|char](
+    dst: ptr cblst_p2;
+    msg: openArray[T]; DST: openArray[U]; aug: openArray[V])
 
 # Zcash-compatible serialization/deserialization.
 proc blst_p1_serialize*(dst: var array[96, byte]; src: ptr cblst_p1)
@@ -410,15 +373,13 @@ proc blst_p2_deserialize*(dst: ptr cblst_p2_affine; src: array[192, byte]): BLST
 #  turn a little odd.
 
 # Secret-key operations.
-proc blst_keygen*[T,U: byte|char](out_SK: ptr cblst_scalar;
-                                  IKM: openArray[T];
-                                  info: openArray[U])
+proc blst_keygen*[T,U: byte|char](
+    out_SK: ptr cblst_scalar;
+    IKM: openArray[T]; info: openArray[U])
 proc blst_sk_to_pk_in_g1*(out_pk: ptr cblst_p1; SK: ptr cblst_scalar)
-proc blst_sign_pk_in_g1*(out_sig: ptr cblst_p2; hash: ptr cblst_p2;
-                         SK: ptr cblst_scalar)
+proc blst_sign_pk_in_g1*(out_sig: ptr cblst_p2; hash: ptr cblst_p2; SK: ptr cblst_scalar)
 proc blst_sk_to_pk_in_g2*(out_pk: ptr cblst_p2; SK: ptr cblst_scalar)
-proc blst_sign_pk_in_g2*(out_sig: ptr cblst_p1; hash: ptr cblst_p1;
-                         SK: ptr cblst_scalar)
+proc blst_sign_pk_in_g2*(out_sig: ptr cblst_p1; hash: ptr cblst_p1; SK: ptr cblst_scalar)
 
 # Pairing interface.
 #
@@ -452,60 +413,40 @@ proc blst_sign_pk_in_g2*(out_sig: ptr cblst_p1; hash: ptr cblst_p1;
 #     ...
 #     blst_pairing_finalverify(pk[0], gtsig);
 
-proc blst_miller_loop*(ret: ptr cblst_fp12; Q: ptr cblst_p2_affine;
-                       P: ptr cblst_p1_affine)
-proc blst_miller_loop_n*(ret: ptr cblst_fp12; Qs: ptr ptr cblst_p2_affine;
-                         Ps: ptr ptr cblst_p1_affine; n: uint)
+proc blst_miller_loop*(ret: ptr cblst_fp12; Q: ptr cblst_p2_affine; P: ptr cblst_p1_affine)
+proc blst_miller_loop_n*(ret: ptr cblst_fp12; Qs: ptr ptr cblst_p2_affine; Ps: ptr ptr cblst_p1_affine; n: uint)
 proc blst_final_exp*(ret: ptr cblst_fp12; f: ptr cblst_fp12)
 proc blst_precompute_lines*(Qlines: var array[68, cblst_fp6]; Q: ptr cblst_p2_affine)
-proc blst_miller_loop_lines*(ret: ptr cblst_fp12; Qlines: array[68, cblst_fp6];
-                             P: ptr cblst_p1_affine)
+proc blst_miller_loop_lines*(ret: ptr cblst_fp12; Qlines: array[68, cblst_fp6]; P: ptr cblst_p1_affine)
 proc blst_fp12_finalverify*(gt1: ptr cblst_fp12; gt2: ptr cblst_fp12): CTbool
 proc blst_pairing_sizeof*(): uint
-proc blst_pairing_init*[T: byte|char](new_ctx: ptr cblst_pairing;
-                                      hash_or_encode: HashOrEncode;
-                                      DST: openArray[T])
+proc blst_pairing_init*[T: byte|char](
+    new_ctx: ptr cblst_pairing; hash_or_encode: HashOrEncode; DST: openArray[T])
 proc blst_pairing_get_dst*(ctx: ptr cblst_pairing): ptr UncheckedArray[byte]
 proc blst_pairing_commit*(ctx: ptr cblst_pairing)
-proc blst_pairing_aggregate_pk_in_g2*[T,U: byte|char](ctx: ptr cblst_pairing;
-                                                      PK: ptr cblst_p2_affine;
-                                                      signature: ptr cblst_p1_affine;
-                                                      msg: openArray[T];
-                                                      aug: openArray[U]): BLST_ERROR
-proc blst_pairing_chk_n_aggr_pk_in_g2*[T,U: byte|char](ctx: ptr cblst_pairing;
-                                                       PK: ptr cblst_p2_affine;
-                                                       pk_grpchk: bool;
-                                                       signature: ptr cblst_p1_affine;
-                                                       sig_grpchk: bool;
-                                                       msg: openArray[T];
-                                                       aug: openArray[U]): BLST_ERROR
-proc blst_pairing_mul_n_aggregate_pk_in_g2*[T,U: byte|char](ctx: ptr cblst_pairing;
-    PK: ptr cblst_p2_affine; sig: ptr cblst_p1_affine;
-    scalar: ptr byte; nbits: uint;
+proc blst_pairing_aggregate_pk_in_g2*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p2_affine; signature: ptr cblst_p1_affine;
     msg: openArray[T]; aug: openArray[U]): BLST_ERROR
-proc blst_pairing_chk_n_mul_n_aggr_pk_in_g2*[T,U: byte|char](ctx: ptr cblst_pairing;
-    PK: ptr cblst_p2_affine; pk_grpchk: bool; sig: ptr cblst_p1_affine;
-    sig_grpchk: bool; scalar: ptr byte; nbits: uint;
+proc blst_pairing_chk_n_aggr_pk_in_g2*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p2_affine; pk_grpchk: bool; signature: ptr cblst_p1_affine; sig_grpchk: bool;
     msg: openArray[T]; aug: openArray[U]): BLST_ERROR
-proc blst_pairing_aggregate_pk_in_g1*[T,U: byte|char](ctx: ptr cblst_pairing;
-                                                      PK: ptr cblst_p1_affine;
-                                                      signature: ptr cblst_p2_affine;
-                                                      msg: openArray[T];
-                                                      aug: openArray[U]): BLST_ERROR
-proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](ctx: ptr cblst_pairing;
-                                                       PK: ptr cblst_p1_affine;
-                                                       pk_grpchk: bool;
-                                                       signature: ptr cblst_p2_affine;
-                                                       sig_grpchk: bool;
-                                                       msg: openArray[T];
-                                                       aug: openArray[U]): BLST_ERROR
-proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](ctx: ptr cblst_pairing;
-    PK: ptr cblst_p1_affine; sig: ptr cblst_p2_affine;
-    scalar: ptr byte; nbits: uint;
+proc blst_pairing_mul_n_aggregate_pk_in_g2*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p2_affine; sig: ptr cblst_p1_affine; scalar: ptr byte; nbits: uint;
     msg: openArray[T]; aug: openArray[U]): BLST_ERROR
-proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](ctx: ptr cblst_pairing;
-    PK: ptr cblst_p1_affine; pk_grpchk: bool; sig: ptr cblst_p2_affine;
-    sig_grpchk: bool; scalar: ptr byte; nbits: uint;
+proc blst_pairing_chk_n_mul_n_aggr_pk_in_g2*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p2_affine; pk_grpchk: bool; sig: ptr cblst_p1_affine; sig_grpchk: bool; scalar: ptr byte; nbits: uint;
+    msg: openArray[T]; aug: openArray[U]): BLST_ERROR
+proc blst_pairing_aggregate_pk_in_g1*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p1_affine; signature: ptr cblst_p2_affine;
+    msg: openArray[T]; aug: openArray[U]): BLST_ERROR
+proc blst_pairing_chk_n_aggr_pk_in_g1*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p1_affine; pk_grpchk: bool; signature: ptr cblst_p2_affine; sig_grpchk: bool;
+    msg: openArray[T]; aug: openArray[U]): BLST_ERROR
+proc blst_pairing_mul_n_aggregate_pk_in_g1*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p1_affine; sig: ptr cblst_p2_affine; scalar: ptr byte; nbits: uint;
+    msg: openArray[T]; aug: openArray[U]): BLST_ERROR
+proc blst_pairing_chk_n_mul_n_aggr_pk_in_g1*[T,U: byte|char](
+    ctx: ptr cblst_pairing; PK: ptr cblst_p1_affine; pk_grpchk: bool; sig: ptr cblst_p2_affine; sig_grpchk: bool; scalar: ptr byte; nbits: uint;
     msg: openArray[T]; aug: openArray[U]): BLST_ERROR
 proc blst_pairing_merge*(ctx: ptr cblst_pairing; ctx1: ptr cblst_pairing): BLST_ERROR
 proc blst_pairing_finalverify*(ctx: ptr cblst_pairing; gtsig: ptr cblst_fp12): CTbool
@@ -516,24 +457,16 @@ proc blst_pairing_finalverify*(ctx: ptr cblst_pairing; gtsig: ptr cblst_fp12): C
 #  collected with these calls to blst_pairing_finalverify. Inputs are
 #  Zcash-compatible "straight-from-wire" byte vectors, compressed or
 #  not.
-proc blst_aggregate_in_g1*(dst: ptr cblst_p1; src: ptr cblst_p1;
-                           zwire: ptr byte): BLST_ERROR
-proc blst_aggregate_in_g2*(dst: ptr cblst_p2; src: ptr cblst_p2;
-                           zwire: ptr byte): BLST_ERROR
+proc blst_aggregate_in_g1*(dst: ptr cblst_p1; src: ptr cblst_p1; zwire: ptr byte): BLST_ERROR
+proc blst_aggregate_in_g2*(dst: ptr cblst_p2; src: ptr cblst_p2; zwire: ptr byte): BLST_ERROR
 proc blst_aggregated_in_g1*(dst: ptr cblst_fp12; signature: ptr cblst_p1_affine)
 proc blst_aggregated_in_g2*(dst: ptr cblst_fp12; signature: ptr cblst_p2_affine)
 
 # "One-shot" CoreVerify entry points.
-proc blst_core_verify_pk_in_g1*[T,U,V: byte|char](pk: ptr cblst_p1_affine;
-                                                  signature: ptr cblst_p2_affine;
-                                                  hash_or_encode: HashOrEncode;
-                                                  msg: openArray[T];
-                                                  DST: openArray[U];
-                                                  aug: openArray[V]): BLST_ERROR
-proc blst_core_verify_pk_in_g2*[T,U,V: byte|char](pk: ptr cblst_p2_affine;
-                                                  signature: ptr cblst_p1_affine;
-                                                  hash_or_encode: HashOrEncode;
-                                                  msg: openArray[T];
-                                                  DST: openArray[U];
-                                                  aug: openArray[V]): BLST_ERROR
+proc blst_core_verify_pk_in_g1*[T,U,V: byte|char](
+    pk: ptr cblst_p1_affine; signature: ptr cblst_p2_affine; hash_or_encode: HashOrEncode;
+    msg: openArray[T]; DST: openArray[U]; aug: openArray[V]): BLST_ERROR
+proc blst_core_verify_pk_in_g2*[T,U,V: byte|char](
+    pk: ptr cblst_p2_affine; signature: ptr cblst_p1_affine; hash_or_encode: HashOrEncode;
+    msg: openArray[T]; DST: openArray[U]; aug: openArray[V]): BLST_ERROR
 {.pop.}
