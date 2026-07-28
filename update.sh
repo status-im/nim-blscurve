@@ -9,7 +9,7 @@ OUT=blscurve/blst/blst_abi.nim
 NEW="$OUT.new"
 
 TOAST=("$HOME"/.nimble/pkgs2/nimterop-0.6.13*/nimterop/toast)
-"${TOAST[0]}" -n -p --prefix=_ --typemap=bool=int32 '-G=@\bin\b=src' '-G=@\bout\b=dst' -o="$CANDIDATE" vendor/blst/bindings/blst.h
+"${TOAST[0]}" -n -p --prefix=_ '-G=@\bin\b=src' '-G=@\bout\b=dst' -o="$CANDIDATE" vendor/blst/bindings/blst.h
 
 sed -i.bak \
   -e "s|$PWD/||g" \
