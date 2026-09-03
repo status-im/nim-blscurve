@@ -10,7 +10,7 @@ installDirs = @["blscurve", "vendor"]
 installFiles = @["blscurve.nim"]
 
 ### Dependencies
-requires "nim >= 1.6.18",
+requires "nim >= 2.0.14",
          "nimcrypto >= 0.7.0",
          "results >= 0.5.0",
          "stew >= 0.5.0",
@@ -31,8 +31,7 @@ proc build(args, path: string) =
 
 proc run(args, path: string) =
   build args & " --mm:refc -r", path
-  if (NimMajor, NimMinor) > (1, 6):
-    build args & " --mm:orc -r", path
+  build args & " --mm:orc -r", path
 
 ### tasks
 task test, "Run all tests":
