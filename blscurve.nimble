@@ -10,11 +10,11 @@ installDirs = @["blscurve", "vendor"]
 installFiles = @["blscurve.nim"]
 
 ### Dependencies
-requires "nim >= 1.6.0",
-         "nimcrypto",
-         "stew",
-         "results",
-         "taskpools >= 0.0.5"
+requires "nim >= 1.6.18",
+         "nimcrypto >= 0.7.0",
+         "results >= 0.5.0",
+         "stew >= 0.5.0",
+         "taskpools >= 0.2.0"
 
 let nimc = getEnv("NIMC", "nim") # Which nim compiler to use
 let lang = getEnv("NIMLANG", "c") # Which backend (c/cpp/js)
