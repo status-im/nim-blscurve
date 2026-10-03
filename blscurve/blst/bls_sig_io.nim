@@ -161,8 +161,6 @@ func fromBytes*(
       return false
     let pa = cast[ptr array[L, byte]](raw[0].unsafeAddr)
     blst_scalar_from_bendian(toCV(obj.scalar, cblst_scalar), pa[])
-  if obj.vec_is_zero():
-    return false
   if not blst_sk_check(toCC(obj.scalar, cblst_scalar)).bool:
     return false
   return true

@@ -123,8 +123,6 @@ func publicFromSecret*(pubkey: var PublicKey, seckey: SecretKey): bool =
   ##   true otherwise
   ##   By construction no public API should ever instantiate
   ##   an invalid secretkey in the first place.
-  if seckey.vec_is_zero():
-    return false
   if not blst_sk_check(toCC(seckey.scalar, cblst_scalar)).bool:
     return false
   var pk {.noinit.}: blst_p1

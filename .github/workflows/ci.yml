@@ -18,4 +18,5 @@ jobs:
         bash download_ef_bls12381_vectors.sh
         popd
         # Run the tests.
+        nimble test_asan
         nimble test
