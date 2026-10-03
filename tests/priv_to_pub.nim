@@ -88,3 +88,13 @@ block:
   doAssert not sk.fromHex("0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
   doAssert not sk.fromHex("0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000002")
   echo "SUCCESS - secret keys > curve order are refused"
+
+# Ensure that the zero secret key cannot be deserialized or used
+
+block:
+  var
+    sk: SecretKey
+    pk{.noinit.}: PublicKey
+  doAssert not pk.publicFromSecret(sk)
+  doAssert not sk.fromHex("0x0000000000000000000000000000000000000000000000000000000000000000")
+  echo "SUCCESS - zero secret key is refused"
