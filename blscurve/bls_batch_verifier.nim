@@ -353,7 +353,7 @@ when compileOption("threads"):
         ))
 
     for res in results.mitems:
-      if not sync(res):
+      if not sync(move(res)):
         return false
 
     # Stage 2: Reduce partial pairings
