@@ -289,7 +289,8 @@ when compileOption("threads"):
     # Subtree puts partial reduction in "mid"
     let rightOkFV = reducePartialPairings(tp, contexts, mid, stopEx)
 
-    # Wait for all subtrees, important: don't shortcut booleans as future/flowvar memory is released on sync
+    # Wait for all subtrees, important: don't shortcut booleans as
+    # future/flowvar memory is released on sync
     let leftOk = sync(leftOkFV)
     let rightOk = rightOkFV
     if not leftOk or not rightOk:
@@ -355,9 +356,14 @@ when compileOption("threads"):
           chunkID, chunkStart, chunkLen
         ))
 
+    # Wait for all chunks, important: don't return early as they still access
+    # the inputs and the cache, and future/flowvar memory is released on sync
+    var ok = true
     for res in results.mitems:
       if not sync(res):
-        return false
+        ok = false
+    if not ok:
+      return false
 
     # Stage 2: Reduce partial pairings
     if numBatches < 4: # linear merge
