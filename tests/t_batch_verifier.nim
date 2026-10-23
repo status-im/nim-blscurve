@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018-2024 Status Research & Development GmbH
+# Copyright (c) 2018-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -165,6 +165,16 @@ suite "Batch verification":
       check:
         tp.batchVerify(cache, @[sigset], fakeRandomBytes)
         tp.batchVerify(@[sigset], fakeRandomBytes)
+
+    # Ensure that a public key at infinity is rejected
+    block:
+      let
+        multiSet = MultiSignatureSet.init(
+          pubkeys & default(PublicKey), msg, sigs & default(Signature))
+        sigset = multiSet.combine(fakeRandomBytes)
+      check:
+        not tp.batchVerify(cache, @[sigset], fakeRandomBytes)
+        not tp.batchVerify(@[sigset], fakeRandomBytes)
 
     # Ensure that shuffled signatures are rejected
     sigs.shuffle()
