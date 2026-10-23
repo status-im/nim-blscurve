@@ -168,9 +168,20 @@ suite "Batch verification":
 
     # Ensure that a public key at infinity is rejected
     block:
+      var
+        sk, negSk: SecretKey
+        pk, negPk, infPk: PublicKey
+        infSig: Signature
+      doAssert sk.fromHex(
+        "263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3")
+      doAssert negSk.fromHex(  # r - sk
+        "4dafe9d9fa426163b461787ed0e0e56fcd0e96c83844e40ce3d8701db9dfbf1e")
+      doAssert pk.publicFromSecret(sk)
+      doAssert negPk.publicFromSecret(negSk)
+      doAssert infPk.aggregateAll([pk, negPk])
+      doAssert infSig.aggregateAll([sk.sign(msg), negSk.sign(msg)])
       let
-        multiSet = MultiSignatureSet.init(
-          pubkeys & default(PublicKey), msg, sigs & default(Signature))
+        multiSet = MultiSignatureSet.init(pubkeys & infPk, msg, sigs & infSig)
         sigset = multiSet.combine(fakeRandomBytes)
       check:
         not tp.batchVerify(cache, @[sigset], fakeRandomBytes)
