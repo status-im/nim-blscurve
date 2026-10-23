@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018-2024 Status Research & Development GmbH
+# Copyright (c) 2018-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -101,6 +101,9 @@ func combine*(
           multiSet: MultiSignatureSet,
           secureRandomBytes: array[32, byte]
         ): SignatureSet =
+  for pubkey in multiSet.pubkeys:
+    if pubkey == static(default(PublicKey)):
+      return (default(PublicKey), multiSet.message, default(Signature))
   let (pubkey, signature) = secureRandomBytes
     .combine(multiSet.pubkeys, multiSet.signatures)
   (pubkey, multiSet.message, signature)

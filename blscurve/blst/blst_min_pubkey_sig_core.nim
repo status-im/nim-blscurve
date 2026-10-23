@@ -1,5 +1,5 @@
 # Nim-BLST
-# Copyright (c) 2020-2026 Status Research & Development GmbH
+# Copyright (c) 2020-2024 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -574,7 +574,7 @@ func combine*(
   ## into a single linear combination
   ##
   ## Assumes that all public keys and signatures
-  ## have been group checked
+  ## have been group checked and that no public key is infinity
   doAssert publicKeys.len == signatures.len
   let numEntries = publicKeys.len.uint
   case numEntries
@@ -583,10 +583,6 @@ func combine*(
   of 1:
     (publicKeys[0], signatures[0])
   else:
-    for publicKey in publicKeys:
-      if bool blst_p1_affine_is_inf(toCC(publicKey.point, cblst_p1_affine)):
-        return default(tuple[publicKey: PublicKey, signature: Signature])
-
     # Generate different blinding scalars for each entry
     var
       secureBlinding = secureRandomBytes
