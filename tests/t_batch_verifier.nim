@@ -9,7 +9,7 @@
 
 import
   # Standard library
-  std/[unittest, random],
+  std/[unittest, random, sequtils],
   # Status libraries
   taskpools,
   # Public API
@@ -196,6 +196,64 @@ suite "Batch verification":
       check:
         not tp.batchVerify(cache, @[sigset], fakeRandomBytes)
         not tp.batchVerify(@[sigset], fakeRandomBytes)
+
+  wrappedTest "Verify after a failed batch":
+    var
+      cache = BatchedBLSVerifierCache.init(tp)
+      batch, invalidBatch: seq[SignatureSet]
+
+    for i in 0 ..< 16:
+      batch.addExample(i, "msg" & $i)
+    for i in 0 ..< 128:
+      invalidBatch.addExample(i, "msg" & $i)
+
+    # 4 chunks of 32: fail the first and the last, the middle ones keep running
+    invalidBatch[0].pubkey.reset()
+    invalidBatch[^32].pubkey.reset()
+
+    for _ in 0 ..< 20:
+      check:
+        not tp.batchVerify(cache, invalidBatch, fakeRandomBytes)
+        tp.batchVerify(cache, batch, fakeRandomBytes)
+
+  wrappedTest "Random batches":
+    var
+      rng = initRand(1234)
+      cache = BatchedBLSVerifierCache.init(tp)
+
+    for i in 0 ..< 256:
+      var batch: seq[SignatureSet]
+      for _ in 0 .. rng.rand(7):
+        batch.addExample(rng.rand(99), "msg" & $rng.rand(2))
+      for sigset in batch.mitems:
+        case rng.rand(9)
+        of 0:
+          sigset.pubkey.reset()
+          sigset.signature.reset()
+        of 1:
+          sigset.signature.reset()
+        of 2:
+          sigset.signature = rng.sample(batch).signature
+        else:
+          discard
+
+      var combined: seq[SignatureSet]
+      for m in 0 .. 2:
+        let
+          message = hash("msg" & $m)
+          sets = batch.filterIt(it.message == message)
+        if sets.len > 0:
+          combined.add MultiSignatureSet.init(
+            sets.mapIt(it.pubkey), message, sets.mapIt(it.signature)
+          ).combine(fakeRandomBytes)
+
+      let valid = batch.allIt(verify(it.pubkey, it.message, it.signature))
+      checkpoint "batch " & $i
+      check:
+        tp.batchVerify(cache, batch, fakeRandomBytes) == valid
+        tp.batchVerify(batch, fakeRandomBytes) == valid
+        tp.batchVerify(cache, combined, fakeRandomBytes) == valid
+        tp.batchVerify(combined, fakeRandomBytes) == valid
 
   tp.shutdown()
 
