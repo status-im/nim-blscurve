@@ -144,7 +144,7 @@ func batchVerifySerial*(
   doAssert cache.batchContexts.len >= 1
 
   template ctx: untyped = cache.batchContexts[0]
-  ctx.init(secureRandomBytes, "")
+  ctx.init(secureRandomBytes, array[0, byte]([]))
 
   # Accumulate line functions
   for i in 0 ..< input.len:

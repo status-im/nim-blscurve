@@ -1,5 +1,5 @@
 # Nim-BLSCurve
-# Copyright (c) 2018 Status Research & Development GmbH
+# Copyright (c) 2018-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -70,5 +70,5 @@ func keyGen*(ikm: openArray[byte], publicKey: var PublicKey, secretKey: var Secr
 
   # The cast is a workaround for private field access
 
-  blst_keygen(toCV(secretKey, cblst_scalar), ikm, info = "")
+  blst_keygen(toCV(secretKey, cblst_scalar), ikm, info = array[0, byte]([]))
   publicKey.publicFromSecret(secretKey)

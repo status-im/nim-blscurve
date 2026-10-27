@@ -1,5 +1,5 @@
 # Nim-BLST
-# Copyright (c) 2020-2024 Status Research & Development GmbH
+# Copyright (c) 2020-2026 Status Research & Development GmbH
 # Licensed under either of
 #  * Apache License, version 2.0, ([LICENSE-APACHE](LICENSE-APACHE))
 #  * MIT license ([LICENSE-MIT](LICENSE-MIT))
@@ -240,7 +240,7 @@ func coreSign*[T: byte|char](
   var
     sig {.noinit.}: blst_p2
 
-  blst_hash_to_g2(toCV(sig, cblst_p2), message, domainSepTag, aug = "")
+  blst_hash_to_g2(toCV(sig, cblst_p2), message, domainSepTag, aug = array[0, byte]([]))
   blst_sign_pk_in_g1(
     toCV(sig, cblst_p2),
     toCC(sig, cblst_p2),
@@ -261,7 +261,7 @@ func coreVerify*[T: byte|char](
     hash_or_encode = kHash,
     message,
     domainSepTag,
-    aug = ""
+    aug = array[0, byte]([])
   )
 
 func coreVerifyNoGroupCheck*[T: byte|char](
@@ -286,7 +286,7 @@ func coreVerifyNoGroupCheck*[T: byte|char](
     toCC(sig_or_proof.point, cblst_p2_affine),
     sig_grpchk = false, # Already grouped checked
     message,
-    aug = ""
+    aug = array[0, byte]([])
   )
   if not ok:
     return false
@@ -335,7 +335,7 @@ func update*[T: char|byte](
     signature = nil,
     sig_grpchk = false, # Already grouped checked
     message,
-    aug = ""
+    aug = array[0, byte]([])
   )
 
 func commit(ctx: var ContextCoreAggregateVerify) {.inline.} =
@@ -387,8 +387,8 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
       pk_grpchk = false, # Already grouped checked
       toCC(signature.point, cblst_p2_affine),
       sig_grpchk = false, # Already grouped checked
-      msg = "",
-      aug = ""
+      msg = array[0, byte]([]),
+      aug = array[0, byte]([])
     )
   elif signature is AggregateSignature:
     block:
@@ -400,8 +400,8 @@ func finish*(ctx: var ContextCoreAggregateVerify, signature: Signature or Aggreg
         pk_grpchk = false, # Already grouped checked
         toCC(sig.point, cblst_p2_affine),
         sig_grpchk = false, # Already grouped checked
-        msg = "",
-        aug = ""
+        msg = array[0, byte]([]),
+        aug = array[0, byte]([])
       )
   else:
     {.error: "Unreachable".}
@@ -562,7 +562,7 @@ func update*[T: char|byte](
     scalar = addr blindingScalar.b[0],
     nbits = blindingBits, # Use only the first 64 bits for blinding
     message,
-    aug = ""
+    aug = array[0, byte]([])
   )
 
 func combine*(
